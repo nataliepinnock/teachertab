@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { User, Settings, Shield, Menu, BookOpen, Users, Calendar, Clock } from 'lucide-react';
+import { User, Settings, Shield, Menu, BookOpen, Users, Calendar, Clock, CheckCircle } from 'lucide-react';
 
 export default function DashboardLayout({
   children
@@ -19,6 +19,8 @@ export default function DashboardLayout({
     { href: '/dashboard/classes', icon: Users, label: 'Classes' },
     { href: '/dashboard/subjects', icon: BookOpen, label: 'Subjects' },
     { href: '/dashboard/timetable', icon: Calendar, label: 'Timetable' },
+    { href: '/dashboard/lessons', icon: Clock, label: 'Lessons' },
+    { href: '/dashboard/tasks', icon: CheckCircle, label: 'Tasks' },
     { href: '/dashboard/general', icon: Settings, label: 'General' },
     { href: '/dashboard/security', icon: Shield, label: 'Security' }
   ];

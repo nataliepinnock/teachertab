@@ -23,7 +23,9 @@ export async function GET() {
         planCompleted: lessons.planCompleted,
         // Related data
         className: classes.name,
+        classColor: classes.color,
         subjectName: subjects.name,
+        subjectColor: subjects.color,
         slotStartTime: timetableSlots.startTime,
         slotEndTime: timetableSlots.endTime,
         slotLabel: timetableSlots.label,
