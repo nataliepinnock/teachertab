@@ -11,14 +11,10 @@ import {
 } from '@/components/ui/card';
 import { customerPortalAction } from '@/lib/payments/actions';
 import { useActionState } from 'react';
-import { TeamDataWithMembers, User } from '@/lib/db/schema';
-import { removeTeamMember, inviteTeamMember } from '@/app/(login)/actions';
+import { User, Class, Subject } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { Suspense } from 'react';
-import { Input } from '@/components/ui/input';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Loader2, PlusCircle } from 'lucide-react';
+import { BookOpen, Users, Calendar, GraduationCap } from 'lucide-react';
 
 type ActionState = {
   error?: string;
@@ -31,31 +27,31 @@ function SubscriptionSkeleton() {
   return (
     <Card className="mb-8 h-[140px]">
       <CardHeader>
-        <CardTitle>Team Subscription</CardTitle>
+        <CardTitle>Subscription</CardTitle>
       </CardHeader>
     </Card>
   );
 }
 
 function ManageSubscription() {
-  const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
+  const { data: userData } = useSWR<User>('/api/user', fetcher);
 
   return (
     <Card className="mb-8">
       <CardHeader>
-        <CardTitle>Team Subscription</CardTitle>
+        <CardTitle>Subscription</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
             <div className="mb-4 sm:mb-0">
               <p className="font-medium">
-                Current Plan: {teamData?.planName || 'Free'}
+                Current Plan: {userData?.planName || 'Free'}
               </p>
               <p className="text-sm text-muted-foreground">
-                {teamData?.subscriptionStatus === 'active'
+                {userData?.subscriptionStatus === 'active'
                   ? 'Billed monthly'
-                  : teamData?.subscriptionStatus === 'trialing'
+                  : userData?.subscriptionStatus === 'trialing'
                   ? 'Trial period'
                   : 'No active subscription'}
               </p>
@@ -72,11 +68,11 @@ function ManageSubscription() {
   );
 }
 
-function TeamMembersSkeleton() {
+function TeacherProfileSkeleton() {
   return (
     <Card className="mb-8 h-[140px]">
       <CardHeader>
-        <CardTitle>Team Members</CardTitle>
+        <CardTitle>Teacher Profile</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="animate-pulse space-y-4 mt-1">
@@ -93,194 +89,201 @@ function TeamMembersSkeleton() {
   );
 }
 
-function TeamMembers() {
-  const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
-  const [removeState, removeAction, isRemovePending] = useActionState<
-    ActionState,
-    FormData
-  >(removeTeamMember, {});
+function TeacherProfile() {
+  const { data: userData } = useSWR<User>('/api/user', fetcher);
+
+  if (!userData) {
+    return <TeacherProfileSkeleton />;
+  }
 
   const getUserDisplayName = (user: Pick<User, 'id' | 'name' | 'email'>) => {
     return user.name || user.email || 'Unknown User';
   };
 
-  if (!teamData?.teamMembers?.length) {
-    return (
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Team Members</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">No team members yet.</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const getTeacherTypeDisplay = (teacherType: string) => {
+    return teacherType === 'primary' ? 'Primary Teacher' : 'Secondary Teacher';
+  };
+
+  const getTimetableCycleDisplay = (cycle: string) => {
+    return cycle === 'weekly' ? 'Weekly Cycle' : '2-Week Cycle';
+  };
 
   return (
     <Card className="mb-8">
       <CardHeader>
-        <CardTitle>Team Members</CardTitle>
+        <CardTitle>Teacher Profile</CardTitle>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-4">
-          {teamData.teamMembers.map((member, index) => (
-            <li key={member.id} className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Avatar>
-                  {/* 
-                    This app doesn't save profile images, but here
-                    is how you'd show them:
-
-                    <AvatarImage
-                      src={member.user.image || ''}
-                      alt={getUserDisplayName(member.user)}
-                    />
-                  */}
-                  <AvatarFallback>
-                    {getUserDisplayName(member.user)
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">
-                    {getUserDisplayName(member.user)}
-                  </p>
-                  <p className="text-sm text-muted-foreground capitalize">
-                    {member.role}
-                  </p>
-                </div>
-              </div>
-              {index > 1 ? (
-                <form action={removeAction}>
-                  <input type="hidden" name="memberId" value={member.id} />
-                  <Button
-                    type="submit"
-                    variant="outline"
-                    size="sm"
-                    disabled={isRemovePending}
-                  >
-                    {isRemovePending ? 'Removing...' : 'Remove'}
-                  </Button>
-                </form>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-        {removeState?.error && (
-          <p className="text-red-500 mt-4">{removeState.error}</p>
-        )}
+        <div className="space-y-4">
+          <div className="flex items-center space-x-4">
+            <Avatar>
+              <AvatarFallback>
+                {getUserDisplayName(userData)
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-medium">
+                {getUserDisplayName(userData)}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {userData.email}
+              </p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Teacher Type</p>
+              <p className="text-sm text-gray-600">
+                {getTeacherTypeDisplay(userData.teacherType)}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-700">Timetable Cycle</p>
+              <p className="text-sm text-gray-600">
+                {getTimetableCycleDisplay(userData.timetableCycle)}
+              </p>
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
 }
 
-function InviteTeamMemberSkeleton() {
+function TeacherStatsSkeleton() {
   return (
-    <Card className="h-[260px]">
-      <CardHeader>
-        <CardTitle>Invite Team Member</CardTitle>
-      </CardHeader>
-    </Card>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      {[1, 2, 3].map((i) => (
+        <Card key={i} className="h-[120px]">
+          <CardContent className="animate-pulse">
+            <div className="mt-4 space-y-2">
+              <div className="h-4 w-20 bg-gray-200 rounded"></div>
+              <div className="h-8 w-12 bg-gray-200 rounded"></div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 }
 
-function InviteTeamMember() {
-  const { data: user } = useSWR<User>('/api/user', fetcher);
-  const isOwner = user?.role === 'owner';
-  const [inviteState, inviteAction, isInvitePending] = useActionState<
-    ActionState,
-    FormData
-  >(inviteTeamMember, {});
+function TeacherStats() {
+  const { data: classes, error: classesError } = useSWR<Class[]>('/api/classes', fetcher);
+  const { data: subjects, error: subjectsError } = useSWR<Subject[]>('/api/subjects', fetcher);
+
+  // Handle loading state
+  if (!classes || !subjects) {
+    return <TeacherStatsSkeleton />;
+  }
+
+  // Handle error state
+  if (classesError || subjectsError) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2">
+              <Users className="h-5 w-5 text-blue-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-600">Active Classes</p>
+                <p className="text-2xl font-bold text-gray-900">-</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2">
+              <BookOpen className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-600">Subjects</p>
+                <p className="text-2xl font-bold text-gray-900">-</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2">
+              <Calendar className="h-5 w-5 text-orange-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-600">Archived Classes</p>
+                <p className="text-2xl font-bold text-gray-900">-</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const activeClasses = classes.filter(c => !c.isArchived).length;
+  const archivedClasses = classes.filter(c => c.isArchived).length;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Invite Team Member</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form action={inviteAction} className="space-y-4">
-          <div>
-            <Label htmlFor="email" className="mb-2">
-              Email
-            </Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="Enter email"
-              required
-              disabled={!isOwner}
-            />
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center space-x-2">
+            <Users className="h-5 w-5 text-blue-600" />
+            <div>
+              <p className="text-sm font-medium text-gray-600">Active Classes</p>
+              <p className="text-2xl font-bold text-gray-900">{activeClasses}</p>
+            </div>
           </div>
-          <div>
-            <Label>Role</Label>
-            <RadioGroup
-              defaultValue="member"
-              name="role"
-              className="flex space-x-4"
-              disabled={!isOwner}
-            >
-              <div className="flex items-center space-x-2 mt-2">
-                <RadioGroupItem value="member" id="member" />
-                <Label htmlFor="member">Member</Label>
-              </div>
-              <div className="flex items-center space-x-2 mt-2">
-                <RadioGroupItem value="owner" id="owner" />
-                <Label htmlFor="owner">Owner</Label>
-              </div>
-            </RadioGroup>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center space-x-2">
+            <BookOpen className="h-5 w-5 text-green-600" />
+            <div>
+              <p className="text-sm font-medium text-gray-600">Subjects</p>
+              <p className="text-2xl font-bold text-gray-900">{subjects.length}</p>
+            </div>
           </div>
-          {inviteState?.error && (
-            <p className="text-red-500">{inviteState.error}</p>
-          )}
-          {inviteState?.success && (
-            <p className="text-green-500">{inviteState.success}</p>
-          )}
-          <Button
-            type="submit"
-            className="bg-orange-500 hover:bg-orange-600 text-white"
-            disabled={isInvitePending || !isOwner}
-          >
-            {isInvitePending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Inviting...
-              </>
-            ) : (
-              <>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Invite Member
-              </>
-            )}
-          </Button>
-        </form>
-      </CardContent>
-      {!isOwner && (
-        <CardFooter>
-          <p className="text-sm text-muted-foreground">
-            You must be a team owner to invite new members.
-          </p>
-        </CardFooter>
-      )}
-    </Card>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center space-x-2">
+            <Calendar className="h-5 w-5 text-orange-600" />
+            <div>
+              <p className="text-sm font-medium text-gray-600">Archived Classes</p>
+              <p className="text-2xl font-bold text-gray-900">{archivedClasses}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
-export default function SettingsPage() {
+export default function DashboardPage() {
   return (
     <section className="flex-1 p-4 lg:p-8">
-      <h1 className="text-lg lg:text-2xl font-medium mb-6">Team Settings</h1>
+      <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
+        Teacher Dashboard
+      </h1>
+      
+      <Suspense fallback={<TeacherStatsSkeleton />}>
+        <TeacherStats />
+      </Suspense>
+
+      <Suspense fallback={<TeacherProfileSkeleton />}>
+        <TeacherProfile />
+      </Suspense>
+
       <Suspense fallback={<SubscriptionSkeleton />}>
         <ManageSubscription />
-      </Suspense>
-      <Suspense fallback={<TeamMembersSkeleton />}>
-        <TeamMembers />
-      </Suspense>
-      <Suspense fallback={<InviteTeamMemberSkeleton />}>
-        <InviteTeamMember />
       </Suspense>
     </section>
   );

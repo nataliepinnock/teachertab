@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { CircleIcon, Loader2 } from 'lucide-react';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
@@ -14,7 +15,6 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
   const priceId = searchParams.get('priceId');
-  const inviteId = searchParams.get('inviteId');
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     mode === 'signin' ? signIn : signUp,
     { error: '' }
@@ -29,7 +29,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           {mode === 'signin'
             ? 'Sign in to your account'
-            : 'Create your account'}
+            : 'Create your teacher account'}
         </h2>
       </div>
 
@@ -37,7 +37,73 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
         <form className="space-y-6" action={formAction}>
           <input type="hidden" name="redirect" value={redirect || ''} />
           <input type="hidden" name="priceId" value={priceId || ''} />
-          <input type="hidden" name="inviteId" value={inviteId || ''} />
+          
+          {mode === 'signup' && (
+            <>
+              <div>
+                <Label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Full Name
+                </Label>
+                <div className="mt-1">
+                  <Input
+                    id="name"
+                    name="name"
+                    type="text"
+                    autoComplete="name"
+                    defaultValue={state.name}
+                    required
+                    maxLength={100}
+                    className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
+                    placeholder="Enter your full name"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="block text-sm font-medium text-gray-700 mb-2">
+                  Teacher Type
+                </Label>
+                <RadioGroup
+                  defaultValue="primary"
+                  name="teacherType"
+                  className="flex space-x-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="primary" id="primary" />
+                    <Label htmlFor="primary">Primary Teacher</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="secondary" id="secondary" />
+                    <Label htmlFor="secondary">Secondary Teacher</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div>
+                <Label className="block text-sm font-medium text-gray-700 mb-2">
+                  Timetable Cycle
+                </Label>
+                <RadioGroup
+                  defaultValue="weekly"
+                  name="timetableCycle"
+                  className="flex space-x-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="weekly" id="weekly" />
+                    <Label htmlFor="weekly">Weekly</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="2-weekly" id="2-weekly" />
+                    <Label htmlFor="2-weekly">2-Week Cycle</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </>
+          )}
+
           <div>
             <Label
               htmlFor="email"
@@ -103,7 +169,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
               ) : mode === 'signin' ? (
                 'Sign in'
               ) : (
-                'Sign up'
+                'Create Account'
               )}
             </Button>
           </div>

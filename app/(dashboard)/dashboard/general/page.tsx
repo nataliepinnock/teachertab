@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Loader2 } from 'lucide-react';
 import { updateAccount } from '@/app/(login)/actions';
 import { User } from '@/lib/db/schema';
@@ -23,23 +24,27 @@ type AccountFormProps = {
   state: ActionState;
   nameValue?: string;
   emailValue?: string;
+  teacherTypeValue?: string;
+  timetableCycleValue?: string;
 };
 
 function AccountForm({
   state,
   nameValue = '',
-  emailValue = ''
+  emailValue = '',
+  teacherTypeValue = 'primary',
+  timetableCycleValue = 'weekly'
 }: AccountFormProps) {
   return (
     <>
       <div>
         <Label htmlFor="name" className="mb-2">
-          Name
+          Full Name
         </Label>
         <Input
           id="name"
           name="name"
-          placeholder="Enter your name"
+          placeholder="Enter your full name"
           defaultValue={state.name || nameValue}
           required
         />
@@ -57,6 +62,40 @@ function AccountForm({
           required
         />
       </div>
+      <div>
+        <Label className="mb-2">Teacher Type</Label>
+        <RadioGroup
+          defaultValue={teacherTypeValue}
+          name="teacherType"
+          className="flex space-x-4"
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="primary" id="primary" />
+            <Label htmlFor="primary">Primary Teacher</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="secondary" id="secondary" />
+            <Label htmlFor="secondary">Secondary Teacher</Label>
+          </div>
+        </RadioGroup>
+      </div>
+      <div>
+        <Label className="mb-2">Timetable Cycle</Label>
+        <RadioGroup
+          defaultValue={timetableCycleValue}
+          name="timetableCycle"
+          className="flex space-x-4"
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="weekly" id="weekly" />
+            <Label htmlFor="weekly">Weekly</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="2-weekly" id="2-weekly" />
+            <Label htmlFor="2-weekly">2-Week Cycle</Label>
+          </div>
+        </RadioGroup>
+      </div>
     </>
   );
 }
@@ -68,6 +107,8 @@ function AccountFormWithData({ state }: { state: ActionState }) {
       state={state}
       nameValue={user?.name ?? ''}
       emailValue={user?.email ?? ''}
+      teacherTypeValue={user?.teacherType ?? 'primary'}
+      timetableCycleValue={user?.timetableCycle ?? 'weekly'}
     />
   );
 }
