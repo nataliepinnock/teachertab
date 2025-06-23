@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { User, Settings, Shield, Menu, BookOpen, Users, Calendar, Clock, CheckCircle } from 'lucide-react';
+import { User, Settings, Shield, Menu, BookOpen, Users, Calendar, Clock, CheckCircle, CalendarDays, Grid3X3 } from 'lucide-react';
 
 export default function DashboardLayout({
   children
@@ -21,14 +21,18 @@ export default function DashboardLayout({
     { href: '/dashboard/timetable', icon: Calendar, label: 'Timetable' },
     { href: '/dashboard/lessons', icon: Clock, label: 'Lessons' },
     { href: '/dashboard/tasks', icon: CheckCircle, label: 'Tasks' },
+    { href: '/dashboard/events', icon: CalendarDays, label: 'Events' },
+    { href: '/dashboard/calendar', icon: Grid3X3, label: 'Calendar' },
     { href: '/dashboard/general', icon: Settings, label: 'General' },
     { href: '/dashboard/security', icon: Shield, label: 'Security' }
   ];
 
+  const isCalendarPage = pathname === '/dashboard/calendar';
+
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-68px)] max-w-7xl mx-auto w-full">
+    <div className="flex flex-col h-[calc(100dvh-69px)] w-full">
       {/* Mobile header */}
-      <div className="lg:hidden flex items-center justify-between bg-white border-b border-gray-200 p-4">
+      <div className="lg:hidden flex items-center justify-between bg-white border-b border-gray-200 px-4 py-2">
         <div className="flex items-center">
           <span className="font-medium">Teacher Dashboard</span>
         </div>
@@ -70,7 +74,13 @@ export default function DashboardLayout({
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto p-0 lg:p-4">{children}</main>
+        <main
+          className={`flex-1 ${
+            isCalendarPage ? 'overflow-hidden' : 'overflow-y-auto'
+          }`}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

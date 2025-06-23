@@ -1,0 +1,64 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+
+interface MonthCalendarProps {
+  onAddEvent?: () => void;
+  className?: string;
+  currentDate?: Date;
+  onDateChange?: (date: Date) => void;
+}
+
+export function MonthCalendar({ onAddEvent, className = '', currentDate: externalCurrentDate, onDateChange }: MonthCalendarProps) {
+  const [currentDate, setCurrentDate] = useState(externalCurrentDate || new Date());
+
+  // Update internal state when external date changes
+  useEffect(() => {
+    if (externalCurrentDate) {
+      setCurrentDate(externalCurrentDate);
+    }
+  }, [externalCurrentDate]);
+
+  // Notify parent when internal date changes
+  const updateDate = (newDate: Date) => {
+    setCurrentDate(newDate);
+    if (onDateChange) {
+      onDateChange(newDate);
+    }
+  };
+
+  const goToPreviousMonth = () => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(currentDate.getMonth() - 1);
+    updateDate(newDate);
+  };
+
+  const goToNextMonth = () => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(currentDate.getMonth() + 1);
+    updateDate(newDate);
+  };
+
+  const goToToday = () => {
+    updateDate(new Date());
+  };
+
+  return (
+    <div className={`flex h-full flex-col ${className}`}>
+      <div className="flex-1 overflow-auto bg-white">
+        <div className="flex h-full items-center justify-center">
+          <div className="text-center">
+            <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Month View</h3>
+            <p className="text-gray-500">Month view implementation coming soon...</p>
+            <p className="text-sm text-gray-400 mt-2">
+              This will show a full month calendar grid with events
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+} 

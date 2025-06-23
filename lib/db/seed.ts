@@ -7,6 +7,7 @@ import {
   timetableEntries,
   lessons,
   tasks,
+  events,
 } from './schema';
 import { hashPassword } from '@/lib/auth/session';
 import { stripe } from '../payments/stripe';
@@ -87,12 +88,12 @@ async function seed() {
       {
         userId: user.id,
         name: 'Maths',
-        color: '#4F46E5', // Indigo
+        color: '#4F46E5',
       },
       {
         userId: user.id,
         name: 'Science',
-        color: '#10B981', // Emerald
+        color: '#10B981',
       },
     ])
     .returning();
@@ -104,7 +105,7 @@ async function seed() {
         userId: user.id,
         name: 'Year 3 - Penguins',
         description: 'Primary class',
-        color: '#F59E0B', // Amber
+        color: '#F59E0B',
       },
     ])
     .returning();
@@ -159,14 +160,13 @@ async function seed() {
   console.log('📆 Timetable entries created.');
 
   await db.insert(lessons).values([
-    // Past Lessons
     {
       userId: user.id,
       classId: class1.id,
       subjectId: maths.id,
       timetableSlotId: slotW1P1.id,
       title: 'Number Bonds to 10',
-      date: new Date('2025-06-10T09:00:00'),
+      date: '2025-06-10',
       lessonPlan: 'Use counters and pair activities.\nWrap-up quiz.',
       planCompleted: 1,
     },
@@ -176,19 +176,17 @@ async function seed() {
       subjectId: science.id,
       timetableSlotId: slotW2P1.id,
       title: 'What Plants Need to Grow',
-      date: new Date('2025-06-12T09:30:00'),
+      date: '2025-06-12',
       lessonPlan: 'Experiment + discussion.\nSunlight, water, soil.',
       planCompleted: 1,
     },
-
-    // Upcoming Lessons
     {
       userId: user.id,
       classId: class1.id,
       subjectId: maths.id,
       timetableSlotId: slotW1P1.id,
       title: 'Intro to Multiplication',
-      date: new Date('2025-06-24T09:00:00'),
+      date: '2025-06-24',
       lessonPlan: 'Arrays and repeated addition.\nMini whiteboard quiz.',
       planCompleted: 1,
     },
@@ -198,7 +196,7 @@ async function seed() {
       subjectId: science.id,
       timetableSlotId: slotW2P1.id,
       title: 'Plant Life Cycles',
-      date: new Date('2025-07-01T09:30:00'),
+      date: '2025-07-01',
       lessonPlan: 'Seed germination diagram.\nSchool garden examples.',
       planCompleted: 0,
     },
@@ -206,7 +204,6 @@ async function seed() {
 
   console.log('📘 Lessons created.');
 
-  // Add sample tasks
   await db.insert(tasks).values([
     {
       userId: user.id,
@@ -238,6 +235,29 @@ async function seed() {
   ]);
 
   console.log('📋 Tasks created.');
+
+  await db.insert(events).values([
+    {
+      userId: user.id,
+      title: 'Parents Evening',
+      description: 'Evening meetings with parents to discuss student progress',
+      location: 'Hall',
+      startTime: new Date('2025-06-26T16:00:00'),
+      endTime: new Date('2025-06-26T18:00:00'),
+      allDay: 0,
+    },
+    {
+      userId: user.id,
+      title: 'Staff Training Day',
+      description: 'INSET day — no pupils in school',
+      location: '',
+      startTime: new Date('2025-07-05T00:00:00'),
+      endTime: new Date('2025-07-05T23:59:59'),
+      allDay: 1,
+    },
+  ]);
+
+  console.log('🗓️ Events created.');
   await createStripeProducts();
 
   console.log('✅ Seeding complete.');

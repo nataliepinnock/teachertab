@@ -39,9 +39,9 @@ export async function GET() {
       .where(eq(lessons.userId, user.id))
       .orderBy(lessons.date, lessons.id);
 
-    return Response.json(userLessons || []);
+    return Response.json(userLessons);
   } catch (error) {
     console.error('Error fetching lessons:', error);
-    return Response.json([], { status: 500 });
+    return Response.json({ error: 'Failed to fetch lessons' }, { status: 500 });
   }
 } 

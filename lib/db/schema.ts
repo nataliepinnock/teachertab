@@ -5,6 +5,7 @@ import {
   text,
   timestamp,
   integer,
+  date,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -36,6 +37,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   timetableSlots: many(timetableSlots),
   lessons: many(lessons),
   tasks: many(tasks),
+  events: many(events),
 }));
 
 // CLASSES
@@ -137,9 +139,8 @@ export const lessons = pgTable('lessons', {
   classId: integer('class_id').notNull().references(() => classes.id),
   subjectId: integer('subject_id').notNull().references(() => subjects.id),
   timetableSlotId: integer('timetable_slot_id').notNull().references(() => timetableSlots.id),
-
   title: varchar('title', { length: 255 }).notNull(),
-  date: timestamp('date').notNull(),
+  date: date('date').notNull(),
   lessonPlan: text('lesson_plan'),
   planCompleted: integer('plan_completed').notNull().default(0),
 });
@@ -185,6 +186,25 @@ export const tasksRelations = relations(tasks, ({ one }) => ({
   }),
 }));
 
+// EVENTS
+export const events = pgTable('events', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  location: varchar('location', { length: 255 }),
+  startTime: timestamp('start_time').notNull(),
+  endTime: timestamp('end_time').notNull(),
+  allDay: integer('all_day').notNull().default(0),
+});
+
+export const eventsRelations = relations(events, ({ one }) => ({
+  user: one(users, {
+    fields: [events.userId],
+    references: [users.id],
+  }),
+}));
+
 // TYPES
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -206,3 +226,6 @@ export type NewLesson = typeof lessons.$inferInsert;
 
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
+
+export type Event = typeof events.$inferSelect;
+export type NewEvent = typeof events.$inferInsert;
