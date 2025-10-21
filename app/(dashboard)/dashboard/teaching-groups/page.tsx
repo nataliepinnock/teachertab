@@ -325,7 +325,7 @@ function TeachingGroupsList() {
     }
   };
 
-  const handleSaveTeachingGroup = async (data: { classId: number; subjectId: number; numberOfStudents: number; notes: string }) => {
+  const handleSaveTeachingGroup = async (data: { classId: number; subjectId: number; numberOfStudents: number; notes: string; className?: string; subjectName?: string }) => {
     try {
       if (modalMode === 'edit' && selectedTeachingGroup) {
         // Update existing teaching group
