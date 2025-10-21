@@ -23,7 +23,7 @@ export default async function PricingPage() {
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold text-gray-900 mb-4">Choose Your Plan</h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Start your free trial today. Cancel anytime. No hidden fees.
+          Choose your plan and get started today. Cancel anytime.
         </p>
       </div>
       <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -31,7 +31,7 @@ export default async function PricingPage() {
           name={monthlyPlan?.name || 'Monthly'}
           price={monthlyPrice?.unitAmount || 399}
           interval={monthlyPrice?.interval || 'month'}
-          trialDays={monthlyPrice?.trialPeriodDays || 7}
+          trialDays={0}
           features={[
             'Unlimited lesson planning',
             'Calendar management',
@@ -45,7 +45,7 @@ export default async function PricingPage() {
           name={annualPlan?.name || 'Annual'}
           price={annualPrice?.unitAmount || 3990}
           interval={annualPrice?.interval || 'year'}
-          trialDays={annualPrice?.trialPeriodDays || 7}
+          trialDays={0}
           features={[
             'Everything in Monthly, plus:',
             'Advanced analytics',
@@ -88,9 +88,11 @@ function PricingCard({
         </div>
       )}
       <h2 className="text-2xl font-medium text-gray-900 mb-2">{name}</h2>
-      <p className="text-sm text-gray-600 mb-4">
-        with {trialDays} day free trial
-      </p>
+      {trialDays > 0 && (
+        <p className="text-sm text-gray-600 mb-4">
+          with {trialDays} day free trial
+        </p>
+      )}
       <p className="text-4xl font-medium text-gray-900 mb-6">
         £{(price / 100).toFixed(2)}{' '}
         <span className="text-xl font-normal text-gray-600">
