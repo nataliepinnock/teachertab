@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { customerPortalAction } from '@/lib/payments/actions';
 import { useActionState } from 'react';
-import { User, Class, Subject, Event } from '@/lib/db/schema';
+import { User as UserType, Class, Subject, Event } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { Suspense } from 'react';
 import { 
@@ -22,6 +22,7 @@ import {
   CalendarDays, 
   Clock, 
   MapPin, 
+  User,
   Settings, 
   FileText, 
   BarChart3, 
@@ -54,7 +55,7 @@ function SubscriptionSkeleton() {
 }
 
 function ManageSubscription() {
-  const { data: userData } = useSWR<User>('/api/user', fetcher);
+  const { data: userData } = useSWR<UserType>('/api/user', fetcher);
 
   return (
     <Card className="mb-8">
@@ -119,13 +120,13 @@ function TeacherProfileSkeleton() {
 }
 
 function TeacherProfile() {
-  const { data: userData } = useSWR<User>('/api/user', fetcher);
+  const { data: userData } = useSWR<UserType>('/api/user', fetcher);
 
   if (!userData) {
     return <TeacherProfileSkeleton />;
   }
 
-  const getUserDisplayName = (user: Pick<User, 'id' | 'name' | 'email'>) => {
+  const getUserDisplayName = (user: Pick<UserType, 'id' | 'name' | 'email'>) => {
     return user.name || user.email || 'Unknown User';
   };
 
