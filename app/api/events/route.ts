@@ -40,7 +40,7 @@ function generateRecurringEvents(
       endTime: eventEndTime,
       recurrenceType,
       isRecurring: true,
-      parentEventId: eventCount === 0 ? undefined : null, // Will be set after parent is created
+      parentEventId: undefined, // Will be set after parent is created
     });
     
     // Calculate next occurrence
