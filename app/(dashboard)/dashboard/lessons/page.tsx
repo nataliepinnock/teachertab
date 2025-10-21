@@ -160,7 +160,7 @@ function LessonsList() {
         // For editing, we need to delete the old lessons and create new ones
         if (editingLesson.lessonIds && editingLesson.lessonIds.length > 0) {
           // Delete existing lessons
-          const deletePromises = editingLesson.lessonIds.map(async (lessonId) => {
+          const deletePromises = editingLesson.lessonIds.map(async (lessonId: number) => {
             const response = await fetch(`/api/lessons?id=${lessonId}`, {
               method: 'DELETE',
             });
