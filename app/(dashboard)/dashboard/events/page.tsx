@@ -2,19 +2,93 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Calendar, Clock, MapPin, Plus, X } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Calendar, Clock, MapPin, Plus, Edit, Trash2, Archive, ArrowLeft, Palette } from 'lucide-react';
 import useSWR from 'swr';
 import { Event } from '@/lib/db/schema';
+import { EventModal } from '@/components/event-modal';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-function EventCard({ event }: { event: Event }) {
+export default function EventsPage() {
+  const { data: events, error, mutate } = useSWR<Event[]>('/api/events', fetcher);
+  const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+
+  const handleAddEvent = () => {
+    setModalMode('add');
+    setSelectedEvent(null);
+    setShowModal(true);
+  };
+
+  const handleEditEvent = (event: Event) => {
+    setModalMode('edit');
+    setSelectedEvent(event);
+    setShowModal(true);
+  };
+
+  const handleDeleteEvent = async (eventId: number) => {
+    try {
+      const response = await fetch(`/api/events/${eventId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        mutate();
+      } else {
+        console.error('Failed to delete event');
+      }
+    } catch (error) {
+      console.error('Error deleting event:', error);
+    }
+  };
+
+  const handleModalClose = () => {
+    setShowModal(false);
+    setSelectedEvent(null);
+  };
+
+  const handleEventAction = () => {
+    mutate();
+  };
+
+  // Filter and sort events based on current view
+  const filterAndSortEvents = () => {
+    if (!events || !Array.isArray(events)) return [];
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (showArchived) {
+      // Show past events, sorted by most recent first
+      return events
+        .filter(event => new Date(event.startTime) < today)
+        .sort((a, b) => {
+          const dateA = new Date(a.startTime);
+          const dateB = new Date(b.startTime);
+          return dateB.getTime() - dateA.getTime(); // Most recent first
+        });
+    } else {
+      // Show current and future events, sorted by soonest first
+      return events
+        .filter(event => new Date(event.startTime) >= today)
+        .sort((a, b) => {
+          const dateA = new Date(a.startTime);
+          const dateB = new Date(b.startTime);
+          return dateA.getTime() - dateB.getTime(); // Soonest first
+        });
+    }
+  };
+
+  const sortedEvents = filterAndSortEvents();
+  const pastEventsCount = events && Array.isArray(events) ? events.filter(event => new Date(event.startTime) < new Date()).length : 0;
+  const currentEventsCount = events && Array.isArray(events) ? events.filter(event => new Date(event.startTime) >= new Date()).length : 0;
+
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-GB', {
-      weekday: 'short',
+      weekday: 'short', 
       day: 'numeric',
       month: 'short',
     });
@@ -27,204 +101,17 @@ function EventCard({ event }: { event: Event }) {
     });
   };
 
-  const isAllDay = event.allDay === 1;
-
-  return (
-    <Card className="mb-4">
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h3 className="font-semibold text-lg mb-2">{event.title}</h3>
-            {event.description && (
-              <p className="text-gray-600 mb-3">{event.description}</p>
-            )}
-            
-            <div className="space-y-2">
-              <div className="flex items-center text-sm text-gray-500">
-                <Calendar className="h-4 w-4 mr-2" />
-                {formatDate(event.startTime.toString())}
-                {!isAllDay && (
-                  <>
-                    <span className="mx-2">•</span>
-                    <Clock className="h-4 w-4 mr-2" />
-                    {formatTime(event.startTime.toString())} - {formatTime(event.endTime.toString())}
-                  </>
-                )}
-              </div>
-              
-              {event.location && (
-                <div className="flex items-center text-sm text-gray-500">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  {event.location}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function AddEventForm({ onClose, onEventAdded }: { onClose: () => void; onEventAdded: () => void }) {
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    location: '',
-    startTime: '',
-    endTime: '',
-    allDay: false,
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch('/api/events', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          startTime: new Date(formData.startTime).toISOString(),
-          endTime: new Date(formData.endTime).toISOString(),
-        }),
-      });
-
-      if (response.ok) {
-        onEventAdded();
-        onClose();
-      } else {
-        console.error('Failed to create event');
-      }
-    } catch (error) {
-      console.error('Error creating event:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const isToday = (date: string) => {
+    const today = new Date();
+    const eventDate = new Date(date);
+    return today.toDateString() === eventDate.toDateString();
   };
 
-  return (
-    <Card className="mb-6">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Add New Event</CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Input
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-            />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="allDay"
-              checked={formData.allDay}
-              onChange={(e) => setFormData({ ...formData, allDay: e.target.checked })}
-              className="rounded"
-            />
-            <Label htmlFor="allDay">All day event</Label>
-          </div>
-
-          {!formData.allDay && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="startTime">Start Time *</Label>
-                <Input
-                  id="startTime"
-                  type="datetime-local"
-                  value={formData.startTime}
-                  onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="endTime">End Time *</Label>
-                <Input
-                  id="endTime"
-                  type="datetime-local"
-                  value={formData.endTime}
-                  onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-          )}
-
-          {formData.allDay && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="startDate">Start Date *</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={formData.startTime}
-                  onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="endDate">End Date *</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={formData.endTime}
-                  onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Adding...' : 'Add Event'}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
-  );
-}
-
-export default function EventsPage() {
-  const { data: events, error, mutate } = useSWR<Event[]>('/api/events', fetcher);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const isPast = (date: string) => {
+    const today = new Date();
+    const eventDate = new Date(date);
+    return eventDate < today;
+  };
 
   if (error) {
     return (
@@ -238,43 +125,228 @@ export default function EventsPage() {
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Events</h1>
-        <Button onClick={() => setShowAddForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Event
-        </Button>
+        <div>
+          <h1 className="text-2xl font-bold">
+            {showArchived ? 'Archived Events' : 'Events'}
+          </h1>
+          <p className="text-gray-600 mt-1">
+            {showArchived 
+              ? `${pastEventsCount} past event${pastEventsCount !== 1 ? 's' : ''}`
+              : `${currentEventsCount} upcoming event${currentEventsCount !== 1 ? 's' : ''}`
+            }
+          </p>
+        </div>
+        <div className="flex items-center space-x-3">
+          {showArchived ? (
+            <Button 
+              variant="outline" 
+              onClick={() => setShowArchived(false)}
+              className="flex items-center space-x-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to Current</span>
+            </Button>
+          ) : (
+            <>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowArchived(true)}
+                className="flex items-center space-x-2"
+              >
+                <Archive className="h-4 w-4" />
+                <span>View Archive ({pastEventsCount})</span>
+              </Button>
+              <Button onClick={handleAddEvent}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Event
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
-      {showAddForm && (
-        <AddEventForm
-          onClose={() => setShowAddForm(false)}
-          onEventAdded={() => mutate()}
-        />
-      )}
+      <EventModal
+        isOpen={showModal}
+        onClose={handleModalClose}
+        onEventAdded={handleEventAction}
+        event={selectedEvent}
+        mode={modalMode}
+      />
 
-      {!events ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="pt-6">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : events.length === 0 ? (
+      {!sortedEvents || sortedEvents.length === 0 ? (
         <Card>
-          <CardContent className="pt-6 text-center text-gray-500">
-            <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p>No events yet. Create your first event to get started!</p>
+          <CardContent className="pt-12 pb-12">
+            <div className="text-center">
+              <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {showArchived ? 'No archived events' : 'No events yet'}
+              </h3>
+              <p className="text-gray-500 mb-6">
+                {showArchived 
+                  ? 'No past events found in the archive.'
+                  : 'Create your first event to get started with event planning.'
+                }
+              </p>
+              {!showArchived && (
+                <Button onClick={handleAddEvent}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Your First Event
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {events.map((event) => (
-            <EventCard key={event.id} event={event} />
-          ))}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                     Event
+                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                    Date & Time
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                    Color
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                    Location
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {sortedEvents.map((event) => {
+                  const isAllDay = event.allDay === 1;
+                  const isEventToday = isToday(event.startTime.toString());
+                  const isEventPast = isPast(event.startTime.toString());
+                  
+                  return (
+                    <tr 
+                      key={event.id} 
+                      className={`hover:bg-gray-50 ${
+                        isEventPast ? 'opacity-75' : ''
+                      }`}
+                    >
+                                             <td className="px-3 py-4 whitespace-nowrap">
+                         <div>
+                           <div className="flex items-center space-x-2 mb-1">
+                             <h3 className="text-sm font-medium text-gray-900">
+                               {event.title}
+                             </h3>
+                             {isEventToday && !showArchived && (
+                               <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                                 Today
+                               </span>
+                             )}
+                             {isEventPast && !showArchived && (
+                               <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
+                                 Past
+                               </span>
+                             )}
+                             {showArchived && (
+                               <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs font-medium rounded-full">
+                                 Past
+                               </span>
+                             )}
+                           </div>
+                           {event.description && (
+                             <p className="text-xs text-gray-500 max-w-xs truncate">
+                               {event.description}
+                             </p>
+                           )}
+                         </div>
+                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-4 w-4 text-gray-500" />
+                          <span>{formatDate(event.startTime.toString())}</span>
+                        </div>
+                        {!isAllDay && (
+                          <div className="flex items-center space-x-2 mt-1">
+                            <Clock className="h-4 w-4 text-gray-500" />
+                            <span className="text-xs text-gray-500">
+                              {formatTime(event.startTime.toString())} - {formatTime(event.endTime.toString())}
+                            </span>
+                          </div>
+                        )}
+                        {isAllDay && (
+                          <div className="mt-1">
+                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                              All Day
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {event.color ? (
+                          <div className="flex items-center space-x-2">
+                            <div 
+                              className="w-4 h-4 rounded-full border-2 border-gray-300"
+                              style={{ backgroundColor: event.color }}
+                            />
+                            <span className="text-xs text-gray-600 font-medium">Color assigned</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-xs">No color</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {event.location ? (
+                          <div className="flex items-center space-x-2">
+                            <MapPin className="h-4 w-4 text-gray-500" />
+                            <span className="max-w-xs truncate">{event.location}</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-xs">No location</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          isEventPast 
+                            ? 'bg-gray-100 text-gray-800' 
+                            : isEventToday 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {isEventPast ? 'Past' : isEventToday ? 'Today' : 'Upcoming'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditEvent(event)}
+                            className="h-8 w-8 p-0"
+                            title="Edit Event"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteEvent(event.id)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            title="Delete Event"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

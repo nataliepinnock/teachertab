@@ -34,10 +34,13 @@ export const usersRelations = relations(users, ({ many }) => ({
   classes: many(classes),
   subjects: many(subjects),
   timetableEntries: many(timetableEntries),
+  timetableActivities: many(timetableActivities),
   timetableSlots: many(timetableSlots),
   lessons: many(lessons),
   tasks: many(tasks),
   events: many(events),
+  academicYears: many(academicYears),
+  holidays: many(holidays),
 }));
 
 // CLASSES
@@ -45,7 +48,8 @@ export const classes = pgTable('classes', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').notNull().references(() => users.id),
   name: varchar('name', { length: 100 }).notNull(),
-  description: text('description'),
+  numberOfStudents: integer('number_of_students').notNull().default(0),
+  notes: text('notes'),
   isArchived: integer('is_archived').notNull().default(0),
   color: varchar('color', { length: 10 }),
 });
@@ -80,11 +84,11 @@ export const subjectsRelations = relations(subjects, ({ one, many }) => ({
 export const timetableSlots = pgTable('timetable_slots', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').notNull().references(() => users.id),
-  period: integer('period').notNull(),
+  dayOfWeek: varchar('day_of_week', { length: 10 }).notNull(),
   weekNumber: integer('week_number').notNull().default(1),
   startTime: varchar('start_time', { length: 5 }).notNull(),
   endTime: varchar('end_time', { length: 5 }).notNull(),
-  label: varchar('label', { length: 100 }),
+  label: varchar('label', { length: 100 }).notNull(),
 });
 
 export const timetableSlotsRelations = relations(timetableSlots, ({ one, many }) => ({
@@ -93,6 +97,7 @@ export const timetableSlotsRelations = relations(timetableSlots, ({ one, many })
     references: [users.id],
   }),
   lessons: many(lessons),
+  activities: many(timetableActivities),
 }));
 
 // TIMETABLE ENTRIES
@@ -103,7 +108,6 @@ export const timetableEntries = pgTable('timetable_entries', {
   subjectId: integer('subject_id').references(() => subjects.id),
 
   dayOfWeek: varchar('day_of_week', { length: 10 }).notNull(),
-  period: integer('period').notNull(),
   weekNumber: integer('week_number').notNull().default(1),
   timetableSlotId: integer('timetable_slot_id').references(() => timetableSlots.id),
 
@@ -111,6 +115,29 @@ export const timetableEntries = pgTable('timetable_entries', {
   endDate: timestamp('end_date'),
   room: varchar('room', { length: 50 }),
   notes: text('notes'),
+});
+
+// New table for timetable activities (meetings, duties, planning time, etc.)
+export const timetableActivities = pgTable('timetable_activities', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
+  timetableSlotId: integer('timetable_slot_id').notNull().references(() => timetableSlots.id),
+  
+  activityType: varchar('activity_type', { length: 20 }).notNull(), // 'meeting', 'duty', 'planning', 'other'
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  location: varchar('location', { length: 100 }),
+  color: varchar('color', { length: 10 }),
+  
+  dayOfWeek: varchar('day_of_week', { length: 10 }).notNull(),
+  weekNumber: integer('week_number').notNull().default(1),
+  
+  startDate: timestamp('start_date'),
+  endDate: timestamp('end_date'),
+  notes: text('notes'),
+  
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
 export const timetableEntriesRelations = relations(timetableEntries, ({ one }) => ({
@@ -132,6 +159,17 @@ export const timetableEntriesRelations = relations(timetableEntries, ({ one }) =
   }),
 }));
 
+export const timetableActivitiesRelations = relations(timetableActivities, ({ one }) => ({
+  user: one(users, {
+    fields: [timetableActivities.userId],
+    references: [users.id],
+  }),
+  timetableSlot: one(timetableSlots, {
+    fields: [timetableActivities.timetableSlotId],
+    references: [timetableSlots.id],
+  }),
+}));
+
 // LESSONS
 export const lessons = pgTable('lessons', {
   id: serial('id').primaryKey(),
@@ -143,6 +181,7 @@ export const lessons = pgTable('lessons', {
   date: date('date').notNull(),
   lessonPlan: text('lesson_plan'),
   planCompleted: integer('plan_completed').notNull().default(0),
+  color: varchar('color', { length: 10 }),
 });
 
 export const lessonsRelations = relations(lessons, ({ one }) => ({
@@ -174,6 +213,7 @@ export const tasks = pgTable('tasks', {
   priority: varchar('priority', { length: 20 }),
   completed: integer('completed').notNull().default(0),
   tags: varchar('tags', { length: 500 }), // Store as JSON string instead of array
+  color: varchar('color', { length: 10 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   deletedAt: timestamp('deleted_at'),
@@ -196,12 +236,71 @@ export const events = pgTable('events', {
   startTime: timestamp('start_time').notNull(),
   endTime: timestamp('end_time').notNull(),
   allDay: integer('all_day').notNull().default(0),
+  color: varchar('color', { length: 10 }),
+  // Recurrence fields
+  isRecurring: integer('is_recurring').notNull().default(0),
+  recurrenceType: varchar('recurrence_type', { length: 20 }), // 'daily', 'weekly', 'monthly', 'week1', 'week2'
+  recurrenceEndDate: timestamp('recurrence_end_date'),
+  parentEventId: integer('parent_event_id').references(() => events.id), // For tracking recurring event series
 });
 
-export const eventsRelations = relations(events, ({ one }) => ({
+export const eventsRelations = relations(events, ({ one, many }) => ({
   user: one(users, {
     fields: [events.userId],
     references: [users.id],
+  }),
+  parentEvent: one(events, {
+    fields: [events.parentEventId],
+    references: [events.id],
+    relationName: 'parentEvent',
+  }),
+  childEvents: many(events, {
+    relationName: 'parentEvent',
+  }),
+}));
+
+// ACADEMIC YEARS
+export const academicYears = pgTable('academic_years', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
+  name: varchar('name', { length: 100 }).notNull(),
+  startDate: date('start_date').notNull(),
+  endDate: date('end_date').notNull(),
+  weekCycleStartDate: date('week_cycle_start_date').notNull(), // Date when Week 1 starts
+  skipHolidayWeeks: integer('skip_holiday_weeks').notNull().default(1), // 0 = include holidays, 1 = skip holidays
+  isActive: integer('is_active').notNull().default(1),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const academicYearsRelations = relations(academicYears, ({ one, many }) => ({
+  user: one(users, {
+    fields: [academicYears.userId],
+    references: [users.id],
+  }),
+  holidays: many(holidays),
+}));
+
+// HOLIDAYS
+export const holidays = pgTable('holidays', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
+  academicYearId: integer('academic_year_id').notNull().references(() => academicYears.id),
+  name: varchar('name', { length: 100 }).notNull(),
+  startDate: date('start_date').notNull(),
+  endDate: date('end_date').notNull(),
+  type: varchar('type', { length: 20 }).notNull().default('holiday'), // 'holiday', 'half_term', 'term_break', 'inset_day'
+  color: varchar('color', { length: 10 }),
+});
+
+export const holidaysRelations = relations(holidays, ({ one }) => ({
+  user: one(users, {
+    fields: [holidays.userId],
+    references: [users.id],
+  }),
+  academicYear: one(academicYears, {
+    fields: [holidays.academicYearId],
+    references: [academicYears.id],
   }),
 }));
 
@@ -229,3 +328,9 @@ export type NewTask = typeof tasks.$inferInsert;
 
 export type Event = typeof events.$inferSelect;
 export type NewEvent = typeof events.$inferInsert;
+
+export type AcademicYear = typeof academicYears.$inferSelect;
+export type NewAcademicYear = typeof academicYears.$inferInsert;
+
+export type Holiday = typeof holidays.$inferSelect;
+export type NewHoliday = typeof holidays.$inferInsert;

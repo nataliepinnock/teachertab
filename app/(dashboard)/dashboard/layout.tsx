@@ -1,10 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { User, Settings, Shield, Menu, BookOpen, Users, Calendar, Clock, CheckCircle, CalendarDays, Grid3X3 } from 'lucide-react';
+import { User, Settings, Shield, Menu, Clock, CheckCircle, CalendarDays, Grid3X3 } from 'lucide-react';
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  teacherType: string;
+}
 
 export default function DashboardLayout({
   children
@@ -13,12 +20,27 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await fetch('/api/user');
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const navItems = [
     { href: '/dashboard', icon: User, label: 'Dashboard' },
-    { href: '/dashboard/classes', icon: Users, label: 'Classes' },
-    { href: '/dashboard/subjects', icon: BookOpen, label: 'Subjects' },
-    { href: '/dashboard/timetable', icon: Calendar, label: 'Timetable' },
+    { href: '/dashboard/setup', icon: Settings, label: 'Setup' },
     { href: '/dashboard/lessons', icon: Clock, label: 'Lessons' },
     { href: '/dashboard/tasks', icon: CheckCircle, label: 'Tasks' },
     { href: '/dashboard/events', icon: CalendarDays, label: 'Events' },

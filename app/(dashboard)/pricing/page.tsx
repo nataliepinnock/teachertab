@@ -12,38 +12,49 @@ export default async function PricingPage() {
     getStripeProducts(),
   ]);
 
-  const basePlan = products.find((product) => product.name === 'Base');
-  const plusPlan = products.find((product) => product.name === 'Plus');
+  const monthlyPlan = products.find((product) => product.name === 'Monthly');
+  const annualPlan = products.find((product) => product.name === 'Annual');
 
-  const basePrice = prices.find((price) => price.productId === basePlan?.id);
-  const plusPrice = prices.find((price) => price.productId === plusPlan?.id);
+  const monthlyPrice = prices.find((price) => price.productId === monthlyPlan?.id);
+  const annualPrice = prices.find((price) => price.productId === annualPlan?.id);
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="grid md:grid-cols-2 gap-8 max-w-xl mx-auto">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">Choose Your Plan</h1>
+        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          Start your free trial today. Cancel anytime. No hidden fees.
+        </p>
+      </div>
+      <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
         <PricingCard
-          name={basePlan?.name || 'Base'}
-          price={basePrice?.unitAmount || 800}
-          interval={basePrice?.interval || 'month'}
-          trialDays={basePrice?.trialPeriodDays || 7}
+          name={monthlyPlan?.name || 'Monthly'}
+          price={monthlyPrice?.unitAmount || 399}
+          interval={monthlyPrice?.interval || 'month'}
+          trialDays={monthlyPrice?.trialPeriodDays || 7}
           features={[
-            'Unlimited Usage',
-            'Unlimited Workspace Members',
-            'Email Support',
+            'Unlimited lesson planning',
+            'Calendar management',
+            'Student tracking',
+            'Basic reports',
+            'Email support',
           ]}
-          priceId={basePrice?.id}
+          priceId={monthlyPrice?.id}
         />
         <PricingCard
-          name={plusPlan?.name || 'Plus'}
-          price={plusPrice?.unitAmount || 1200}
-          interval={plusPrice?.interval || 'month'}
-          trialDays={plusPrice?.trialPeriodDays || 7}
+          name={annualPlan?.name || 'Annual'}
+          price={annualPrice?.unitAmount || 3990}
+          interval={annualPrice?.interval || 'year'}
+          trialDays={annualPrice?.trialPeriodDays || 7}
           features={[
-            'Everything in Base, and:',
-            'Early Access to New Features',
-            '24/7 Support + Slack Access',
+            'Everything in Monthly, plus:',
+            'Advanced analytics',
+            'Custom templates',
+            'Priority support',
+            'Save 17% with annual billing',
           ]}
-          priceId={plusPrice?.id}
+          priceId={annualPrice?.id}
+          popular={true}
         />
       </div>
     </main>
@@ -57,6 +68,7 @@ function PricingCard({
   trialDays,
   features,
   priceId,
+  popular = false,
 }: {
   name: string;
   price: number;
@@ -64,17 +76,25 @@ function PricingCard({
   trialDays: number;
   features: string[];
   priceId?: string;
+  popular?: boolean;
 }) {
   return (
-    <div className="pt-6">
+    <div className={`pt-6 ${popular ? 'relative border-2 border-orange-500 rounded-lg p-6' : ''}`}>
+      {popular && (
+        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+          <span className="bg-orange-500 text-white px-4 py-1 rounded-full text-sm font-medium">
+            Most Popular
+          </span>
+        </div>
+      )}
       <h2 className="text-2xl font-medium text-gray-900 mb-2">{name}</h2>
       <p className="text-sm text-gray-600 mb-4">
         with {trialDays} day free trial
       </p>
       <p className="text-4xl font-medium text-gray-900 mb-6">
-        ${price / 100}{' '}
+        £{(price / 100).toFixed(2)}{' '}
         <span className="text-xl font-normal text-gray-600">
-          per user / {interval}
+          per {interval}
         </span>
       </p>
       <ul className="space-y-4 mb-8">

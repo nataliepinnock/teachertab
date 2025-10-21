@@ -104,7 +104,8 @@ async function seed() {
       {
         userId: user.id,
         name: 'Year 3 - Penguins',
-        description: 'Primary class',
+        numberOfStudents: 25,
+        notes: 'Primary class with mixed abilities',
         color: '#F59E0B',
       },
     ])
@@ -115,7 +116,7 @@ async function seed() {
     .values([
       {
         userId: user.id,
-        period: 1,
+        dayOfWeek: 'Monday',
         weekNumber: 1,
         startTime: '09:00',
         endTime: '10:00',
@@ -123,7 +124,7 @@ async function seed() {
       },
       {
         userId: user.id,
-        period: 1,
+        dayOfWeek: 'Monday',
         weekNumber: 2,
         startTime: '09:30',
         endTime: '10:30',
@@ -138,7 +139,6 @@ async function seed() {
       classId: class1.id,
       subjectId: maths.id,
       dayOfWeek: 'Monday',
-      period: 1,
       weekNumber: 1,
       timetableSlotId: slotW1P1.id,
       room: 'Room A',
@@ -149,8 +149,7 @@ async function seed() {
       classId: class1.id,
       subjectId: science.id,
       dayOfWeek: 'Monday',
-      period: 1,
-      weekNumber: 2,
+      weekNumber: 2,  
       timetableSlotId: slotW2P1.id,
       room: 'Room A',
       notes: 'Discussion + garden observations',
@@ -198,6 +197,27 @@ async function seed() {
       title: 'Plant Life Cycles',
       date: '2025-07-01',
       lessonPlan: 'Seed germination diagram.\nSchool garden examples.',
+      planCompleted: 0,
+    },
+    // Test lessons with identical times for overlap testing
+    {
+      userId: user.id,
+      classId: class1.id,
+      subjectId: maths.id,
+      timetableSlotId: slotW1P1.id,
+      title: 'Form Time',
+      date: '2025-09-09',
+      lessonPlan: 'Registration and announcements',
+      planCompleted: 0,
+    },
+    {
+      userId: user.id,
+      classId: class1.id,
+      subjectId: maths.id,
+      timetableSlotId: slotW1P1.id,
+      title: 'Percentage of an amount',
+      date: '2025-09-09',
+      lessonPlan: 'Calculate percentages of amounts',
       planCompleted: 0,
     },
   ]);

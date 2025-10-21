@@ -1,0 +1,1 @@
+ALTER TABLE "academic_years" ADD COLUMN "skip_holiday_weeks" integer DEFAULT 1 NOT NULL;

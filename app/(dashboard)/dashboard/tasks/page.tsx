@@ -2,37 +2,124 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Calendar, Clock, CheckCircle, Circle, Tag, Filter, ArrowUpDown } from 'lucide-react';
+import { Plus, Calendar, Clock, CheckCircle, Circle, Tag, Filter, ArrowUpDown, Edit, Trash2 } from 'lucide-react';
 import useSWR from 'swr';
 import { Suspense, useState } from 'react';
+import { TaskModal } from '@/components/task-modal';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 function TasksSkeleton() {
   return (
     <div className="space-y-4">
-      {[1, 2, 3, 4].map((i) => (
-        <Card key={i} className="h-[120px]">
-          <CardContent className="animate-pulse">
-            <div className="mt-4 space-y-3">
-              <div className="h-5 w-48 bg-gray-200 rounded"></div>
-              <div className="h-4 w-64 bg-gray-200 rounded"></div>
-              <div className="flex space-x-2">
-                <div className="h-6 w-16 bg-gray-200 rounded-full"></div>
-                <div className="h-6 w-20 bg-gray-200 rounded-full"></div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+      <div className="animate-pulse">
+        <div className="h-10 bg-gray-200 rounded mb-4"></div>
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-16 bg-gray-200 rounded"></div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
 
 function TasksList() {
-  const { data: tasks, error: tasksError } = useSWR<any[]>('/api/tasks', fetcher);
+  const { data: tasks, error: tasksError, mutate } = useSWR<any[]>('/api/tasks', fetcher);
   const [filter, setFilter] = useState<'all' | 'completed' | 'pending'>('all');
   const [sortBy, setSortBy] = useState<'dueDate' | 'priority' | 'title'>('dueDate');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<any>(null);
+
+  const handleSaveTask = async (taskData: any) => {
+    try {
+      const isEditing = editingTask && editingTask.id;
+      const method = isEditing ? 'PUT' : 'POST';
+      const url = isEditing ? '/api/tasks' : '/api/tasks';
+      
+      // Add the task ID for editing
+      const requestData = isEditing ? { ...taskData, id: editingTask.id } : taskData;
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      if (!response.ok) {
+        throw new Error(isEditing ? 'Failed to update task' : 'Failed to create task');
+      }
+
+      // Refresh the tasks list
+      await mutate();
+    } catch (error) {
+      console.error('Error saving task:', error);
+      throw error;
+    }
+  };
+
+  const handleToggleComplete = async (taskId: number, currentCompleted: number) => {
+    try {
+      const response = await fetch('/api/tasks', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: taskId,
+          completed: !currentCompleted,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update task completion');
+      }
+
+      // Refresh the tasks list
+      await mutate();
+    } catch (error) {
+      console.error('Error updating task completion', error);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: number, taskTitle: string) => {
+    if (!confirm(`Are you sure you want to delete "${taskTitle}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/tasks?id=${taskId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete task');
+      }
+
+      // Refresh the tasks list
+      await mutate();
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      alert('Failed to delete task. Please try again.');
+    }
+  };
+
+  const openAddModal = () => {
+    setEditingTask(null);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (task: any) => {
+    setEditingTask(task);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingTask(null);
+  };
 
   if (tasksError) {
     return (
@@ -139,7 +226,7 @@ function TasksList() {
             {totalCount} total • {completedCount} completed • {pendingCount} pending
           </p>
         </div>
-        <Button>
+        <Button onClick={openAddModal}>
           <Plus className="h-4 w-4 mr-2" />
           Add Task
         </Button>
@@ -203,7 +290,7 @@ function TasksList() {
                 }
               </p>
               {filter === 'all' && (
-                <Button>
+                <Button onClick={openAddModal}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Your First Task
                 </Button>
@@ -212,69 +299,119 @@ function TasksList() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {sortedTasks.map((task) => {
-            const taskDate = new Date(task.dueDate);
-            const isTaskOverdue = isOverdue(task.dueDate);
-            const isTaskToday = isToday(task.dueDate);
-            const tags = parseTags(task.tags);
-            
-            return (
-              <Card 
-                key={task.id} 
-                className={`hover:shadow-md transition-shadow cursor-pointer ${
-                  task.completed ? 'opacity-75' : ''
-                } ${isTaskOverdue && !task.completed ? 'ring-2 ring-red-500' : ''}`}
-              >
-                <CardContent className="pt-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <h3 className={`text-lg font-semibold ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-                          {task.title}
-                        </h3>
-                        {task.completed ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <Circle className="h-5 w-5 text-gray-400" />
-                        )}
-                        {isTaskToday && !task.completed && (
-                          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                            Today
-                          </span>
-                        )}
-                        {isTaskOverdue && !task.completed && (
-                          <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
-                            Overdue
-                          </span>
-                        )}
-                      </div>
-                      
-                      {task.description && (
-                        <p className={`text-sm mb-3 ${task.completed ? 'text-gray-500' : 'text-gray-600'}`}>
-                          {task.description}
-                        </p>
-                      )}
-
-                      <div className="flex items-center space-x-4 mb-3">
-                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                          {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)} Priority
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Task
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Priority
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Due Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Color
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tags
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {sortedTasks.map((task) => {
+                  const taskDate = new Date(task.dueDate);
+                  const isTaskOverdue = isOverdue(task.dueDate);
+                  const isTaskToday = isToday(task.dueDate);
+                  const tags = parseTags(task.tags);
+                  
+                  return (
+                    <tr 
+                      key={task.id} 
+                      className={`hover:bg-gray-50 ${
+                        task.completed ? 'opacity-75' : ''
+                      } ${isTaskOverdue && !task.completed ? 'bg-red-50' : ''}`}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleToggleComplete(task.id, task.completed)}
+                            className="h-6 w-6 p-0 mr-3"
+                            title={task.completed ? 'Mark Incomplete' : 'Mark Complete'}
+                          >
+                            {task.completed ? (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Circle className="h-4 w-4 text-gray-400" />
+                            )}
+                          </Button>
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <h3 className={`text-sm font-medium ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                                {task.title}
+                              </h3>
+                              {isTaskToday && !task.completed && (
+                                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                                  Today
+                                </span>
+                              )}
+                              {isTaskOverdue && !task.completed && (
+                                <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
+                                  Overdue
+                                </span>
+                              )}
+                            </div>
+                            {task.description && (
+                              <p className={`text-xs ${task.completed ? 'text-gray-400' : 'text-gray-500'} mt-1 max-w-xs truncate`}>
+                                {task.description}
+                              </p>
+                            )}
+                          </div>
                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                          {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <div className="flex items-center space-x-2">
                           <Calendar className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm text-gray-600">{formatDate(task.dueDate)}</span>
+                          <span>{formatDate(task.dueDate)}</span>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 mt-1">
                           <Clock className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm text-gray-600">{formatTime(task.dueDate)}</span>
+                          <span className="text-xs text-gray-500">{formatTime(task.dueDate)}</span>
                         </div>
-                      </div>
-
-                      {tags.length > 0 && (
-                        <div className="flex items-center space-x-2">
-                          <Tag className="h-4 w-4 text-gray-500" />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {task.color ? (
+                          <div className="flex items-center space-x-2">
+                            <div 
+                              className="w-4 h-4 rounded-full border-2 border-gray-300"
+                              style={{ backgroundColor: task.color }}
+                            />
+                            <span className="text-xs text-gray-600 font-medium">Color assigned</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-xs">No color</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {tags.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
-                            {tags.map((tag: string, index: number) => (
+                            {tags.slice(0, 3).map((tag: string, index: number) => (
                               <span
                                 key={index}
                                 className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
@@ -282,26 +419,65 @@ function TasksList() {
                                 {tag}
                               </span>
                             ))}
+                            {tags.length > 3 && (
+                              <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                                +{tags.length - 3}
+                              </span>
+                            )}
                           </div>
+                        ) : (
+                          <span className="text-gray-400 text-xs">No tags</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          task.completed 
+                            ? 'bg-green-100 text-green-800' 
+                            : isTaskOverdue 
+                            ? 'bg-red-100 text-red-800' 
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {task.completed ? 'Completed' : isTaskOverdue ? 'Overdue' : 'Pending'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => openEditModal(task)}
+                            className="h-8 w-8 p-0"
+                            title="Edit Task"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleDeleteTask(task.id, task.title)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            title="Delete Task"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center space-x-2 ml-4">
-                      <Button variant="outline" size="sm">
-                        {task.completed ? 'Mark Incomplete' : 'Mark Complete'}
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        Edit
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
+
+      <TaskModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onSave={handleSaveTask}
+        mode={editingTask ? 'edit' : 'add'}
+        initialData={editingTask}
+      />
     </div>
   );
 }
