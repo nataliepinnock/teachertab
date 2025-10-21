@@ -22,7 +22,6 @@ import {
   CalendarDays, 
   Clock, 
   MapPin, 
-  User, 
   Settings, 
   FileText, 
   BarChart3, 
