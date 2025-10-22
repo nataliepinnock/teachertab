@@ -241,7 +241,7 @@ export const events = pgTable('events', {
   isRecurring: integer('is_recurring').notNull().default(0),
   recurrenceType: varchar('recurrence_type', { length: 20 }), // 'daily', 'weekly', 'monthly', 'week1', 'week2'
   recurrenceEndDate: timestamp('recurrence_end_date'),
-  parentEventId: integer('parent_event_id').references(() => events.id), // For tracking recurring event series
+  parentEventId: integer('parent_event_id'), // For tracking recurring event series
 });
 
 export const eventsRelations = relations(events, ({ one, many }) => ({

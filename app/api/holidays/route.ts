@@ -13,10 +13,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const academicYearId = searchParams.get('academicYearId');
 
-    let whereClause = eq(holidays.userId, user.id);
-    if (academicYearId) {
-      whereClause = and(eq(holidays.userId, user.id), eq(holidays.academicYearId, parseInt(academicYearId)));
-    }
+    const whereClause = academicYearId 
+      ? and(eq(holidays.userId, user.id), eq(holidays.academicYearId, parseInt(academicYearId)))
+      : eq(holidays.userId, user.id);
 
     const userHolidays = await db
       .select({

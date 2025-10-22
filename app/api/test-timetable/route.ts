@@ -64,17 +64,23 @@ export async function POST() {
     ];
     
     const createdEntries = await db.insert(timetableEntries).values(
-      entries.map(entry => ({
-        userId: user.id,
-        timetableSlotId: entry.slotId,
-        classId: entry.classId,
-        subjectId: entry.subjectId,
-        dayOfWeek: createdSlots.find(s => s.id === entry.slotId)?.dayOfWeek,
-        weekNumber: createdSlots.find(s => s.id === entry.slotId)?.weekNumber,
-        room: entry.room,
-        startDate: '2025-09-01',
-        endDate: '2026-07-31'
-      }))
+      entries.map(entry => {
+        const slot = createdSlots.find(s => s.id === entry.slotId);
+        if (!slot) {
+          throw new Error(`Slot not found for entry ${entry.slotId}`);
+        }
+        return {
+          userId: user.id,
+          timetableSlotId: entry.slotId,
+          classId: entry.classId,
+          subjectId: entry.subjectId,
+          dayOfWeek: slot.dayOfWeek,
+          weekNumber: slot.weekNumber,
+          room: entry.room,
+          startDate: new Date('2025-09-01'),
+          endDate: new Date('2026-07-31')
+        };
+      })
     ).returning();
     
     console.log('Created', createdEntries.length, 'timetable entries');

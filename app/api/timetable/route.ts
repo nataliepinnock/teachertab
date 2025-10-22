@@ -15,8 +15,13 @@ export async function GET(request: Request) {
     const slotIdParam = searchParams.get('slotId');
     const slotId = slotIdParam ? parseInt(slotIdParam, 10) : null;
 
+    // Apply optional slot filter
+    const whereClause = slotId 
+      ? and(eq(timetableEntries.userId, user.id), eq(timetableEntries.timetableSlotId, slotId))
+      : eq(timetableEntries.userId, user.id);
+
     // Get timetable entries with joined class, subject, and slot data
-    const baseQuery = db
+    const userTimetableEntries = await db
       .select({
         id: timetableEntries.id,
         userId: timetableEntries.userId,
@@ -41,12 +46,8 @@ export async function GET(request: Request) {
       .leftJoin(classes, eq(timetableEntries.classId, classes.id))
       .leftJoin(subjects, eq(timetableEntries.subjectId, subjects.id))
       .leftJoin(timetableSlots, eq(timetableEntries.timetableSlotId, timetableSlots.id))
-      .where(eq(timetableEntries.userId, user.id));
-
-    // Apply optional slot filter
-    const userTimetableEntries = slotId
-      ? await baseQuery.where(and(eq(timetableEntries.userId, user.id), eq(timetableEntries.timetableSlotId, slotId)))
-      : await baseQuery.orderBy(timetableEntries.dayOfWeek, timetableEntries.weekNumber);
+      .where(whereClause)
+      .orderBy(timetableEntries.dayOfWeek, timetableEntries.weekNumber);
 
     return Response.json(userTimetableEntries || []);
   } catch (error) {

@@ -125,7 +125,7 @@ export function EventModal({ isOpen, onClose, onEventAdded, event, mode }: Event
       }
     } catch (error) {
       console.error(`Error ${mode}ing event:`, error);
-      alert(`Error ${mode}ing event: ${error.message || 'Unknown error'}`);
+      alert(`Error ${mode}ing event: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSubmitting(false);
     }

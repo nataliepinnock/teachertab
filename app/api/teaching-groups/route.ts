@@ -121,7 +121,6 @@ export async function PUT(request: NextRequest) {
         .set({
           numberOfStudents: numberOfStudents,
           notes: notes,
-          updatedAt: new Date()
         })
         .where(eq(classes.id, classId));
     }

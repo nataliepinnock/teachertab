@@ -94,7 +94,7 @@ export function DayCalendar({ className, currentDate, onDateChange }: DayCalenda
 
     // Add events for the current date
     const dayEvents = events.filter(event => {
-      const eventDate = new Date(event.date);
+      const eventDate = new Date(event.startTime);
       return eventDate.toISOString().split('T')[0] === dateStr;
     });
 
@@ -102,18 +102,18 @@ export function DayCalendar({ className, currentDate, onDateChange }: DayCalenda
       allEvents.push({
         id: `event-${event.id}`,
         title: event.title,
-        startTime: new Date(`${event.date}T${event.startTime || '09:00'}`),
-        endTime: new Date(`${event.date}T${event.endTime || '10:00'}`),
+        startTime: new Date(event.startTime),
+        endTime: new Date(event.endTime),
         color: event.color || '#6B7280',
         type: 'event',
-        description: event.description,
-        location: event.location
+        description: event.description || undefined,
+        location: event.location || undefined
       });
     });
 
     // Add lessons for the current date
     const dayLessons = lessons.filter(lesson => {
-      const lessonDate = new Date(lesson.startTime);
+      const lessonDate = new Date(lesson.date);
       return lessonDate.toISOString().split('T')[0] === dateStr;
     });
 
@@ -124,13 +124,13 @@ export function DayCalendar({ className, currentDate, onDateChange }: DayCalenda
       allEvents.push({
         id: `lesson-${lesson.id}`,
         title: lesson.title,
-        startTime: new Date(lesson.startTime),
-        endTime: new Date(lesson.endTime),
+        startTime: new Date(lesson.date),
+        endTime: new Date(lesson.date),
         color: lesson.color || lessonSubject?.color || lessonClass?.color || '#6B7280',
         type: 'lesson',
         class: lessonClass?.name,
-        location: lesson.location || 'Classroom',
-        description: lesson.description
+        location: 'Classroom',
+        description: lesson.lessonPlan || undefined
       });
     });
 
@@ -291,7 +291,8 @@ export function DayCalendar({ className, currentDate, onDateChange }: DayCalenda
       {/* Lesson Modal */}
       {editingLesson && (
         <LessonModal
-          open={true}
+          isOpen={true}
+          mode="edit"
           onClose={() => setEditingLesson(null)}
           onSave={async (data) => {
             // Handle save logic

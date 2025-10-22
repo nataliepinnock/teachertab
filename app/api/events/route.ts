@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
       location,
       startTime: new Date(startTime),
       endTime: new Date(finalEndTime),
-      allDay: allDay ? 1 : 0,
+      allDay: Boolean(allDay),
       color: color || null,
     };
 
@@ -155,6 +155,7 @@ export async function POST(request: NextRequest) {
           .insert(events)
           .values({
             ...baseEvent,
+            allDay: baseEvent.allDay ? 1 : 0,
             isRecurring: 1,
             recurrenceType,
             recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null,
@@ -164,6 +165,7 @@ export async function POST(request: NextRequest) {
         // Create child events
         const childEvents = recurringEvents.slice(1).map(event => ({
           ...event,
+          allDay: event.allDay ? 1 : 0,
           parentEventId: parentEvent.id,
           isRecurring: 1, // Convert boolean to number for database
         }));
@@ -183,7 +185,7 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.error('Events API - Error creating recurring events:', error);
         return NextResponse.json(
-          { error: 'Failed to create recurring events', details: error.message },
+          { error: 'Failed to create recurring events', details: error instanceof Error ? error.message : String(error) },
           { status: 500 }
         );
       }
@@ -193,6 +195,7 @@ export async function POST(request: NextRequest) {
         .insert(events)
         .values({
           ...baseEvent,
+          allDay: baseEvent.allDay ? 1 : 0,
           isRecurring: 0,
           recurrenceType: null,
           recurrenceEndDate: null,

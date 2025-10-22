@@ -464,7 +464,6 @@ export function DayCalendar({ className, currentDate, onDateChange }: DayCalenda
           <MiniMonthCalendar selectedDate={currentDate} onDateChange={onDateChange} />
         </div>
       </div>
-    </div>
       
     {/* Event View Modal */}
       {viewingEvent && viewingEvent.type === 'event' && (
