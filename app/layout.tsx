@@ -8,9 +8,9 @@ export const metadata: Metadata = {
   title: 'TeacherTab',
   description: 'Teach. Plan. Organise.',
   icons: {
-    icon: '/images/favicon.svg',
-    shortcut: '/images/favicon.svg',
-    apple: '/images/favicon.svg',
+    icon: '/images/Tt.svg',
+    shortcut: '/images/Tt.svg',
+    apple: '/images/Tt.svg',
   }
 };
 
