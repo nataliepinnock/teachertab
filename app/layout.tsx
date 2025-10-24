@@ -6,7 +6,12 @@ import { SWRConfig } from 'swr';
 
 export const metadata: Metadata = {
   title: 'TeacherTab',
-  description: 'Teach. Plan. Organise.'
+  description: 'Teach. Plan. Organise.',
+  icons: {
+    icon: '/images/favicon.svg',
+    shortcut: '/images/favicon.svg',
+    apple: '/images/favicon.svg',
+  }
 };
 
 export const viewport: Viewport = {

@@ -1,0 +1,9 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle for dark theme -->
+  <circle cx="50" cy="50" r="48" fill="#1F2937" stroke="#374151" stroke-width="2"/>
+  
+  <!-- Tt text -->
+  <text x="50" y="65" font-family="Arial, sans-serif" font-size="48" font-weight="bold" text-anchor="middle" fill="#F9FAFB">
+    Tt
+  </text>
+</svg>

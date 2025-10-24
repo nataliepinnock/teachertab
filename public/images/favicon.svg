@@ -1,0 +1,9 @@
+<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="15" fill="#3B82F6"/>
+  
+  <!-- Tt text -->
+  <text x="16" y="22" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="white">
+    Tt
+  </text>
+</svg>
