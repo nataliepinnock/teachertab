@@ -5,143 +5,168 @@ import { TeacherTabLogo } from '@/components/ui/logo';
 export default function HomePage() {
   return (
     <main>
-      {/* Hero Section with App Mockup */}
-      <section className="py-20 bg-gradient-to-br from-gray-50 to-white">
+      <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <div className="flex items-center justify-center mb-6">
-              <TeacherTabLogo size="lg" className="text-primary" />
-              <span className="ml-3 text-3xl font-bold text-gray-900">TeacherTab</span>
-            </div>
-            <h1 className="text-5xl font-bold text-gray-900 tracking-tight sm:text-6xl md:text-7xl">
-              Your Teaching
-              <span className="block text-[#28559e]">Companion</span>
-            </h1>
-            <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">
-              Streamline your teaching workflow with intelligent lesson planning, 
-              timetable management, and student organization tools.
-            </p>
-            <div className="mt-8">
-              <Button
-                size="lg"
-                className="text-lg rounded-full bg-[#28559e] hover:bg-[#1e3d72] px-8 py-4"
-              >
-                Start Teaching Better
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-
-          {/* App Mockup */}
-          <div className="relative max-w-6xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-              {/* Mock Header */}
-              <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center">
-                  <TeacherTabLogo size="md" className="text-primary" />
-                  <span className="ml-2 text-lg font-semibold text-gray-900">TeacherTab</span>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                </div>
+          <div className="lg:grid lg:grid-cols-12 lg:gap-8">
+            <div className="sm:text-center md:max-w-2xl md:mx-auto lg:col-span-6 lg:text-left">
+              <h1 className="text-5xl font-bold text-gray-900 tracking-tight sm:text-6xl md:text-7xl lg:text-8xl">
+                TeacherTab
+                <span className="block text-[#28559e]">Your Teaching Companion</span>
+              </h1>
+              <p className="mt-3 text-base text-gray-500 sm:mt-5 sm:text-xl lg:text-lg xl:text-xl">
+                Streamline your teaching workflow with intelligent lesson planning, 
+                timetable management, and student organization tools designed specifically for educators.
+              </p>
+              <div className="mt-8 sm:max-w-lg sm:mx-auto sm:text-center lg:text-left lg:mx-0">
+                <Button
+                  size="lg"
+                  className="text-lg rounded-full bg-[#28559e] hover:bg-[#1e3d72]"
+                >
+                  Start Teaching Better
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
               </div>
-
-              {/* Mock Dashboard Content */}
-              <div className="p-6">
-                <div className="grid lg:grid-cols-3 gap-6">
-                  {/* Calendar Section */}
-                  <div className="lg:col-span-2">
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900">This Week's Schedule</h3>
-                        <Button size="sm" className="bg-[#28559e] hover:bg-[#1e3d72]">
-                          <Plus className="h-4 w-4 mr-1" />
-                          Add Lesson
-                        </Button>
+            </div>
+            <div className="mt-12 relative sm:max-w-lg sm:mx-auto lg:mt-0 lg:max-w-none lg:mx-0 lg:col-span-6 lg:flex lg:items-center">
+              {/* Detailed App Mockup */}
+              <div className="relative w-full">
+                <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden transform rotate-1 hover:rotate-0 transition-transform duration-300">
+                  {/* Mock Header */}
+                  <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <TeacherTabLogo size="sm" className="text-primary" />
+                      <span className="ml-2 text-lg font-semibold text-gray-900">TeacherTab</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-6 h-6 bg-[#28559e]/20 rounded-full flex items-center justify-center">
+                        <Calendar className="h-3 w-3 text-[#28559e]" />
                       </div>
-                      
-                      {/* Mock Calendar Grid */}
-                      <div className="grid grid-cols-7 gap-2 mb-4">
-                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
-                          <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
-                            {day}
-                          </div>
-                        ))}
-                        {Array.from({ length: 35 }, (_, i) => (
-                          <div key={i} className={`h-12 border border-gray-100 rounded-lg flex items-center justify-center text-sm ${
-                            i >= 15 && i <= 19 ? 'bg-[#28559e]/10 border-[#28559e]/20' : 'bg-gray-50'
-                          }`}>
-                            {i >= 15 && i <= 19 ? (
-                              <div className="text-center">
-                                <div className="w-2 h-2 bg-[#28559e] rounded-full mx-auto mb-1"></div>
-                                <div className="text-xs text-[#28559e] font-medium">Math</div>
-                              </div>
-                            ) : i > 19 ? (
-                              <span className="text-gray-300">{i - 19}</span>
-                            ) : null}
-                          </div>
-                        ))}
+                      <div className="w-6 h-6 bg-[#e85b46]/20 rounded-full flex items-center justify-center">
+                        <BookOpen className="h-3 w-3 text-[#e85b46]" />
                       </div>
+                      <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
                     </div>
                   </div>
 
-                  {/* Sidebar */}
-                  <div className="space-y-4">
-                    {/* Quick Stats */}
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Quick Stats</h3>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">This Week</span>
-                          <span className="text-sm font-medium text-[#28559e]">12 Lessons</span>
+                  {/* Mock Dashboard Content */}
+                  <div className="p-4">
+                    <div className="grid grid-cols-1 gap-4">
+                      {/* Week Overview */}
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-semibold text-gray-900">This Week</h3>
+                          <span className="text-xs text-gray-500">March 18-22</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Classes</span>
-                          <span className="text-sm font-medium text-[#28559e]">4 Active</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Subjects</span>
-                          <span className="text-sm font-medium text-[#28559e]">6</span>
+                        
+                        {/* Detailed Calendar Grid */}
+                        <div className="grid grid-cols-7 gap-1">
+                          {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
+                            <div key={day} className="text-center">
+                              <div className="text-xs text-gray-500 mb-1">{day}</div>
+                              <div className={`h-8 rounded-lg flex flex-col items-center justify-center text-xs ${
+                                index < 5 ? 'bg-[#28559e]/10 border border-[#28559e]/20' : 'bg-gray-100'
+                              }`}>
+                                {index < 5 ? (
+                                  <>
+                                    <div className="w-1 h-1 bg-[#28559e] rounded-full mb-0.5"></div>
+                                    <span className="text-[#28559e] font-medium">3</span>
+                                  </>
+                                ) : (
+                                  <span className="text-gray-400">{18 + index}</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    </div>
 
-                    {/* Recent Lessons */}
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Recent Lessons</h3>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">Algebra Basics</div>
-                            <div className="text-xs text-gray-500">Year 9 - Math</div>
+                      {/* Today's Schedule */}
+                      <div className="bg-white border border-gray-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-semibold text-gray-900">Today's Schedule</h3>
+                          <Button size="sm" className="bg-[#28559e] hover:bg-[#1e3d72] text-xs px-2 py-1">
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between p-2 bg-[#28559e]/5 rounded-lg border-l-2 border-[#28559e]">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 bg-[#28559e] rounded-full mr-2"></div>
+                              <div>
+                                <div className="text-xs font-medium text-gray-900">Algebra Basics</div>
+                                <div className="text-xs text-gray-500">Year 9A • Room 12</div>
+                              </div>
+                            </div>
+                            <div className="text-xs text-gray-500">9:00 AM</div>
                           </div>
-                          <div className="flex items-center space-x-1">
-                            <button className="p-1 hover:bg-gray-200 rounded">
-                              <Edit3 className="h-3 w-3 text-gray-500" />
-                            </button>
-                            <button className="p-1 hover:bg-gray-200 rounded">
-                              <MoreHorizontal className="h-3 w-3 text-gray-500" />
-                            </button>
+                          
+                          <div className="flex items-center justify-between p-2 bg-[#e85b46]/5 rounded-lg border-l-2 border-[#e85b46]">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 bg-[#e85b46] rounded-full mr-2"></div>
+                              <div>
+                                <div className="text-xs font-medium text-gray-900">Shakespeare</div>
+                                <div className="text-xs text-gray-500">Year 11B • Library</div>
+                              </div>
+                            </div>
+                            <div className="text-xs text-gray-500">11:30 AM</div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
+                              <div>
+                                <div className="text-xs font-medium text-gray-900">Physics Lab</div>
+                                <div className="text-xs text-gray-500">Year 10C • Lab 3</div>
+                              </div>
+                            </div>
+                            <div className="text-xs text-gray-500">2:00 PM</div>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">Shakespeare</div>
-                            <div className="text-xs text-gray-500">Year 11 - English</div>
+                      </div>
+
+                      {/* Quick Stats */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-white border border-gray-200 rounded-lg p-2 text-center">
+                          <div className="text-lg font-bold text-[#28559e]">12</div>
+                          <div className="text-xs text-gray-500">Lessons</div>
+                        </div>
+                        <div className="bg-white border border-gray-200 rounded-lg p-2 text-center">
+                          <div className="text-lg font-bold text-[#e85b46]">4</div>
+                          <div className="text-xs text-gray-500">Classes</div>
+                        </div>
+                        <div className="bg-white border border-gray-200 rounded-lg p-2 text-center">
+                          <div className="text-lg font-bold text-[#28559e]">6</div>
+                          <div className="text-xs text-gray-500">Subjects</div>
+                        </div>
+                      </div>
+
+                      {/* Recent Activity */}
+                      <div className="bg-white border border-gray-200 rounded-lg p-3">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-2">Recent Activity</h3>
+                        <div className="space-y-2">
+                          <div className="flex items-center text-xs">
+                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></div>
+                            <span className="text-gray-600">Completed lesson plan for Algebra</span>
                           </div>
-                          <div className="flex items-center space-x-1">
-                            <button className="p-1 hover:bg-gray-200 rounded">
-                              <Edit3 className="h-3 w-3 text-gray-500" />
-                            </button>
-                            <button className="p-1 hover:bg-gray-200 rounded">
-                              <MoreHorizontal className="h-3 w-3 text-gray-500" />
-                            </button>
+                          <div className="flex items-center text-xs">
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
+                            <span className="text-gray-600">Added new student to Year 9A</span>
+                          </div>
+                          <div className="flex items-center text-xs">
+                            <div className="w-1.5 h-1.5 bg-[#e85b46] rounded-full mr-2"></div>
+                            <span className="text-gray-600">Updated timetable for next week</span>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
+                
+                {/* Floating Elements */}
+                <div className="absolute -top-2 -right-2 w-4 h-4 bg-[#28559e] rounded-full animate-pulse"></div>
+                <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-[#e85b46] rounded-full animate-bounce"></div>
               </div>
             </div>
           </div>
