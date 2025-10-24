@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BookOpen, Calendar, Users, Clock, CheckCircle, Plus, Edit3, Trash2, MoreHorizontal } from 'lucide-react';
+import { ArrowRight, BookOpen, Calendar, Users, Clock, CheckCircle, Plus, Edit3, Trash2, MoreHorizontal, MapPin } from 'lucide-react';
 import { TeacherTabLogo } from '@/components/ui/logo';
 
 export default function HomePage() {
@@ -58,13 +58,13 @@ export default function HomePage() {
                           <span className="text-xs text-gray-500">March 18-22</span>
                         </div>
                         
-                        {/* Detailed Calendar Grid */}
+                        {/* Detailed Calendar Grid - Matching Real Calendar */}
                         <div className="grid grid-cols-7 gap-1">
                           {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
                             <div key={day} className="text-center">
                               <div className="text-xs text-gray-500 mb-1">{day}</div>
-                              <div className={`h-8 rounded-lg flex flex-col items-center justify-center text-xs ${
-                                index < 5 ? 'bg-[#28559e]/10 border border-[#28559e]/20' : 'bg-gray-100'
+                              <div className={`h-8 rounded-lg flex flex-col items-center justify-center text-xs border-2 ${
+                                index < 5 ? 'bg-[#28559e]/10 border-[#28559e]/20' : 'bg-gray-100 border-gray-200'
                               }`}>
                                 {index < 5 ? (
                                   <>
@@ -80,7 +80,7 @@ export default function HomePage() {
                         </div>
                       </div>
 
-                      {/* Today's Schedule */}
+                      {/* Today's Schedule - Matching Real Calendar Event Styling */}
                       <div className="bg-white border border-gray-200 rounded-lg p-3">
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="text-sm font-semibold text-gray-900">Today's Schedule</h3>
@@ -91,37 +91,73 @@ export default function HomePage() {
                         </div>
                         
                         <div className="space-y-2">
-                          <div className="flex items-center justify-between p-2 bg-[#28559e]/5 rounded-lg border-l-2 border-[#28559e]">
-                            <div className="flex items-center">
-                              <div className="w-2 h-2 bg-[#28559e] rounded-full mr-2"></div>
-                              <div>
-                                <div className="text-xs font-medium text-gray-900">Algebra Basics</div>
-                                <div className="text-xs text-gray-500">Year 9A • Room 12</div>
+                          {/* Lesson 1 - Planned lesson styling */}
+                          <div className="group flex flex-col text-xs transition-colors border-2 rounded-md px-1.5 py-1 shadow-sm hover:shadow-md cursor-pointer"
+                               style={{
+                                 backgroundColor: '#28559e15', // lightenColor equivalent
+                                 borderColor: '#28559eCC'
+                               }}>
+                            <div className="flex items-start justify-between gap-1">
+                              <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                <div className="text-xs font-semibold truncate" style={{ color: '#28559eE6' }}>
+                                  Algebra Basics
+                                </div>
+                                <div className="text-xs truncate" style={{ color: '#28559eCC' }}>
+                                  Year 9A
+                                </div>
+                                <div className="flex items-center text-xs">
+                                  <MapPin className="h-3 w-3 mr-1 flex-shrink-0" style={{ color: '#28559eCC' }} />
+                                  <span className="truncate" style={{ color: '#28559eCC' }}>Room 12</span>
+                                </div>
                               </div>
+                              <div className="text-xs text-gray-500">9:00 AM</div>
                             </div>
-                            <div className="text-xs text-gray-500">9:00 AM</div>
                           </div>
                           
-                          <div className="flex items-center justify-between p-2 bg-[#e85b46]/5 rounded-lg border-l-2 border-[#e85b46]">
-                            <div className="flex items-center">
-                              <div className="w-2 h-2 bg-[#e85b46] rounded-full mr-2"></div>
-                              <div>
-                                <div className="text-xs font-medium text-gray-900">Shakespeare</div>
-                                <div className="text-xs text-gray-500">Year 11B • Library</div>
+                          {/* Lesson 2 - Unfinished lesson styling */}
+                          <div className="group flex flex-col text-xs transition-colors border-2 rounded-md px-1.5 py-1 shadow-sm hover:shadow-md cursor-pointer opacity-50 grayscale"
+                               style={{
+                                 backgroundColor: '#e85b4615', // lightenColor equivalent
+                                 borderColor: '#e85b4650'
+                               }}>
+                            <div className="flex items-start justify-between gap-1">
+                              <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                <div className="text-xs font-semibold truncate" style={{ color: '#e85b46E6' }}>
+                                  Shakespeare
+                                </div>
+                                <div className="text-xs truncate" style={{ color: '#e85b46CC' }}>
+                                  Year 11B
+                                </div>
+                                <div className="flex items-center text-xs">
+                                  <MapPin className="h-3 w-3 mr-1 flex-shrink-0" style={{ color: '#e85b46CC' }} />
+                                  <span className="truncate" style={{ color: '#e85b46CC' }}>Library</span>
+                                </div>
                               </div>
+                              <div className="text-xs text-gray-500">11:30 AM</div>
                             </div>
-                            <div className="text-xs text-gray-500">11:30 AM</div>
                           </div>
                           
-                          <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                            <div className="flex items-center">
-                              <div className="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
-                              <div>
-                                <div className="text-xs font-medium text-gray-900">Physics Lab</div>
-                                <div className="text-xs text-gray-500">Year 10C • Lab 3</div>
+                          {/* Lesson 3 - Regular lesson styling */}
+                          <div className="group flex flex-col text-xs transition-colors border-2 rounded-md px-1.5 py-1 shadow-sm hover:shadow-md cursor-pointer"
+                               style={{
+                                 backgroundColor: '#F9FAFB',
+                                 borderColor: '#374151'
+                               }}>
+                            <div className="flex items-start justify-between gap-1">
+                              <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                <div className="text-xs font-semibold truncate" style={{ color: '#111827' }}>
+                                  Physics Lab
+                                </div>
+                                <div className="text-xs truncate" style={{ color: '#374151' }}>
+                                  Year 10C
+                                </div>
+                                <div className="flex items-center text-xs">
+                                  <MapPin className="h-3 w-3 mr-1 flex-shrink-0" style={{ color: '#374151' }} />
+                                  <span className="truncate" style={{ color: '#374151' }}>Lab 3</span>
+                                </div>
                               </div>
+                              <div className="text-xs text-gray-500">2:00 PM</div>
                             </div>
-                            <div className="text-xs text-gray-500">2:00 PM</div>
                           </div>
                         </div>
                       </div>
@@ -193,9 +229,9 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">Lesson Planning</h3>
               <p className="text-gray-600">
-                Create, organize, and track your lessons with our intuitive planning tools. 
-                Never lose track of your curriculum again.
-              </p>
+                  Create, organize, and track your lessons with our intuitive planning tools. 
+                  Never lose track of your curriculum again.
+                </p>
             </div>
 
             {/* Feature 2 */}
@@ -205,9 +241,9 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">Timetable Management</h3>
               <p className="text-gray-600">
-                Build flexible timetables that adapt to your teaching schedule. 
-                Manage classes, subjects, and activities with ease.
-              </p>
+                  Build flexible timetables that adapt to your teaching schedule. 
+                  Manage classes, subjects, and activities with ease.
+                </p>
             </div>
 
             {/* Feature 3 */}
@@ -217,9 +253,9 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">Student Organization</h3>
               <p className="text-gray-600">
-                Keep track of your classes, student counts, and teaching groups. 
-                Stay organized and focused on what matters most.
-              </p>
+                  Keep track of your classes, student counts, and teaching groups. 
+                  Stay organized and focused on what matters most.
+                </p>
             </div>
           </div>
         </div>
@@ -229,12 +265,12 @@ export default function HomePage() {
       <section className="py-20 bg-gradient-to-r from-[#28559e] to-[#1e3d72]">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl font-bold text-white mb-6">
-            Ready to Transform Your Teaching?
-          </h2>
+                Ready to Transform Your Teaching?
+              </h2>
           <p className="text-xl text-blue-100 mb-8">
-            Join thousands of teachers who have streamlined their workflow with TeacherTab. 
-            Spend less time on admin, more time inspiring students.
-          </p>
+                Join thousands of teachers who have streamlined their workflow with TeacherTab. 
+                Spend less time on admin, more time inspiring students.
+              </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button
               size="lg"
@@ -244,11 +280,11 @@ export default function HomePage() {
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <div className="flex items-center space-x-6 text-blue-100">
-              <div className="flex items-center">
+                <div className="flex items-center">
                 <CheckCircle className="h-5 w-5 mr-2" />
                 <span>Free to start</span>
-              </div>
-              <div className="flex items-center">
+                </div>
+                <div className="flex items-center">
                 <CheckCircle className="h-5 w-5 mr-2" />
                 <span>No setup required</span>
               </div>
