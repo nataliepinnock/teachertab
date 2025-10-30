@@ -65,6 +65,13 @@ const signUpSchema = z.object({
 export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   const { name, email, password, teacherType, timetableCycle } = data;
 
+  // Enforce selecting a paid plan BEFORE creating the user
+  const redirectToGuard = formData.get('redirect') as string | null;
+  const priceIdGuard = formData.get('priceId') as string | null;
+  if (redirectToGuard !== 'checkout' || !priceIdGuard) {
+    redirect('/pricing');
+  }
+
   // Check if user already exists
   const [existingUser] = await db
     .select()
@@ -98,16 +105,8 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
   await setSession(createdUser);
 
-  const redirectTo = formData.get('redirect') as string | null;
-  if (redirectTo === 'checkout') {
-    const priceId = formData.get('priceId') as string;
-    if (priceId) {
-      return createCheckoutSession({ user: createdUser, priceId });
-    }
-    redirect('/pricing');
-  }
-  // Enforce selecting a paid plan before proceeding
-  redirect('/pricing');
+  // At this point, guard already ensured presence of priceId
+  return createCheckoutSession({ user: createdUser, priceId: priceIdGuard });
 });
 
 export async function signOut() {
