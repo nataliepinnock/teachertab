@@ -71,7 +71,7 @@ function ManageSubscription() {
             <div className="mb-4 sm:mb-0">
               <div className="flex items-center gap-2 mb-2">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  {userData?.planName || 'Free Plan'}
+                  {userData?.planName || 'No active plan'}
                 </span>
                 <span className="text-sm text-gray-500">
                   {userData?.subscriptionStatus === 'active'

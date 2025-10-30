@@ -26,7 +26,7 @@ async function createStripeProducts() {
     currency: 'usd',
     recurring: {
       interval: 'month',
-      trial_period_days: 7,
+      trial_period_days: 0,
     },
   });
 
@@ -41,7 +41,7 @@ async function createStripeProducts() {
     currency: 'usd',
     recurring: {
       interval: 'month',
-      trial_period_days: 7,
+      trial_period_days: 0,
     },
   });
 

@@ -48,6 +48,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     if (priceId) {
       return createCheckoutSession({ user: user, priceId });
     }
+    redirect('/pricing');
   }
 
   redirect('/dashboard');
@@ -100,10 +101,13 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
     const priceId = formData.get('priceId') as string;
-    return createCheckoutSession({ user: createdUser, priceId });
+    if (priceId) {
+      return createCheckoutSession({ user: createdUser, priceId });
+    }
+    redirect('/pricing');
   }
-
-  redirect('/dashboard');
+  // Enforce selecting a paid plan before proceeding
+  redirect('/pricing');
 });
 
 export async function signOut() {
