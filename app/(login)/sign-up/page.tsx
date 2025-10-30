@@ -7,15 +7,12 @@ export const dynamic = 'force-dynamic';
 export default async function SignUpPage({
   searchParams
 }: {
-  // In Next.js 15 with PPR, searchParams is a Promise
-  searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>;
+  // Match Next 15 PageProps: searchParams can be a Promise
+  searchParams?: Promise<any>;
 }) {
-  const resolvedParams =
-    typeof (searchParams as any)?.then === 'function'
-      ? await (searchParams as Promise<Record<string, string | string[] | undefined>>)
-      : ((searchParams as Record<string, string | string[] | undefined>) || undefined);
+  const resolvedParams = searchParams ? await searchParams : undefined;
 
-  const rawPriceId = resolvedParams?.priceId;
+  const rawPriceId = resolvedParams?.priceId as string | string[] | undefined;
   const priceId = Array.isArray(rawPriceId) ? rawPriceId[0] : rawPriceId;
 
   // Force users to choose a plan first
