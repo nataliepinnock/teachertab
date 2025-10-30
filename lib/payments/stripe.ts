@@ -12,10 +12,7 @@ if (!stripeSecretKey) {
   throw new Error('Missing STRIPE_SECRET_KEY environment variable');
 }
 
-export const stripe = new Stripe(stripeSecretKey, {
-  // Use a stable, valid API version or omit to use account default
-  apiVersion: '2024-06-20'
-});
+export const stripe = new Stripe(stripeSecretKey);
 
 const appBaseUrl =
   process.env.NEXT_PUBLIC_APP_URL ||
