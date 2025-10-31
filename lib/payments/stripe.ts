@@ -1,4 +1,4 @@
-import Stripe from 'stripe';
+                                                                                                              import Stripe from 'stripe';
 import { redirect } from 'next/navigation';
 import { User } from '@/lib/db/schema';
 import {
@@ -19,12 +19,16 @@ const appBaseUrl =
   process.env.BASE_URL ||
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
+type CheckoutSessionContext = 'signup' | 'existing';
+
 export async function createCheckoutSession({
   user,
-  priceId
+  priceId,
+  context = 'existing'
 }: {
   user: User | null;
   priceId: string;
+  context?: CheckoutSessionContext;
 }) {
   const currentUser = await getUser();
 
@@ -42,12 +46,15 @@ export async function createCheckoutSession({
     ],
     mode: 'subscription',
     success_url: `${appBaseUrl}/api/stripe/checkout?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appBaseUrl}/pricing`,
+    cancel_url: `${appBaseUrl}/api/stripe/checkout/cancel?session_id={CHECKOUT_SESSION_ID}`,
     customer: user.stripeCustomerId || undefined,
     client_reference_id: user.id.toString(),
     allow_promotion_codes: true,
     subscription_data: {
       // No trial period
+    },
+    metadata: {
+      flow: context
     }
   });
 

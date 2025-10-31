@@ -11,7 +11,7 @@ export const checkoutAction = async (formData: FormData) => {
   }
   
   const priceId = formData.get('priceId') as string;
-  await createCheckoutSession({ user: user, priceId });
+  await createCheckoutSession({ user, priceId, context: 'existing' });
 };
 
 export const customerPortalAction = async () => {

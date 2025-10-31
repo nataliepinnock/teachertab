@@ -46,6 +46,31 @@ export async function getUserByStripeCustomerId(customerId: string) {
   return result.length > 0 ? result[0] : null;
 }
 
+export async function getUserById(userId: number) {
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function deleteUserIfNoSubscription(userId: number) {
+  const user = await getUserById(userId);
+
+  if (!user) {
+    return false;
+  }
+
+  if (user.stripeSubscriptionId || user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing') {
+    return false;
+  }
+
+  await db.delete(users).where(eq(users.id, userId));
+  return true;
+}
+
 export async function updateUserSubscription(
   userId: number,
   subscriptionData: {

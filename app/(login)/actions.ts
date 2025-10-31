@@ -51,7 +51,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
         email
       };
     }
-    return createCheckoutSession({ user: user, priceId });
+    return createCheckoutSession({ user, priceId, context: 'existing' });
   }
 
   redirect('/dashboard');
@@ -119,7 +119,11 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   await setSession(createdUser);
 
   if (redirectIntent === 'checkout') {
-    return createCheckoutSession({ user: createdUser, priceId: selectedPriceId });
+    return createCheckoutSession({
+      user: createdUser,
+      priceId: selectedPriceId,
+      context: 'signup'
+    });
   }
 
   return {

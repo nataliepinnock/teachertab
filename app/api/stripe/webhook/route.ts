@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
 import { NextRequest, NextResponse } from 'next/server';
+import { deleteUserIfNoSubscription } from '@/lib/db/queries';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -25,6 +26,16 @@ export async function POST(request: NextRequest) {
     case 'customer.subscription.deleted':
       const subscription = event.data.object as Stripe.Subscription;
       await handleSubscriptionChange(subscription);
+      break;
+    case 'checkout.session.expired':
+    case 'checkout.session.async_payment_failed':
+      const session = event.data.object as Stripe.Checkout.Session;
+      if (session.metadata?.flow === 'signup' && session.client_reference_id) {
+        const userId = Number(session.client_reference_id);
+        if (!Number.isNaN(userId)) {
+          await deleteUserIfNoSubscription(userId);
+        }
+      }
       break;
     default:
       console.log(`Unhandled event type ${event.type}`);
