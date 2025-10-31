@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
-import { redirect } from 'next/navigation';
 import { Login } from '../login';
+import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,10 +15,38 @@ export default async function SignUpPage({
   const rawPriceId = resolvedParams?.priceId as string | string[] | undefined;
   const priceId = Array.isArray(rawPriceId) ? rawPriceId[0] : rawPriceId;
 
-  // Force users to choose a plan first
-  if (!priceId) {
-    redirect('/pricing');
-  }
+  const [prices, products] = await Promise.all([
+    getStripePrices(),
+    getStripeProducts()
+  ]);
 
-  return <Login mode="signup" />;
+  const plans = prices
+    .map((price) => {
+      const product = products.find((product) => product.id === price.productId);
+
+      if (price.unitAmount == null || !price.interval || !product?.name) {
+        return null;
+      }
+
+      return {
+        id: price.id,
+        name: product.name,
+        amount: price.unitAmount,
+        interval: price.interval,
+        description: product.description
+      };
+    })
+    .filter((plan): plan is {
+      id: string;
+      name: string;
+      amount: number;
+      interval: string;
+      description?: string | null;
+    } => Boolean(plan));
+
+  return (
+    <Suspense>
+      <Login mode="signup" initialPriceId={priceId || undefined} plans={plans} />
+    </Suspense>
+  );
 }

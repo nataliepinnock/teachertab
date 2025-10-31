@@ -44,11 +44,14 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
-    const priceId = formData.get('priceId') as string;
-    if (priceId) {
-      return createCheckoutSession({ user: user, priceId });
+    const priceId = formData.get('priceId') as string | null;
+    if (!priceId) {
+      return {
+        error: 'Please choose a subscription plan to continue.',
+        email
+      };
     }
-    redirect('/pricing');
+    return createCheckoutSession({ user: user, priceId });
   }
 
   redirect('/dashboard');
@@ -65,11 +68,15 @@ const signUpSchema = z.object({
 export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   const { name, email, password, teacherType, timetableCycle } = data;
 
-  // Enforce selecting a paid plan BEFORE creating the user
-  const redirectToGuard = formData.get('redirect') as string | null;
-  const priceIdGuard = formData.get('priceId') as string | null;
-  if (redirectToGuard !== 'checkout' || !priceIdGuard) {
-    redirect('/pricing');
+  const redirectIntent = formData.get('redirect') as string | null;
+  const selectedPriceId = formData.get('priceId') as string | null;
+
+  if (!selectedPriceId) {
+    return {
+      error: 'Please select a subscription plan to continue.',
+      name,
+      email
+    };
   }
 
   // Check if user already exists
@@ -80,7 +87,12 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     .limit(1);
 
   if (existingUser) {
-    return { error: 'User with this email already exists.', name, email };
+    return {
+      error: 'User with this email already exists.',
+      name,
+      email,
+      priceId: selectedPriceId
+    };
   }
 
   const passwordHash = await hashPassword(password);
@@ -99,14 +111,21 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     return {
       error: 'Failed to create user. Please try again.',
       name,
-      email
+      email,
+      priceId: selectedPriceId
     };
   }
 
   await setSession(createdUser);
 
-  // At this point, guard already ensured presence of priceId
-  return createCheckoutSession({ user: createdUser, priceId: priceIdGuard });
+  if (redirectIntent === 'checkout') {
+    return createCheckoutSession({ user: createdUser, priceId: selectedPriceId });
+  }
+
+  return {
+    success: 'Account created successfully.',
+    priceId: selectedPriceId
+  };
 });
 
 export async function signOut() {
