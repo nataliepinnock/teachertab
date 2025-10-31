@@ -33,8 +33,25 @@ export async function POST(request: NextRequest) {
       if (session.metadata?.flow === 'signup' && session.client_reference_id) {
         const userId = Number(session.client_reference_id);
         if (!Number.isNaN(userId)) {
-          await deleteUserIfNoSubscription(userId);
+          const deleted = await deleteUserIfNoSubscription(userId);
+          console.log('Webhook cleanup', {
+            eventType: event.type,
+            sessionId: session.id,
+            userId,
+            deleted
+          });
+        } else {
+          console.warn('Webhook cleanup skipped: invalid user id', {
+            eventType: event.type,
+            raw: session.client_reference_id
+          });
         }
+      } else {
+        console.log('Webhook cleanup skipped: not signup flow or missing user', {
+          eventType: event.type,
+          metadata: session.metadata,
+          clientReferenceId: session.client_reference_id
+        });
       }
       break;
     default:

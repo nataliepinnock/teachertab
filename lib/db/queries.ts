@@ -60,14 +60,21 @@ export async function deleteUserIfNoSubscription(userId: number) {
   const user = await getUserById(userId);
 
   if (!user) {
+    console.warn('deleteUserIfNoSubscription: user not found', { userId });
     return false;
   }
 
   if (user.stripeSubscriptionId || user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing') {
+    console.log('deleteUserIfNoSubscription: user has subscription, skipping', {
+      userId,
+      stripeSubscriptionId: user.stripeSubscriptionId,
+      subscriptionStatus: user.subscriptionStatus
+    });
     return false;
   }
 
   await db.delete(users).where(eq(users.id, userId));
+  console.log('deleteUserIfNoSubscription: deleted user', { userId });
   return true;
 }
 

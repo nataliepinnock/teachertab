@@ -16,16 +16,26 @@ async function cleanupSignupIfNeeded(session: Stripe.Checkout.Session) {
   const userIdRaw = session.client_reference_id;
 
   if (flow !== 'signup' || !userIdRaw) {
+    console.log('Checkout cancel: flow not signup or missing user', {
+      flow,
+      userIdRaw
+    });
     return;
   }
 
   const userId = Number(userIdRaw);
 
   if (Number.isNaN(userId)) {
+    console.warn('Checkout cancel: invalid user id', { userIdRaw });
     return;
   }
 
-  await deleteUserIfNoSubscription(userId);
+  const deleted = await deleteUserIfNoSubscription(userId);
+  console.log('Checkout cancel cleanup result', {
+    sessionId: session.id,
+    userId,
+    deleted
+  });
 }
 
 export async function GET(request: NextRequest) {
