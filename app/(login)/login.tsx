@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useActionState, useEffect, useMemo, useState } from 'react';
+import type Stripe from 'stripe';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,11 +13,11 @@ import { TeacherTabLogo } from '@/components/ui/logo';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
 
-type PlanOption = {
+export type PlanOption = {
   id: string;
   name: string;
   amount: number;
-  interval: string;
+  interval: Stripe.Price.Recurring.Interval;
   description?: string | null;
 };
 

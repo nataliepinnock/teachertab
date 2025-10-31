@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Login } from '../login';
+import { Login, type PlanOption } from '../login';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 
 export const dynamic = 'force-dynamic';
@@ -20,29 +20,23 @@ export default async function SignUpPage({
     getStripeProducts()
   ]);
 
-  const plans = prices
-    .map((price) => {
-      const product = products.find((product) => product.id === price.productId);
+  const plans: PlanOption[] = prices.flatMap((price) => {
+    const product = products.find((product) => product.id === price.productId);
 
-      if (price.unitAmount == null || !price.interval || !product?.name) {
-        return null;
-      }
+    if (price.unitAmount == null || !price.interval || !product?.name) {
+      return [];
+    }
 
-      return {
+    return [
+      {
         id: price.id,
         name: product.name,
         amount: price.unitAmount,
         interval: price.interval,
-        description: product.description
-      };
-    })
-    .filter((plan): plan is {
-      id: string;
-      name: string;
-      amount: number;
-      interval: string;
-      description?: string | null;
-    } => Boolean(plan));
+        description: product.description ?? null
+      }
+    ];
+  });
 
   return (
     <Suspense>
