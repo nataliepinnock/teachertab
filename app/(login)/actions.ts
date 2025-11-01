@@ -53,7 +53,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
     return {
       error:
-        'Payment was not completed, so the account has been removed. Please sign up again to restart your subscription.',
+        'Looks like the payment didn't go through, so we've cancelled that signup. Please start a new signup when you're ready to try again.',
       email,
       priceId: priceId || undefined
     };
