@@ -45,16 +45,32 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(buildRedirectUrl(request));
   }
 
+  let redirectUrl = buildRedirectUrl(request, 'checkout=cancelled');
+
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['customer']
+      expand: ['customer', 'line_items']
     });
 
     await cleanupSignupIfNeeded(session);
+
+    if (session.metadata?.flow === 'signup') {
+      const url = new URL('/sign-up', request.url);
+      url.searchParams.set('redirect', 'checkout');
+      url.searchParams.set('checkout', 'cancelled');
+
+      const priceId = session.metadata?.priceId ||
+        (session.line_items?.data?.[0]?.price as Stripe.Price | undefined)?.id;
+      if (priceId) {
+        url.searchParams.set('priceId', priceId);
+      }
+
+      redirectUrl = url;
+    }
   } catch (error) {
     console.error('Error handling checkout cancellation:', error);
   }
 
-  return NextResponse.redirect(buildRedirectUrl(request, 'checkout=cancelled'));
+  return NextResponse.redirect(redirectUrl);
 }
 

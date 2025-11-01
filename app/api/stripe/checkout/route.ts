@@ -14,9 +14,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/pricing', request.url));
   }
 
+  let session: Stripe.Checkout.Session | null = null;
+
   try {
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['customer', 'subscription'],
+    session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['customer', 'subscription', 'line_items'],
     });
 
     if (!session.customer || typeof session.customer === 'string') {
@@ -79,6 +81,35 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);
-    return NextResponse.redirect(new URL('/error', request.url));
+
+    let redirectUrl = new URL('/pricing', request.url);
+    redirectUrl.searchParams.set('checkout', 'failed');
+
+    let fallbackSession = session;
+
+    if (!fallbackSession) {
+      try {
+        fallbackSession = await stripe.checkout.sessions.retrieve(sessionId, {
+          expand: ['line_items'],
+        });
+      } catch (sessionError) {
+        console.error('Error retrieving failed checkout session:', sessionError);
+      }
+    }
+
+    const priceId = fallbackSession?.metadata?.priceId ||
+      (fallbackSession?.line_items?.data?.[0]?.price as Stripe.Price | undefined)?.id;
+    const flow = fallbackSession?.metadata?.flow;
+
+    if (flow === 'signup') {
+      redirectUrl = new URL('/sign-up', request.url);
+      redirectUrl.searchParams.set('redirect', 'checkout');
+      redirectUrl.searchParams.set('checkout', 'failed');
+      if (priceId) {
+        redirectUrl.searchParams.set('priceId', priceId);
+      }
+    }
+
+    return NextResponse.redirect(redirectUrl);
   }
 }

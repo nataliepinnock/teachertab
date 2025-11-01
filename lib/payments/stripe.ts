@@ -62,7 +62,8 @@ export async function createCheckoutSession({
       // No trial period
     },
     metadata: {
-      flow: context
+      flow: context,
+      priceId
     }
   });
 

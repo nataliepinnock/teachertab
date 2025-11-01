@@ -1,0 +1,108 @@
+[1mdiff --git a/app/api/stripe/checkout/cancel/route.ts b/app/api/stripe/checkout/cancel/route.ts[m
+[1mindex 3da2acc..5a221c7 100644[m
+[1m--- a/app/api/stripe/checkout/cancel/route.ts[m
+[1m+++ b/app/api/stripe/checkout/cancel/route.ts[m
+[36m@@ -45,16 +45,32 @@[m [mexport async function GET(request: NextRequest) {[m
+     return NextResponse.redirect(buildRedirectUrl(request));[m
+   }[m
+ [m
+[32m+[m[32m  let redirectUrl = buildRedirectUrl(request, 'checkout=cancelled');[m
+[32m+[m
+   try {[m
+     const session = await stripe.checkout.sessions.retrieve(sessionId, {[m
+[31m-      expand: ['customer'][m
+[32m+[m[32m      expand: ['customer', 'line_items'][m
+     });[m
+ [m
+     await cleanupSignupIfNeeded(session);[m
+[32m+[m
+[32m+[m[32m    if (session.metadata?.flow === 'signup') {[m
+[32m+[m[32m      const url = new URL('/sign-up', request.url);[m
+[32m+[m[32m      url.searchParams.set('redirect', 'checkout');[m
+[32m+[m[32m      url.searchParams.set('checkout', 'cancelled');[m
+[32m+[m
+[32m+[m[32m      const priceId = session.metadata?.priceId ||[m
+[32m+[m[32m        (session.line_items?.data?.[0]?.price as Stripe.Price | undefined)?.id;[m
+[32m+[m[32m      if (priceId) {[m
+[32m+[m[32m        url.searchParams.set('priceId', priceId);[m
+[32m+[m[32m      }[m
+[32m+[m
+[32m+[m[32m      redirectUrl = url;[m
+[32m+[m[32m    }[m
+   } catch (error) {[m
+     console.error('Error handling checkout cancellation:', error);[m
+   }[m
+ [m
+[31m-  return NextResponse.redirect(buildRedirectUrl(request, 'checkout=cancelled'));[m
+[32m+[m[32m  return NextResponse.redirect(redirectUrl);[m
+ }[m
+ [m
+[1mdiff --git a/app/api/stripe/checkout/route.ts b/app/api/stripe/checkout/route.ts[m
+[1mindex 5af8834..1e5cce2 100644[m
+[1m--- a/app/api/stripe/checkout/route.ts[m
+[1m+++ b/app/api/stripe/checkout/route.ts[m
+[36m@@ -14,9 +14,11 @@[m [mexport async function GET(request: NextRequest) {[m
+     return NextResponse.redirect(new URL('/pricing', request.url));[m
+   }[m
+ [m
+[32m+[m[32m  let session: Stripe.Checkout.Session | null = null;[m
+[32m+[m
+   try {[m
+[31m-    const session = await stripe.checkout.sessions.retrieve(sessionId, {[m
+[31m-      expand: ['customer', 'subscription'],[m
+[32m+[m[32m    session = await stripe.checkout.sessions.retrieve(sessionId, {[m
+[32m+[m[32m      expand: ['customer', 'subscription', 'line_items'],[m
+     });[m
+ [m
+     if (!session.customer || typeof session.customer === 'string') {[m
+[36m@@ -79,6 +81,35 @@[m [mexport async function GET(request: NextRequest) {[m
+     return NextResponse.redirect(new URL('/dashboard', request.url));[m
+   } catch (error) {[m
+     console.error('Error handling successful checkout:', error);[m
+[31m-    return NextResponse.redirect(new URL('/error', request.url));[m
+[32m+[m
+[32m+[m[32m    let redirectUrl = new URL('/pricing', request.url);[m
+[32m+[m[32m    redirectUrl.searchParams.set('checkout', 'failed');[m
+[32m+[m
+[32m+[m[32m    let fallbackSession = session;[m
+[32m+[m
+[32m+[m[32m    if (!fallbackSession) {[m
+[32m+[m[32m      try {[m
+[32m+[m[32m        fallbackSession = await stripe.checkout.sessions.retrieve(sessionId, {[m
+[32m+[m[32m          expand: ['line_items'],[m
+[32m+[m[32m        });[m
+[32m+[m[32m      } catch (sessionError) {[m
+[32m+[m[32m        console.error('Error retrieving failed checkout session:', sessionError);[m
+[32m+[m[32m      }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    const priceId = fallbackSession?.metadata?.priceId ||[m
+[32m+[m[32m      (fallbackSession?.line_items?.data?.[0]?.price as Stripe.Price | undefined)?.id;[m
+[32m+[m[32m    const flow = fallbackSession?.metadata?.flow;[m
+[32m+[m
+[32m+[m[32m    if (flow === 'signup') {[m
+[32m+[m[32m      redirectUrl = new URL('/sign-up', request.url);[m
+[32m+[m[32m      redirectUrl.searchParams.set('redirect', 'checkout');[m
+[32m+[m[32m      redirectUrl.searchParams.set('checkout', 'failed');[m
+[32m+[m[32m      if (priceId) {[m
+[32m+[m[32m        redirectUrl.searchParams.set('priceId', priceId);[m
+[32m+[m[32m      }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    return NextResponse.redirect(redirectUrl);[m
+   }[m
+ }[m
+[1mdiff --git a/lib/payments/stripe.ts b/lib/payments/stripe.ts[m
+[1mindex 3e426ec..b862094 100644[m
+[1m--- a/lib/payments/stripe.ts[m
+[1m+++ b/lib/payments/stripe.ts[m
+[36m@@ -62,7 +62,8 @@[m [mexport async function createCheckoutSession({[m
+       // No trial period[m
+     },[m
+     metadata: {[m
+[31m-      flow: context[m
+[32m+[m[32m      flow: context,[m
+[32m+[m[32m      priceId[m
+     }[m
+   });[m
+ [m
