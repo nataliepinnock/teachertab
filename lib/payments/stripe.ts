@@ -32,7 +32,15 @@ export async function createCheckoutSession({
 }) {
   const currentUser = await getUser();
 
-  if (!user || !currentUser) {
+  if (!user) {
+    redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
+  }
+
+  if (context === 'existing') {
+    if (!currentUser || currentUser.id !== user.id) {
+      redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
+    }
+  } else if (context === 'signup' && currentUser && currentUser.id !== user.id) {
     redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
   }
 

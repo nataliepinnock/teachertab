@@ -40,11 +40,33 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     return { error: 'Invalid email or password.', email };
   }
 
+  const redirectTo = formData.get('redirect') as string | null;
+  const priceId = formData.get('priceId') as string | null;
+
+  const activeStatuses = new Set(['active', 'trialing']);
+  const isSubscriptionActive =
+    typeof user.subscriptionStatus === 'string' &&
+    activeStatuses.has(user.subscriptionStatus);
+
+  if (!isSubscriptionActive) {
+    if (redirectTo === 'checkout' && priceId) {
+      return createCheckoutSession({
+        user,
+        priceId,
+        context: 'signup'
+      });
+    }
+
+    return {
+      error: 'Your subscription is not active. Please complete payment to continue.',
+      email,
+      priceId: priceId || undefined
+    };
+  }
+
   await setSession(user);
 
-  const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
-    const priceId = formData.get('priceId') as string | null;
     if (!priceId) {
       return {
         error: 'Please choose a subscription plan to continue.',
@@ -102,7 +124,8 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     email,
     passwordHash,
     teacherType: teacherType as string,
-    timetableCycle: timetableCycle as string
+    timetableCycle: timetableCycle as string,
+    subscriptionStatus: 'incomplete'
   };
 
   const [createdUser] = await db.insert(users).values(newUser).returning();
@@ -115,8 +138,6 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
       priceId: selectedPriceId
     };
   }
-
-  await setSession(createdUser);
 
   if (redirectIntent === 'checkout') {
     return createCheckoutSession({
