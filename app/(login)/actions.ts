@@ -11,7 +11,7 @@ import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { createCheckoutSession } from '@/lib/payments/stripe';
-import { getUser } from '@/lib/db/queries';
+import { deleteUserIfNoSubscription } from '@/lib/db/queries';
 import {
   validatedAction,
   validatedActionWithUser
@@ -49,16 +49,11 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     activeStatuses.has(user.subscriptionStatus);
 
   if (!isSubscriptionActive) {
-    if (redirectTo === 'checkout' && priceId) {
-      return createCheckoutSession({
-        user,
-        priceId,
-        context: 'signup'
-      });
-    }
+    await deleteUserIfNoSubscription(user.id);
 
     return {
-      error: 'Your subscription is not active. Please complete payment to continue.',
+      error:
+        'Payment was not completed, so the account has been removed. Please sign up again to restart your subscription.',
       email,
       priceId: priceId || undefined
     };
@@ -109,12 +104,30 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     .limit(1);
 
   if (existingUser) {
-    return {
-      error: 'User with this email already exists.',
-      name,
-      email,
-      priceId: selectedPriceId
-    };
+    const activeStatuses = new Set(['active', 'trialing']);
+    const isExistingActive =
+      typeof existingUser.subscriptionStatus === 'string' &&
+      activeStatuses.has(existingUser.subscriptionStatus);
+
+    if (isExistingActive) {
+      return {
+        error: 'User with this email already exists.',
+        name,
+        email,
+        priceId: selectedPriceId
+      };
+    }
+
+    const removed = await deleteUserIfNoSubscription(existingUser.id);
+
+    if (!removed) {
+      return {
+        error: 'User with this email already exists.',
+        name,
+        email,
+        priceId: selectedPriceId
+      };
+    }
   }
 
   const passwordHash = await hashPassword(password);
