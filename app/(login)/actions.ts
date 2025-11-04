@@ -96,7 +96,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     };
   }
 
-  // Check if user already exists
+  // Check if user already exists with active subscription
   const [existingUser] = await db
     .select()
     .from(users)
@@ -118,6 +118,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
       };
     }
 
+    // Remove inactive user if exists
     const removed = await deleteUserIfNoSubscription(existingUser.id);
 
     if (!removed) {
@@ -130,33 +131,22 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     }
   }
 
+  // Hash password before storing in Stripe metadata
   const passwordHash = await hashPassword(password);
 
-  const newUser: NewUser = {
-    name,
-    email,
-    passwordHash,
-    teacherType: teacherType as string,
-    timetableCycle: timetableCycle as string,
-    subscriptionStatus: 'incomplete'
-  };
-
-  const [createdUser] = await db.insert(users).values(newUser).returning();
-
-  if (!createdUser) {
-    return {
-      error: 'Failed to create user. Please try again.',
-      name,
-      email,
-      priceId: selectedPriceId
-    };
-  }
-
   if (redirectIntent === 'checkout') {
+    // Create checkout session with signup data in metadata (no user account yet)
     return createCheckoutSession({
-      user: createdUser,
+      user: null,
       priceId: selectedPriceId,
-      context: 'signup'
+      context: 'signup',
+      signupData: {
+        name,
+        email,
+        passwordHash,
+        teacherType: teacherType as string,
+        timetableCycle: timetableCycle as string
+      }
     });
   }
 

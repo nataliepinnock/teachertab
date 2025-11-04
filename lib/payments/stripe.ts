@@ -21,27 +21,59 @@ const appBaseUrl =
 
 type CheckoutSessionContext = 'signup' | 'existing';
 
+type SignupData = {
+  name: string;
+  email: string;
+  passwordHash: string;
+  teacherType: string;
+  timetableCycle: string;
+};
+
 export async function createCheckoutSession({
   user,
   priceId,
-  context = 'existing'
+  context = 'existing',
+  signupData
 }: {
   user: User | null;
   priceId: string;
   context?: CheckoutSessionContext;
+  signupData?: SignupData;
 }) {
   const currentUser = await getUser();
 
-  if (!user) {
-    redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
-  }
+  if (context === 'signup') {
+    // For signup, user is null and we use signupData
+    if (!signupData) {
+      redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
+    }
+    // If someone is already logged in, sign them out first
+    if (currentUser) {
+      redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
+    }
+  } else {
+    // For existing users, user must be provided
+    if (!user) {
+      redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
+    }
 
-  if (context === 'existing') {
     if (!currentUser || currentUser.id !== user.id) {
       redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
     }
-  } else if (context === 'signup' && currentUser && currentUser.id !== user.id) {
-    redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
+  }
+
+  const metadata: Record<string, string> = {
+    flow: context,
+    priceId
+  };
+
+  // Store signup data in metadata for signup flow
+  if (context === 'signup' && signupData) {
+    metadata.signupName = signupData.name;
+    metadata.signupEmail = signupData.email;
+    metadata.signupPasswordHash = signupData.passwordHash;
+    metadata.signupTeacherType = signupData.teacherType;
+    metadata.signupTimetableCycle = signupData.timetableCycle;
   }
 
   const session = await stripe.checkout.sessions.create({
@@ -55,16 +87,13 @@ export async function createCheckoutSession({
     mode: 'subscription',
     success_url: `${appBaseUrl}/api/stripe/checkout?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appBaseUrl}/api/stripe/checkout/cancel?session_id={CHECKOUT_SESSION_ID}`,
-    customer: user.stripeCustomerId || undefined,
-    client_reference_id: user.id.toString(),
+    customer: user?.stripeCustomerId || undefined,
+    client_reference_id: user?.id.toString(),
     allow_promotion_codes: true,
     subscription_data: {
       // No trial period
     },
-    metadata: {
-      flow: context,
-      priceId
-    }
+    metadata
   });
 
   redirect(session.url!);

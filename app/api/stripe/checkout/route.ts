@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
-import { users } from '@/lib/db/schema';
+import { users, type NewUser } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
@@ -57,33 +57,95 @@ export async function GET(request: NextRequest) {
       throw new Error('No product ID found for this subscription.');
     }
 
-    const userId = session.client_reference_id;
-    if (!userId) {
-      throw new Error("No user ID found in session's client_reference_id.");
+    const flow = session.metadata?.flow;
+
+    if (flow === 'signup') {
+      // Create new user from signup data in metadata
+      const signupName = session.metadata?.signupName;
+      const signupEmail = session.metadata?.signupEmail;
+      const signupPasswordHash = session.metadata?.signupPasswordHash;
+      const signupTeacherType = session.metadata?.signupTeacherType;
+      const signupTimetableCycle = session.metadata?.signupTimetableCycle;
+
+      if (!signupName || !signupEmail || !signupPasswordHash || !signupTeacherType || !signupTimetableCycle) {
+        throw new Error('Missing signup data in session metadata.');
+      }
+
+      // Check if user already exists (shouldn't happen, but safety check)
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, signupEmail))
+        .limit(1);
+
+      if (existingUser) {
+        // User exists, update their subscription
+        await db
+          .update(users)
+          .set({
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subscriptionId,
+            stripeProductId: productId,
+            planName: (plan.product as Stripe.Product).name,
+            subscriptionStatus: subscription.status,
+          })
+          .where(eq(users.id, existingUser.id));
+
+        await setSession(existingUser);
+      } else {
+        // Create new user
+        const newUser: NewUser = {
+          name: signupName,
+          email: signupEmail,
+          passwordHash: signupPasswordHash,
+          teacherType: signupTeacherType,
+          timetableCycle: signupTimetableCycle,
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+          stripeProductId: productId,
+          planName: (plan.product as Stripe.Product).name,
+          subscriptionStatus: subscription.status,
+        };
+
+        const [createdUser] = await db.insert(users).values(newUser).returning();
+
+        if (!createdUser) {
+          throw new Error('Failed to create user account.');
+        }
+
+        await setSession(createdUser);
+      }
+    } else {
+      // Existing user flow - update subscription
+      const userId = session.client_reference_id;
+      if (!userId) {
+        throw new Error("No user ID found in session's client_reference_id.");
+      }
+
+      const user = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, Number(userId)))
+        .limit(1);
+
+      if (user.length === 0) {
+        throw new Error('User not found in database.');
+      }
+
+      await db
+        .update(users)
+        .set({
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+          stripeProductId: productId,
+          planName: (plan.product as Stripe.Product).name,
+          subscriptionStatus: subscription.status,
+        })
+        .where(eq(users.id, user[0].id));
+
+      await setSession(user[0]);
     }
 
-    const user = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, Number(userId)))
-      .limit(1);
-
-    if (user.length === 0) {
-      throw new Error('User not found in database.');
-    }
-
-    await db
-      .update(users)
-      .set({
-        stripeCustomerId: customerId,
-        stripeSubscriptionId: subscriptionId,
-        stripeProductId: productId,
-        planName: (plan.product as Stripe.Product).name,
-        subscriptionStatus: subscription.status,
-      })
-      .where(eq(users.id, user[0].id));
-
-    await setSession(user[0]);
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
     console.error('Error handling checkout:', error);
