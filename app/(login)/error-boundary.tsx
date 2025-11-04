@@ -5,6 +5,7 @@ import { Component, ReactNode } from 'react';
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  redirectTo?: string;
 }
 
 interface State {
@@ -25,19 +26,24 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
+  componentDidUpdate(prevProps: Props, prevState: State) {
+    if (this.state.hasError && !prevState.hasError) {
+      // Redirect to sign-up page on error
+      if (this.props.redirectTo) {
+        window.location.href = this.props.redirectTo;
+      } else {
+        window.location.href = '/sign-up';
+      }
+    }
+  }
+
   render() {
     if (this.state.hasError) {
+      // Show loading state while redirecting
       return this.props.fallback || (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Something went wrong</h2>
-            <p className="text-gray-600 mb-4">Please try refreshing the page.</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Refresh Page
-            </button>
+            <p className="text-gray-600">Redirecting...</p>
           </div>
         </div>
       );

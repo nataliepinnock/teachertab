@@ -90,22 +90,7 @@ export default async function SignUpPage({
   // Always render the Login component, even if plans are empty
   // This ensures browser back navigation always works
   return (
-    <ErrorBoundary
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="text-center max-w-md mx-auto p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome back</h2>
-            <p className="text-gray-600 mb-6">There was an issue loading the page. Please try signing up again.</p>
-            <a
-              href="/sign-up"
-              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Go to Sign Up
-            </a>
-          </div>
-        </div>
-      }
-    >
+    <ErrorBoundary redirectTo="/sign-up">
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
         <Login mode="signup" initialPriceId={priceId} plans={plans} />
       </Suspense>
