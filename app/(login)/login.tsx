@@ -128,36 +128,38 @@ export function Login({
                     onValueChange={setSelectedPlan}
                     className="space-y-3"
                   >
-                    {plans.map((plan) => (
-                      <label
-                        key={plan.id}
-                        htmlFor={`plan-${plan.id}`}
-                        className={`flex items-start justify-between gap-4 rounded-xl border p-4 transition hover:border-blue-500 ${
-                          selectedPlan === plan.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <RadioGroupItem
-                            value={plan.id}
-                            id={`plan-${plan.id}`}
-                            className="mt-1"
-                          />
-                          <div>
-                            <p className="text-base font-semibold text-gray-900">
-                              {plan.name}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {formatPrice(plan.amount, plan.interval || 'month')}
-                            </p>
-                            {plan.description && (
-                              <p className="mt-1 text-sm text-gray-500">
-                                {plan.description}
+                    {plans
+                      .filter((plan) => plan && plan.id && plan.name && plan.amount != null)
+                      .map((plan) => (
+                        <label
+                          key={plan.id}
+                          htmlFor={`plan-${plan.id}`}
+                          className={`flex items-start justify-between gap-4 rounded-xl border p-4 transition hover:border-blue-500 ${
+                            selectedPlan === plan.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <RadioGroupItem
+                              value={plan.id}
+                              id={`plan-${plan.id}`}
+                              className="mt-1"
+                            />
+                            <div>
+                              <p className="text-base font-semibold text-gray-900">
+                                {plan.name}
                               </p>
-                            )}
+                              <p className="text-sm text-gray-600">
+                                {formatPrice(plan.amount, plan.interval || 'month')}
+                              </p>
+                              {plan.description && (
+                                <p className="mt-1 text-sm text-gray-500">
+                                  {plan.description}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </label>
-                    ))}
+                        </label>
+                      ))}
                   </RadioGroup>
                 )}
               </div>

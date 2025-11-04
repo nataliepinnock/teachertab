@@ -26,7 +26,14 @@ export default async function SignUpPage({
     plans = prices.flatMap((price) => {
       const product = products.find((product) => product.id === price.productId);
 
-      if (price.unitAmount == null || !price.interval || !product?.name) {
+      // Ensure all required fields exist before creating plan
+      if (
+        !price.id ||
+        price.unitAmount == null ||
+        !price.interval ||
+        !product ||
+        !product.name
+      ) {
         return [];
       }
 
