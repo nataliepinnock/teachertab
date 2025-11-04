@@ -21,6 +21,11 @@ export async function GET(request: NextRequest) {
       expand: ['customer', 'subscription', 'line_items'],
     });
 
+    // Check payment status first - if payment failed or unpaid, redirect immediately
+    if (session.payment_status !== 'paid') {
+      throw new Error(`Payment status: ${session.payment_status}`);
+    }
+
     if (!session.customer || typeof session.customer === 'string') {
       throw new Error('Invalid customer data from Stripe.');
     }
@@ -32,6 +37,7 @@ export async function GET(request: NextRequest) {
         : session.subscription?.id;
 
     if (!subscriptionId) {
+      // If no subscription, payment likely failed - redirect to signup/pricing
       throw new Error('No subscription found for this session.');
     }
 
@@ -80,20 +86,27 @@ export async function GET(request: NextRequest) {
     await setSession(user[0]);
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
-    console.error('Error handling successful checkout:', error);
+    console.error('Error handling checkout:', error);
 
+    // Default to pricing page
     let redirectUrl = new URL('/pricing', request.url);
     redirectUrl.searchParams.set('checkout', 'failed');
 
+    // Try to get session info for better redirect
     let fallbackSession = session;
 
-    if (!fallbackSession) {
+    if (!fallbackSession && sessionId) {
       try {
         fallbackSession = await stripe.checkout.sessions.retrieve(sessionId, {
           expand: ['line_items'],
         });
       } catch (sessionError) {
         console.error('Error retrieving failed checkout session:', sessionError);
+        // If we can't retrieve session, just redirect to signup as fallback
+        redirectUrl = new URL('/sign-up', request.url);
+        redirectUrl.searchParams.set('redirect', 'checkout');
+        redirectUrl.searchParams.set('checkout', 'failed');
+        return NextResponse.redirect(redirectUrl);
       }
     }
 
@@ -101,7 +114,8 @@ export async function GET(request: NextRequest) {
       (fallbackSession?.line_items?.data?.[0]?.price as Stripe.Price | undefined)?.id;
     const flow = fallbackSession?.metadata?.flow;
 
-    if (flow === 'signup') {
+    // Always redirect to signup if it was a signup flow, otherwise pricing
+    if (flow === 'signup' || !fallbackSession) {
       redirectUrl = new URL('/sign-up', request.url);
       redirectUrl.searchParams.set('redirect', 'checkout');
       redirectUrl.searchParams.set('checkout', 'failed');
