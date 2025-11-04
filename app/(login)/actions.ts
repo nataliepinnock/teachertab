@@ -53,7 +53,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
     return {
       error:
-        "Looks like the payment didn't go through last time, so we cancelled that signup. Please start a new signup when you're ready to try again.",
+        "Looks like the payment didn't go through the last time you tried to sign up, so we've cancelled that signup. Please start a new signup when you're ready to try again.",
       email,
       priceId: priceId || undefined
     };

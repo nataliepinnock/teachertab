@@ -61,7 +61,7 @@ export default function HomePage() {
                         {/* Detailed Calendar Grid - Matching Real Calendar */}
                         <div className="grid grid-cols-7 gap-1">
                           {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
-                            <div key={day} className="text-center">
+                            <div key={index} className="text-center">
                               <div className="text-xs text-gray-500 mb-1">{day}</div>
                               <div className={`h-8 rounded-lg flex flex-col items-center justify-center text-xs border-2 ${
                                 index < 5 ? 'bg-[#28559e]/10 border-[#28559e]/20' : 'bg-gray-100 border-gray-200'
