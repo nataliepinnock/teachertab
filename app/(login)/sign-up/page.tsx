@@ -24,12 +24,15 @@ export default async function SignUpPage({
     ]);
 
     plans = prices
-      .filter((price) => {
-        // Validate price has required fields
-        if (!price?.id || price.unitAmount == null || !price.interval) {
-          return false;
-        }
-        return true;
+      .filter((price): price is typeof price & { unitAmount: number; interval: string } => {
+        // Type guard to ensure price has required fields
+        return !!(
+          price?.id &&
+          price.unitAmount != null &&
+          typeof price.unitAmount === 'number' &&
+          price.interval &&
+          typeof price.interval === 'string'
+        );
       })
       .flatMap((price) => {
         const product = products.find((product) => product?.id === price.productId);
@@ -44,17 +47,18 @@ export default async function SignUpPage({
           return [];
         }
 
-        return [
-          {
-            id: price.id,
-            name: product.name,
-            amount: price.unitAmount,
-            interval: price.interval,
-            description: product.description ?? null
-          }
-        ];
+        // TypeScript now knows unitAmount and interval are not null
+        const plan: PlanOption = {
+          id: price.id,
+          name: product.name,
+          amount: price.unitAmount,
+          interval: price.interval as PlanOption['interval'],
+          description: product.description ?? null
+        };
+
+        return [plan];
       })
-      .filter((plan) => {
+      .filter((plan): plan is PlanOption => {
         // Final validation to ensure plan is complete
         return !!(
           plan &&
