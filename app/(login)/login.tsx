@@ -128,8 +128,18 @@ export function Login({
                     onValueChange={setSelectedPlan}
                     className="space-y-3"
                   >
-                    {plans
-                      .filter((plan) => plan && plan.id && plan.name && plan.amount != null)
+                    {(Array.isArray(plans) ? plans : [])
+                      .filter((plan): plan is PlanOption => {
+                        return !!(
+                          plan &&
+                          typeof plan === 'object' &&
+                          plan.id &&
+                          typeof plan.name === 'string' &&
+                          plan.name.length > 0 &&
+                          typeof plan.amount === 'number' &&
+                          plan.amount > 0
+                        );
+                      })
                       .map((plan) => (
                         <label
                           key={plan.id}
@@ -146,7 +156,7 @@ export function Login({
                             />
                             <div>
                               <p className="text-base font-semibold text-gray-900">
-                                {plan.name}
+                                {plan.name || 'Unnamed Plan'}
                               </p>
                               <p className="text-sm text-gray-600">
                                 {formatPrice(plan.amount, plan.interval || 'month')}
