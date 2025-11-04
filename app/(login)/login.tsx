@@ -38,6 +38,24 @@ export function Login({
     { error: '' }
   );
 
+  // Ensure plans is always a valid array
+  const safePlans = useMemo(() => {
+    if (!Array.isArray(plans)) {
+      return [];
+    }
+    return plans.filter((plan): plan is PlanOption => {
+      return !!(
+        plan &&
+        typeof plan === 'object' &&
+        plan.id &&
+        typeof plan.name === 'string' &&
+        plan.name.length > 0 &&
+        typeof plan.amount === 'number' &&
+        plan.amount > 0
+      );
+    });
+  }, [plans]);
+
   const statePriceId = typeof state?.priceId === 'string' ? state.priceId : undefined;
   const computedInitialPlan = useMemo(() => {
     if (mode !== 'signup') {
@@ -47,10 +65,10 @@ export function Login({
       statePriceId ||
       initialPriceId ||
       priceIdQuery ||
-      plans[0]?.id ||
+      safePlans[0]?.id ||
       ''
     );
-  }, [mode, statePriceId, initialPriceId, priceIdQuery, plans]);
+  }, [mode, statePriceId, initialPriceId, priceIdQuery, safePlans]);
 
   const [selectedPlan, setSelectedPlan] = useState(computedInitialPlan);
 
@@ -64,7 +82,7 @@ export function Login({
   const priceFieldValue =
     mode === 'signup' ? selectedPlan : statePriceId || priceIdQuery || '';
 
-  const canSubmit = mode === 'signup' ? Boolean(selectedPlan) && plans.length > 0 : true;
+  const canSubmit = mode === 'signup' ? Boolean(selectedPlan) && safePlans.length > 0 : true;
 
   const switchLinkHref = useMemo(() => {
     if (mode === 'signin') {
@@ -118,7 +136,7 @@ export function Login({
                 <Label className="block text-sm font-medium text-gray-700 mb-2">
                   Choose your subscription plan
                 </Label>
-                {plans.length === 0 ? (
+                {safePlans.length === 0 ? (
                   <p className="text-sm text-gray-500">
                     Subscription plans are currently unavailable. Please try again later.
                   </p>
@@ -128,19 +146,7 @@ export function Login({
                     onValueChange={setSelectedPlan}
                     className="space-y-3"
                   >
-                    {(Array.isArray(plans) ? plans : [])
-                      .filter((plan): plan is PlanOption => {
-                        return !!(
-                          plan &&
-                          typeof plan === 'object' &&
-                          plan.id &&
-                          typeof plan.name === 'string' &&
-                          plan.name.length > 0 &&
-                          typeof plan.amount === 'number' &&
-                          plan.amount > 0
-                        );
-                      })
-                      .map((plan) => (
+                    {safePlans.map((plan) => (
                         <label
                           key={plan.id}
                           htmlFor={`plan-${plan.id}`}
@@ -156,7 +162,7 @@ export function Login({
                             />
                             <div>
                               <p className="text-base font-semibold text-gray-900">
-                                {plan.name || 'Unnamed Plan'}
+                                {plan.name}
                               </p>
                               <p className="text-sm text-gray-600">
                                 {formatPrice(plan.amount, plan.interval || 'month')}
