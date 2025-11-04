@@ -147,7 +147,7 @@ export function Login({
                               {plan.name}
                             </p>
                             <p className="text-sm text-gray-600">
-                              {formatPrice(plan.amount, plan.interval)}
+                              {formatPrice(plan.amount, plan.interval || 'month')}
                             </p>
                             {plan.description && (
                               <p className="mt-1 text-sm text-gray-500">

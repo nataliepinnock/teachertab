@@ -15,28 +15,35 @@ export default async function SignUpPage({
   const rawPriceId = resolvedParams?.priceId as string | string[] | undefined;
   const priceId = Array.isArray(rawPriceId) ? rawPriceId[0] : rawPriceId;
 
-  const [prices, products] = await Promise.all([
-    getStripePrices(),
-    getStripeProducts()
-  ]);
+  let plans: PlanOption[] = [];
 
-  const plans: PlanOption[] = prices.flatMap((price) => {
-    const product = products.find((product) => product.id === price.productId);
+  try {
+    const [prices, products] = await Promise.all([
+      getStripePrices(),
+      getStripeProducts()
+    ]);
 
-    if (price.unitAmount == null || !price.interval || !product?.name) {
-      return [];
-    }
+    plans = prices.flatMap((price) => {
+      const product = products.find((product) => product.id === price.productId);
 
-    return [
-      {
-        id: price.id,
-        name: product.name,
-        amount: price.unitAmount,
-        interval: price.interval,
-        description: product.description ?? null
+      if (price.unitAmount == null || !price.interval || !product?.name) {
+        return [];
       }
-    ];
-  });
+
+      return [
+        {
+          id: price.id,
+          name: product.name,
+          amount: price.unitAmount,
+          interval: price.interval,
+          description: product.description ?? null
+        }
+      ];
+    });
+  } catch (error) {
+    console.error('Error fetching Stripe plans:', error);
+    // Plans will be empty array, Login component handles this gracefully
+  }
 
   return (
     <Suspense>
