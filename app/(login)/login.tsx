@@ -38,22 +38,47 @@ export function Login({
     { error: '' }
   );
 
-  // Ensure plans is always a valid array
+  // Ensure plans is always a valid array with strict validation
   const safePlans = useMemo(() => {
-    if (!Array.isArray(plans)) {
+    try {
+      if (!Array.isArray(plans)) {
+        return [];
+      }
+      return plans.filter((plan): plan is PlanOption => {
+        try {
+          // Strict validation - ensure plan is an object with all required properties
+          if (!plan || typeof plan !== 'object' || Array.isArray(plan)) {
+            return false;
+          }
+          
+          // Check id exists and is truthy
+          if (!plan.id || typeof plan.id !== 'string') {
+            return false;
+          }
+          
+          // Check name exists, is a string, and is not empty
+          if (!plan.name || typeof plan.name !== 'string' || plan.name.trim().length === 0) {
+            return false;
+          }
+          
+          // Check amount exists and is a valid number
+          if (typeof plan.amount !== 'number' || !Number.isFinite(plan.amount) || plan.amount <= 0) {
+            return false;
+          }
+          
+          // Check interval exists
+          if (!plan.interval || typeof plan.interval !== 'string') {
+            return false;
+          }
+          
+          return true;
+        } catch {
+          return false;
+        }
+      });
+    } catch {
       return [];
     }
-    return plans.filter((plan): plan is PlanOption => {
-      return !!(
-        plan &&
-        typeof plan === 'object' &&
-        plan.id &&
-        typeof plan.name === 'string' &&
-        plan.name.length > 0 &&
-        typeof plan.amount === 'number' &&
-        plan.amount > 0
-      );
-    });
   }, [plans]);
 
   const statePriceId = typeof state?.priceId === 'string' ? state.priceId : undefined;

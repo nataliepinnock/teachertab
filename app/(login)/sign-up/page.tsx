@@ -23,30 +23,49 @@ export default async function SignUpPage({
       getStripeProducts()
     ]);
 
-    plans = prices.flatMap((price) => {
-      const product = products.find((product) => product.id === price.productId);
-
-      // Ensure all required fields exist before creating plan
-      if (
-        !price.id ||
-        price.unitAmount == null ||
-        !price.interval ||
-        !product ||
-        !product.name
-      ) {
-        return [];
-      }
-
-      return [
-        {
-          id: price.id,
-          name: product.name,
-          amount: price.unitAmount,
-          interval: price.interval,
-          description: product.description ?? null
+    plans = prices
+      .filter((price) => {
+        // Validate price has required fields
+        if (!price?.id || price.unitAmount == null || !price.interval) {
+          return false;
         }
-      ];
-    });
+        return true;
+      })
+      .flatMap((price) => {
+        const product = products.find((product) => product?.id === price.productId);
+
+        // Ensure product exists and has required fields
+        if (
+          !product ||
+          !product.id ||
+          typeof product.name !== 'string' ||
+          product.name.length === 0
+        ) {
+          return [];
+        }
+
+        return [
+          {
+            id: price.id,
+            name: product.name,
+            amount: price.unitAmount,
+            interval: price.interval,
+            description: product.description ?? null
+          }
+        ];
+      })
+      .filter((plan) => {
+        // Final validation to ensure plan is complete
+        return !!(
+          plan &&
+          plan.id &&
+          typeof plan.name === 'string' &&
+          plan.name.length > 0 &&
+          typeof plan.amount === 'number' &&
+          plan.amount > 0 &&
+          plan.interval
+        );
+      });
   } catch (error) {
     console.error('Error fetching Stripe plans:', error);
     // Plans will be empty array, Login component handles this gracefully
