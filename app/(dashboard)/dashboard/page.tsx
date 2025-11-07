@@ -14,6 +14,7 @@ import { useActionState } from 'react';
 import { User as UserType, Class, Subject, Event } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { Suspense } from 'react';
+import Link from 'next/link';
 import { 
   BookOpen, 
   Users, 
@@ -43,6 +44,60 @@ type ActionState = {
 };
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+function SetupReminderBanner() {
+  const { data: academicYears, error: academicYearsError } = useSWR('/api/academic-years', fetcher);
+  const { data: timetableSlots, error: timetableSlotsError } = useSWR('/api/timetable-slots', fetcher);
+
+  const academicLoaded = academicYears !== undefined || academicYearsError;
+  const timetableLoaded = timetableSlots !== undefined || timetableSlotsError;
+
+  if (!academicLoaded || !timetableLoaded) {
+    return null;
+  }
+
+  const academicYearsArray = Array.isArray(academicYears) ? academicYears : [];
+  const timetableSlotsArray = Array.isArray(timetableSlots) ? timetableSlots : [];
+
+  const needsAcademicYear = academicYearsArray.length === 0;
+  const needsTimetable = timetableSlotsArray.length === 0;
+
+  if (!needsAcademicYear && !needsTimetable) {
+    return null;
+  }
+
+  const message = needsAcademicYear && needsTimetable
+    ? "Let's finish your setup by adding your academic year dates and building your timetable."
+    : needsAcademicYear
+      ? "Almost there—add your academic year dates to unlock the full timetable experience."
+      : "Almost there—set up your timetable to plan your teaching schedule.";
+
+  return (
+    <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-900">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="mt-0.5 h-5 w-5 text-blue-600" />
+          <div>
+            <p className="font-semibold">Complete your setup</p>
+            <p className="text-sm text-blue-800">{message}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {needsAcademicYear && (
+            <Button asChild size="sm" className="bg-blue-600 text-white hover:bg-blue-700">
+              <Link href="/dashboard/setup/academic-year">Set up academic year</Link>
+            </Button>
+          )}
+          {needsTimetable && (
+            <Button asChild size="sm" variant="outline">
+              <Link href="/dashboard/setup/timetable">Build timetable</Link>
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function SubscriptionSkeleton() {
   return (
@@ -507,6 +562,7 @@ export default function DashboardPage() {
             Here's what's happening with your teaching schedule today.
           </p>
         </div>
+        <SetupReminderBanner />
         
         <Suspense fallback={<TeacherStatsSkeleton />}>
           <TeacherStats />
