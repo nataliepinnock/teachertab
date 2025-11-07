@@ -102,27 +102,31 @@ export default function SetupPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-8 mb-12">
           {setupOptions.map((option, index) => (
             <Link key={option.title} href={option.href}>
-              <Card className={`${option.color} border-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl group h-full flex flex-col p-4`}>
-                <div className="text-center mb-4">
-                  <div className={`mx-auto mb-3 p-3 rounded-xl ${option.bgColor} group-hover:scale-110 transition-transform duration-300`}>
-                    <option.icon className={`h-8 w-8 ${option.iconColor}`} />
+              <Card className={`${option.color} border-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl group h-full flex flex-col p-5`}>
+                <div className="mb-5">
+                  <div className="flex items-start gap-4">
+                    <div className={`p-3 rounded-xl ${option.bgColor} group-hover:scale-110 transition-transform duration-300`}>
+                      <option.icon className={`h-8 w-8 ${option.iconColor}`} />
+                    </div>
+                    <div className="space-y-1">
+                      <CardTitle className="text-lg font-bold text-gray-900 leading-tight">{option.title}</CardTitle>
+                      <p className="text-gray-600 leading-relaxed text-sm max-w-xs">{option.description}</p>
+                    </div>
                   </div>
-                  <CardTitle className="text-lg font-bold text-gray-900 mb-2 leading-tight">{option.title}</CardTitle>
-                  <p className="text-gray-600 leading-relaxed text-sm">{option.description}</p>
                 </div>
-                <div className="text-center space-y-3 flex-grow flex flex-col justify-between">
+                <div className="space-y-3 flex-grow flex flex-col justify-between">
                   {/* Features List */}
                   <div className="space-y-2 flex-grow">
                     {option.features.map((feature, featureIndex) => (
-                      <div key={featureIndex} className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                      <div key={featureIndex} className="flex items-center gap-2 text-sm text-gray-600">
                         <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
-                        <span className="text-center">{feature}</span>
+                        <span>{feature}</span>
                       </div>
                     ))}
                   </div>
                   
                   {/* Action Button */}
-                  <Button variant="outline" className="w-full h-10 text-sm font-medium group-hover:bg-white group-hover:shadow-md transition-all duration-200 flex-shrink-0">
+                  <Button variant="outline" className="w-full h-10 text-sm font-medium justify-between group-hover:bg-white group-hover:shadow-md transition-all duration-200 flex-shrink-0">
                     <span className="truncate">Configure {option.title}</span>
                     <ArrowRight className="h-3 w-3 ml-2 flex-shrink-0 group-hover:translate-x-1 transition-transform duration-200" />
                   </Button>
