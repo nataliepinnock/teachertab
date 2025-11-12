@@ -103,7 +103,7 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 214 100% 35%; /* #28559e - Blue from logo */
+    --primary: 213 100% 12%; /* #001b3d - Deep blue brand */
     --primary-foreground: 0 0% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -111,25 +111,25 @@
     --muted-foreground: 215.4 16.3% 46.9%;
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 8 78% 59%; /* #e85b46 - Red from logo */
+    --destructive: 37 96% 60%; /* #fbae36 - Accent color */
     --destructive-foreground: 0 0% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 214 100% 35%; /* #28559e - Blue from logo */
-    --chart-1: 8 78% 59%; /* #e85b46 - Red from logo */
-    --chart-2: 214 100% 35%; /* #28559e - Blue from logo */
+    --ring: 213 100% 12%; /* #001b3d - Deep blue brand */
+    --chart-1: 37 96% 60%; /* #fbae36 - Accent color */
+    --chart-2: 213 100% 12%; /* #001b3d - Deep blue brand */
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.75rem;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 214 100% 35%; /* #28559e - Blue from logo */
+    --sidebar-primary: 213 100% 12%; /* #001b3d - Deep blue brand */
     --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 214 100% 35%; /* #28559e - Blue from logo */
+    --sidebar-ring: 213 100% 12%; /* #001b3d - Deep blue brand */
   }
 
   .dark {
@@ -139,7 +139,7 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 214 100% 45%; /* Lighter blue for dark theme */
+    --primary: 213 100% 24%; /* Elevated deep blue for dark theme */
     --primary-foreground: 0 0% 98%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -147,24 +147,24 @@
     --muted-foreground: 215 20.2% 65.1%;
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 8 78% 65%; /* Lighter red for dark theme */
+    --destructive: 37 96% 65%; /* Elevated accent for dark theme */
     --destructive-foreground: 0 0% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 214 100% 45%; /* Lighter blue for dark theme */
-    --chart-1: 8 78% 65%; /* Lighter red for dark theme */
-    --chart-2: 214 100% 45%; /* Lighter blue for dark theme */
+    --ring: 213 100% 24%; /* Elevated deep blue for dark theme */
+    --chart-1: 37 96% 65%; /* Elevated accent for dark theme */
+    --chart-2: 213 100% 24%; /* Elevated deep blue for dark theme */
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 214 100% 45%; /* Lighter blue for dark theme */
+    --sidebar-primary: 213 100% 24%; /* Elevated deep blue for dark theme */
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 3.7% 15.9%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 214 100% 45%; /* Lighter blue for dark theme */
+    --sidebar-ring: 213 100% 24%; /* Elevated deep blue for dark theme */
   }
 }
 
@@ -267,15 +267,15 @@
   }
   
   .teacher-button {
-    @apply bg-[#28559e] text-white font-semibold rounded-lg shadow-md hover:bg-[#1e3d72] hover:shadow-lg active:scale-95 transition-all;
+    @apply bg-[#001b3d] text-white font-semibold rounded-lg shadow-md hover:bg-[#000e28] hover:shadow-lg active:scale-95 transition-all;
   }
   
   .teacher-button-secondary {
-    @apply bg-[#e85b46] text-white font-semibold rounded-lg shadow-md hover:bg-[#d44a35] hover:shadow-lg active:scale-95 transition-all;
+    @apply bg-[#fbae36] text-white font-semibold rounded-lg shadow-md hover:bg-[#d69225] hover:shadow-lg active:scale-95 transition-all;
   }
   
   .teacher-input {
-    @apply border-2 border-gray-300 rounded-lg focus:border-[#28559e] focus:shadow-md transition-all;
+    @apply border-2 border-gray-300 rounded-lg focus:border-[#001b3d] focus:shadow-md transition-all;
   }
   
   .teacher-section {
@@ -283,7 +283,7 @@
   }
   
   .teacher-highlight {
-    @apply bg-blue-50 border-l-4 border-[#28559e] p-4 rounded-r-lg;
+    @apply bg-[#001b3d]/10 border-l-4 border-[#001b3d] p-4 rounded-r-lg;
   }
   
   .teacher-warning {
@@ -295,7 +295,165 @@
   }
   
   .teacher-error {
-    @apply bg-red-50 border-l-4 border-[#e85b46] p-4 rounded-r-lg;
+    @apply bg-[#fbae36]/10 border-l-4 border-[#fbae36] p-4 rounded-r-lg;
+  }
+
+  /* Brand color overrides */
+  .text-blue-500,
+  .text-blue-600 {
+    color: #001b3d !important;
+  }
+
+  .text-blue-700 {
+    color: #001631 !important;
+  }
+
+  .text-blue-800 {
+    color: #001025 !important;
+  }
+
+  .text-blue-900 {
+    color: #000b18 !important;
+  }
+
+  .hover\:text-blue-500:hover {
+    color: #001631 !important;
+  }
+
+  .hover\:text-blue-700:hover {
+    color: #001025 !important;
+  }
+
+  .bg-blue-50 {
+    background-color: #f2f4f5 !important;
+  }
+
+  .bg-blue-100 {
+    background-color: #d9dde2 !important;
+  }
+
+  .bg-blue-200 {
+    background-color: #b3bbc5 !important;
+  }
+
+  .bg-blue-600,
+  .bg-blue-500 {
+    background-color: #001b3d !important;
+  }
+
+  .bg-blue-700 {
+    background-color: #001025 !important;
+  }
+
+  .border-blue-200 {
+    border-color: #b3bbc5 !important;
+  }
+
+  .border-blue-300 {
+    border-color: #8c98a8 !important;
+  }
+
+  .hover\:border-blue-300:hover {
+    border-color: #8c98a8 !important;
+  }
+
+  .hover\:border-blue-500:hover {
+    border-color: #001b3d !important;
+  }
+
+  .hover\:bg-blue-50:hover {
+    background-color: #f2f4f5 !important;
+  }
+
+  .hover\:bg-blue-700:hover {
+    background-color: #001025 !important;
+  }
+
+  .ring-blue-200 {
+    --tw-ring-color: #d9dde2 !important;
+  }
+
+  .ring-blue-500 {
+    --tw-ring-color: #001b3d !important;
+  }
+
+  .focus\:border-blue-500:focus,
+  .focus\:border-blue-600:focus {
+    border-color: #001b3d !important;
+  }
+
+  .focus\:ring-blue-500:focus {
+    --tw-ring-color: #001b3d !important;
+  }
+
+  .selection\:bg-blue-200::selection {
+    background-color: #b3bbc5 !important;
+    color: inherit;
+  }
+
+  .selection\:text-blue-900::selection {
+    color: #000b18 !important;
+  }
+
+  .text-orange-500,
+  .text-orange-600 {
+    color: #fbae36 !important;
+  }
+
+  .text-orange-700 {
+    color: #b07a26 !important;
+  }
+
+  .text-orange-800 {
+    color: #8a601e !important;
+  }
+
+  .text-orange-900 {
+    color: #644616 !important;
+  }
+
+  .bg-orange-50 {
+    background-color: #fff7eb !important;
+  }
+
+  .bg-orange-100 {
+    background-color: #feefd7 !important;
+  }
+
+  .bg-orange-500 {
+    background-color: #fbae36 !important;
+  }
+
+  .hover\:bg-orange-50:hover {
+    background-color: #fff7eb !important;
+  }
+
+  .hover\:bg-orange-600:hover {
+    background-color: #d5942e !important;
+  }
+
+  .border-orange-200 {
+    border-color: #fee3b9 !important;
+  }
+
+  .border-orange-300 {
+    border-color: #fdd79b !important;
+  }
+
+  .hover\:border-orange-300:hover {
+    border-color: #fdd79b !important;
+  }
+
+  .ring-orange-200 {
+    --tw-ring-color: #fee3b9 !important;
+  }
+
+  .focus\:border-orange-500:focus {
+    border-color: #fbae36 !important;
+  }
+
+  .focus\:ring-orange-500:focus {
+    --tw-ring-color: #fbae36 !important;
   }
 }
 

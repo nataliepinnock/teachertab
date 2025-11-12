@@ -18,9 +18,9 @@ export default function SetupPage() {
       description: 'Set up your school year, holidays, and week cycles',
       icon: GraduationCap,
       href: '/dashboard/setup/academic-year',
-      color: 'bg-white border-2 border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:shadow-lg transition-all',
-      iconColor: 'text-blue-600',
-      bgColor: 'bg-blue-100',
+      color: 'bg-white border-2 border-gray-200 hover:bg-[#001b3d]/5 hover:border-[#001b3d]/30 hover:shadow-lg transition-all',
+      iconColor: 'text-[#001b3d]',
+      bgColor: 'bg-[#001b3d]/10',
       features: ['School calendar', 'Holiday management', 'Week 1/2 cycles']
     },
     {
@@ -28,9 +28,9 @@ export default function SetupPage() {
       description: 'Manage your class groups, student counts, and class notes',
       icon: Users,
       href: '/dashboard/setup/classes',
-      color: 'bg-white border-2 border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:shadow-lg transition-all',
-      iconColor: 'text-blue-600',
-      bgColor: 'bg-blue-100',
+      color: 'bg-white border-2 border-gray-200 hover:bg-[#001b3d]/5 hover:border-[#001b3d]/30 hover:shadow-lg transition-all',
+      iconColor: 'text-[#001b3d]',
+      bgColor: 'bg-[#001b3d]/10',
       features: user?.teacherType === 'secondary' 
         ? ['Student counts', 'Class notes', 'Color coding']
         : ['Student counts', 'Class notes', 'Group management']
@@ -40,9 +40,9 @@ export default function SetupPage() {
       description: 'Configure subjects with colors and organize your curriculum',
       icon: BookOpen,
       href: '/dashboard/setup/subjects',
-      color: 'bg-white border-2 border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:shadow-lg transition-all',
-      iconColor: 'text-blue-600',
-      bgColor: 'bg-blue-100',
+      color: 'bg-white border-2 border-gray-200 hover:bg-[#001b3d]/5 hover:border-[#001b3d]/30 hover:shadow-lg transition-all',
+      iconColor: 'text-[#001b3d]',
+      bgColor: 'bg-[#001b3d]/10',
       features: user?.teacherType === 'primary'
         ? ['Color coding', 'Curriculum organization', 'Subject management']
         : ['Curriculum organization', 'Subject management', 'Learning objectives']
@@ -52,9 +52,9 @@ export default function SetupPage() {
       description: 'Set up your weekly timetable structure and time slots',
       icon: Clock,
       href: '/dashboard/setup/timetable',
-      color: 'bg-white border-2 border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:shadow-lg transition-all',
-      iconColor: 'text-blue-600',
-      bgColor: 'bg-blue-100',
+      color: 'bg-white border-2 border-gray-200 hover:bg-[#001b3d]/5 hover:border-[#001b3d]/30 hover:shadow-lg transition-all',
+      iconColor: 'text-[#001b3d]',
+      bgColor: 'bg-[#001b3d]/10',
       features: ['Weekly schedules', 'Time slots', 'Day organization']
     }
   ];
@@ -78,17 +78,17 @@ export default function SetupPage() {
           <div className="bg-gray-50 rounded-lg border border-gray-200 p-3 max-w-2xl mx-auto">
             <div className="flex flex-col sm:flex-row gap-2 justify-center items-center text-xs text-gray-500">
               <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                <div className="w-1.5 h-1.5 bg-[#fbae36] rounded-full"></div>
                 <span>1. Academic Year</span>
               </div>
               <div className="hidden sm:block text-gray-300">→</div>
               <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                <div className="w-1.5 h-1.5 bg-[#fbae36] rounded-full"></div>
                 <span>2. Classes & Subjects</span>
               </div>
               <div className="hidden sm:block text-gray-300">→</div>
               <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                <div className="w-1.5 h-1.5 bg-[#fbae36] rounded-full"></div>
                 <span>3. Build Timetable</span>
               </div>
             </div>

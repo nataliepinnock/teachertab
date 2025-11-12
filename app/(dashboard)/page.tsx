@@ -11,7 +11,7 @@ export default function HomePage() {
             <div className="sm:text-center md:max-w-2xl md:mx-auto lg:col-span-6 lg:text-left">
               <h1 className="text-5xl font-bold text-gray-900 tracking-tight sm:text-6xl md:text-7xl lg:text-8xl">
                 TeacherTab
-                <span className="block text-[#28559e]">Your Teaching Companion</span>
+                <span className="block text-[#001b3d]">Your Teaching Companion</span>
               </h1>
               <p className="mt-3 text-base text-gray-500 sm:mt-5 sm:text-xl lg:text-lg xl:text-xl">
                 Streamline your teaching workflow with intelligent lesson planning, 
@@ -20,7 +20,7 @@ export default function HomePage() {
               <div className="mt-8 sm:max-w-lg sm:mx-auto sm:text-center lg:text-left lg:mx-0">
                 <Button
                   size="lg"
-                  className="text-lg rounded-full bg-[#28559e] hover:bg-[#1e3d72]"
+                  className="text-lg rounded-full bg-[#001b3d] hover:bg-[#000e28]"
                 >
                   Start Teaching Better
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -38,11 +38,11 @@ export default function HomePage() {
                       <span className="ml-2 text-lg font-semibold text-gray-900">TeacherTab</span>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <div className="w-6 h-6 bg-[#28559e]/20 rounded-full flex items-center justify-center">
-                        <Calendar className="h-3 w-3 text-[#28559e]" />
+                      <div className="w-6 h-6 bg-[#001b3d]/20 rounded-full flex items-center justify-center">
+                        <Calendar className="h-3 w-3 text-[#001b3d]" />
                       </div>
-                      <div className="w-6 h-6 bg-[#e85b46]/20 rounded-full flex items-center justify-center">
-                        <BookOpen className="h-3 w-3 text-[#e85b46]" />
+                      <div className="w-6 h-6 bg-[#fbae36]/20 rounded-full flex items-center justify-center">
+                        <BookOpen className="h-3 w-3 text-[#fbae36]" />
                       </div>
                       <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
                     </div>
@@ -64,12 +64,12 @@ export default function HomePage() {
                             <div key={index} className="text-center">
                               <div className="text-xs text-gray-500 mb-1">{day}</div>
                               <div className={`h-8 rounded-lg flex flex-col items-center justify-center text-xs border-2 ${
-                                index < 5 ? 'bg-[#28559e]/10 border-[#28559e]/20' : 'bg-gray-100 border-gray-200'
+                                index < 5 ? 'bg-[#001b3d]/10 border-[#001b3d]/20' : 'bg-gray-100 border-gray-200'
                               }`}>
                                 {index < 5 ? (
                                   <>
-                                    <div className="w-1 h-1 bg-[#28559e] rounded-full mb-0.5"></div>
-                                    <span className="text-[#28559e] font-medium">3</span>
+                                    <div className="w-1 h-1 bg-[#001b3d] rounded-full mb-0.5"></div>
+                                    <span className="text-[#001b3d] font-medium">3</span>
                                   </>
                                 ) : (
                                   <span className="text-gray-400">{18 + index}</span>
@@ -84,7 +84,7 @@ export default function HomePage() {
                       <div className="bg-white border border-gray-200 rounded-lg p-3">
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="text-sm font-semibold text-gray-900">Today's Schedule</h3>
-                          <Button size="sm" className="bg-[#28559e] hover:bg-[#1e3d72] text-xs px-2 py-1">
+                          <Button size="sm" className="bg-[#001b3d] hover:bg-[#000e28] text-xs px-2 py-1">
                             <Plus className="h-3 w-3 mr-1" />
                             Add
                           </Button>
@@ -94,20 +94,20 @@ export default function HomePage() {
                           {/* Lesson 1 - Planned lesson styling */}
                           <div className="group flex flex-col text-xs transition-colors border-2 rounded-md px-1.5 py-1 shadow-sm hover:shadow-md cursor-pointer"
                                style={{
-                                 backgroundColor: '#28559e15', // lightenColor equivalent
-                                 borderColor: '#28559eCC'
+                                 backgroundColor: '#001b3d15', // lightenColor equivalent
+                                 borderColor: '#001b3dCC'
                                }}>
                             <div className="flex items-start justify-between gap-1">
                               <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                                <div className="text-xs font-semibold truncate" style={{ color: '#28559eE6' }}>
+                                <div className="text-xs font-semibold truncate" style={{ color: '#001b3dE6' }}>
                                   Algebra Basics
                                 </div>
-                                <div className="text-xs truncate" style={{ color: '#28559eCC' }}>
+                                <div className="text-xs truncate" style={{ color: '#001b3dCC' }}>
                                   Year 9A
                                 </div>
                                 <div className="flex items-center text-xs">
-                                  <MapPin className="h-3 w-3 mr-1 flex-shrink-0" style={{ color: '#28559eCC' }} />
-                                  <span className="truncate" style={{ color: '#28559eCC' }}>Room 12</span>
+                                  <MapPin className="h-3 w-3 mr-1 flex-shrink-0" style={{ color: '#001b3dCC' }} />
+                                  <span className="truncate" style={{ color: '#001b3dCC' }}>Room 12</span>
                                 </div>
                               </div>
                               <div className="text-xs text-gray-500">9:00 AM</div>
@@ -117,20 +117,20 @@ export default function HomePage() {
                           {/* Lesson 2 - Unfinished lesson styling */}
                           <div className="group flex flex-col text-xs transition-colors border-2 rounded-md px-1.5 py-1 shadow-sm hover:shadow-md cursor-pointer opacity-50 grayscale"
                                style={{
-                                 backgroundColor: '#e85b4615', // lightenColor equivalent
-                                 borderColor: '#e85b4650'
+                                 backgroundColor: '#fbae3615', // lightenColor equivalent
+                                 borderColor: '#fbae3650'
                                }}>
                             <div className="flex items-start justify-between gap-1">
                               <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                                <div className="text-xs font-semibold truncate" style={{ color: '#e85b46E6' }}>
+                                <div className="text-xs font-semibold truncate" style={{ color: '#fbae36E6' }}>
                                   Shakespeare
                                 </div>
-                                <div className="text-xs truncate" style={{ color: '#e85b46CC' }}>
+                                <div className="text-xs truncate" style={{ color: '#fbae36CC' }}>
                                   Year 11B
                                 </div>
                                 <div className="flex items-center text-xs">
-                                  <MapPin className="h-3 w-3 mr-1 flex-shrink-0" style={{ color: '#e85b46CC' }} />
-                                  <span className="truncate" style={{ color: '#e85b46CC' }}>Library</span>
+                                  <MapPin className="h-3 w-3 mr-1 flex-shrink-0" style={{ color: '#fbae36CC' }} />
+                                  <span className="truncate" style={{ color: '#fbae36CC' }}>Library</span>
                                 </div>
                               </div>
                               <div className="text-xs text-gray-500">11:30 AM</div>
@@ -165,15 +165,15 @@ export default function HomePage() {
                       {/* Quick Stats */}
                       <div className="grid grid-cols-3 gap-2">
                         <div className="bg-white border border-gray-200 rounded-lg p-2 text-center">
-                          <div className="text-lg font-bold text-[#28559e]">12</div>
+                          <div className="text-lg font-bold text-[#001b3d]">12</div>
                           <div className="text-xs text-gray-500">Lessons</div>
                         </div>
                         <div className="bg-white border border-gray-200 rounded-lg p-2 text-center">
-                          <div className="text-lg font-bold text-[#e85b46]">4</div>
+                          <div className="text-lg font-bold text-[#fbae36]">4</div>
                           <div className="text-xs text-gray-500">Classes</div>
                         </div>
                         <div className="bg-white border border-gray-200 rounded-lg p-2 text-center">
-                          <div className="text-lg font-bold text-[#28559e]">6</div>
+                          <div className="text-lg font-bold text-[#001b3d]">6</div>
                           <div className="text-xs text-gray-500">Subjects</div>
                         </div>
                       </div>
@@ -187,11 +187,11 @@ export default function HomePage() {
                             <span className="text-gray-600">Completed lesson plan for Algebra</span>
                           </div>
                           <div className="flex items-center text-xs">
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
+                            <div className="w-1.5 h-1.5 bg-[#001b3d] rounded-full mr-2"></div>
                             <span className="text-gray-600">Added new student to Year 9A</span>
                           </div>
                           <div className="flex items-center text-xs">
-                            <div className="w-1.5 h-1.5 bg-[#e85b46] rounded-full mr-2"></div>
+                            <div className="w-1.5 h-1.5 bg-[#fbae36] rounded-full mr-2"></div>
                             <span className="text-gray-600">Updated timetable for next week</span>
                           </div>
                         </div>
@@ -201,8 +201,8 @@ export default function HomePage() {
                 </div>
                 
                 {/* Floating Elements */}
-                <div className="absolute -top-2 -right-2 w-4 h-4 bg-[#28559e] rounded-full animate-pulse"></div>
-                <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-[#e85b46] rounded-full animate-bounce"></div>
+                <div className="absolute -top-2 -right-2 w-4 h-4 bg-[#001b3d] rounded-full animate-pulse"></div>
+                <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-[#fbae36] rounded-full animate-bounce"></div>
               </div>
             </div>
           </div>
@@ -224,7 +224,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Feature 1 */}
             <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-center w-12 h-12 bg-[#28559e] rounded-lg mb-4">
+              <div className="flex items-center justify-center w-12 h-12 bg-[#001b3d] rounded-lg mb-4">
                 <BookOpen className="h-6 w-6 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">Lesson Planning</h3>
@@ -236,7 +236,7 @@ export default function HomePage() {
 
             {/* Feature 2 */}
             <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-center w-12 h-12 bg-[#e85b46] rounded-lg mb-4">
+              <div className="flex items-center justify-center w-12 h-12 bg-[#fbae36] rounded-lg mb-4">
                 <Calendar className="h-6 w-6 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">Timetable Management</h3>
@@ -248,7 +248,7 @@ export default function HomePage() {
 
             {/* Feature 3 */}
             <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-center w-12 h-12 bg-[#28559e] rounded-lg mb-4">
+              <div className="flex items-center justify-center w-12 h-12 bg-[#001b3d] rounded-lg mb-4">
                 <Users className="h-6 w-6 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">Student Organization</h3>
@@ -262,24 +262,24 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-[#28559e] to-[#1e3d72]">
+      <section className="py-20 bg-gradient-to-r from-[#001b3d] to-[#000e28]">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl font-bold text-white mb-6">
                 Ready to Transform Your Teaching?
               </h2>
-          <p className="text-xl text-blue-100 mb-8">
+          <p className="text-xl text-[#001b3d]/60 mb-8">
                 Join thousands of teachers who have streamlined their workflow with TeacherTab. 
                 Spend less time on admin, more time inspiring students.
               </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button
               size="lg"
-              className="text-lg rounded-full bg-white text-[#28559e] hover:bg-gray-100 px-8 py-4"
+              className="text-lg rounded-full bg-white text-[#001b3d] hover:bg-gray-100 px-8 py-4"
             >
               Get Started Today
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <div className="flex items-center space-x-6 text-blue-100">
+            <div className="flex items-center space-x-6 text-[#001b3d]/60">
                 <div className="flex items-center">
                 <CheckCircle className="h-5 w-5 mr-2" />
                 <span>Free to start</span>
