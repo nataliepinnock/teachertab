@@ -42,7 +42,7 @@ function UserMenu() {
         <Button asChild className="rounded-full" variant="default">
           <Link href="/sign-in">Sign In</Link>
         </Button>
-        <Button asChild className="rounded-full" variant="outline">
+        <Button asChild className="rounded-full px-6" variant="accent">
           <Link href="/sign-up">Sign Up</Link>
         </Button>
       </>

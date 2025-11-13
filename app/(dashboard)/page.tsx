@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRight, BookOpen, Calendar, Users, Clock, CheckCircle, Plus, Edit3, Trash2, MoreHorizontal, MapPin } from 'lucide-react';
 import { TeacherTabLogo } from '@/components/ui/logo';
+import { TypewriterHeadline } from '@/components/landing/typewriter-headline';
 
 export default function HomePage() {
   return (
@@ -9,10 +10,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="lg:grid lg:grid-cols-12 lg:gap-8">
             <div className="sm:text-center md:max-w-2xl md:mx-auto lg:col-span-6 lg:text-left">
-              <h1 className="text-5xl font-bold text-gray-900 tracking-tight sm:text-6xl md:text-7xl lg:text-8xl">
-                TeacherTab
-                <span className="block text-[#001b3d]">Your Teaching Companion</span>
-              </h1>
+              <TypewriterHeadline className="text-5xl leading-tight tracking-tight text-gray-900 sm:text-6xl md:text-7xl lg:text-8xl" />
               <p className="mt-3 text-base text-gray-500 sm:mt-5 sm:text-xl lg:text-lg xl:text-xl">
                 Streamline your teaching workflow with intelligent lesson planning, 
                 timetable management, and student organization tools designed specifically for educators.
