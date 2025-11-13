@@ -126,7 +126,10 @@ export default function SetupPage() {
                   </div>
                   
                   {/* Action Button */}
-                  <Button variant="outline" className="w-full h-10 text-sm font-medium justify-between group-hover:bg-white group-hover:shadow-md transition-all duration-200 flex-shrink-0">
+                  <Button
+                    variant="outline"
+                    className="w-full h-10 text-sm font-medium justify-between border-[#fbae36] text-[#fbae36] hover:bg-[#fbae36]/10 hover:border-[#d69225] group-hover:shadow-md transition-all duration-200 flex-shrink-0"
+                  >
                     <span className="truncate">Configure {option.title}</span>
                     <ArrowRight className="h-3 w-3 ml-2 flex-shrink-0 group-hover:translate-x-1 transition-transform duration-200" />
                   </Button>

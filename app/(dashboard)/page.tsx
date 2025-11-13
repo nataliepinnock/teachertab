@@ -20,7 +20,8 @@ export default function HomePage() {
               <div className="mt-8 sm:max-w-lg sm:mx-auto sm:text-center lg:text-left lg:mx-0">
                 <Button
                   size="lg"
-                  className="text-lg rounded-full bg-[#001b3d] hover:bg-[#000e28]"
+                  variant="accent"
+                  className="text-lg rounded-full px-10"
                 >
                   Start Teaching Better
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -84,7 +85,7 @@ export default function HomePage() {
                       <div className="bg-white border border-gray-200 rounded-lg p-3">
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="text-sm font-semibold text-gray-900">Today's Schedule</h3>
-                          <Button size="sm" className="bg-[#001b3d] hover:bg-[#000e28] text-xs px-2 py-1">
+                          <Button size="sm" variant="accent" className="text-xs px-3 py-1 rounded-full">
                             <Plus className="h-3 w-3 mr-1" />
                             Add
                           </Button>
@@ -274,7 +275,8 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button
               size="lg"
-              className="text-lg rounded-full bg-white text-[#001b3d] hover:bg-gray-100 px-8 py-4"
+              variant="accent"
+              className="text-lg rounded-full px-10"
             >
               Get Started Today
               <ArrowRight className="ml-2 h-5 w-5" />
