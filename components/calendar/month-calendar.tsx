@@ -199,7 +199,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
   const [editingLesson, setEditingLesson] = useState<CalendarEvent | null>(null);
   const [editingHoliday, setEditingHoliday] = useState<CalendarEvent | null>(null);
   const [viewingEvent, setViewingEvent] = useState<CalendarEvent | null>(null);
-  const [isCreatingTestData, setIsCreatingTestData] = useState(false);
 
   const { data: events, error: eventsError } = useSWR<Event[]>('/api/events', fetcher);
   const { data: lessons, error: lessonsError } = useSWR<LessonWithSlot[]>('/api/lessons', fetcher);
@@ -212,36 +211,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
   // Academic calendar hook for week number calculation
   const { getWeekNumberForDate, activeAcademicYear, getHolidayEvents } = useAcademicCalendar();
   
-  // Create test timetable data
-  const createTestTimetableData = async () => {
-    setIsCreatingTestData(true);
-    try {
-      const response = await fetch('/api/test-timetable', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Test timetable data created:', result);
-        // Refresh the data
-        mutate('/api/timetable');
-        mutate('/api/timetable-slots');
-        mutate('/api/lessons');
-        mutate('/api/events');
-      } else {
-        const error = await response.json();
-        console.error('Failed to create test data:', error);
-      }
-    } catch (error) {
-      console.error('Error creating test data:', error);
-    } finally {
-      setIsCreatingTestData(false);
-    }
-  };
-
   // Delete functions
   const handleDeleteLesson = async (event: CalendarEvent) => {
     if (!event.lessonIds || event.lessonIds.length === 0) {
@@ -776,21 +745,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
             <div className="bg-white py-2">Sat</div>
             <div className="bg-white py-2">Sun</div>
           </div>
-          
-          {/* Test Data Button */}
-          {(!timetableEntries || timetableEntries.length === 0) && (
-            <div className="flex justify-center py-4 border-b border-gray-100 bg-yellow-50">
-              <Button
-                onClick={createTestTimetableData}
-                disabled={isCreatingTestData}
-                size="lg"
-                variant="default"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-              >
-                {isCreatingTestData ? 'Creating...' : '🚀 Create Test Timetable Data'}
-              </Button>
-            </div>
-          )}
           
           <div className="relative grid grid-cols-7 grid-rows-5 gap-px bg-gray-200">
             {monthGrid.map(({ date, isCurrentMonth }, dayIdx) => {

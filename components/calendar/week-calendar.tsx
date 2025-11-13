@@ -334,7 +334,6 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [editingHoliday, setEditingHoliday] = useState<CalendarEvent | null>(null);
   const [view, setView] = useState<'week' | 'month'>('week');
-  const [isCreatingTestData, setIsCreatingTestData] = useState(false);
   
   const container = useRef<HTMLDivElement>(null);
   const containerNav = useRef<HTMLDivElement>(null);
@@ -363,34 +362,6 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
   // Academic calendar hook for week number calculation
   const { getWeekNumberForDate } = useAcademicCalendar();
   
-  // Create test timetable data
-  const createTestTimetableData = async () => {
-    setIsCreatingTestData(true);
-    try {
-      const response = await fetch('/api/test-timetable', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Test timetable data created:', result);
-        // Refresh the data
-        mutate('/api/timetable');
-        mutate('/api/timetable-slots');
-      } else {
-        const error = await response.json();
-        console.error('Failed to create test data:', error);
-      }
-    } catch (error) {
-      console.error('Error creating test data:', error);
-    } finally {
-      setIsCreatingTestData(false);
-    }
-  };
-
   // Delete functions
   const handleDeleteLesson = async (event: CalendarEvent) => {
     if (!event.lessonIds || event.lessonIds.length === 0) {
@@ -996,21 +967,6 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                 </div>
               </div>
               
-              {/* Test Data Button */}
-              {(!timetableEntries || timetableEntries.length === 0) && (
-                <div className="flex justify-center py-4 border-t border-gray-100 bg-yellow-50">
-                  <Button
-                    onClick={createTestTimetableData}
-                    disabled={isCreatingTestData}
-                    size="lg"
-                    variant="default"
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                  >
-                    {isCreatingTestData ? 'Creating...' : '🚀 Create Test Timetable Data'}
-                  </Button>
-                </div>
-              )}
-
               <div className="hidden sm:flex border-t border-gray-100 overflow-hidden" style={{ height: `${Math.max(2.25, (Math.max(...Object.values((() => {
                 // Calculate max events on any single day
                 const renderedEvents = new Set<string>();

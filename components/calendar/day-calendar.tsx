@@ -148,7 +148,6 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [editingHoliday, setEditingHoliday] = useState<CalendarEvent | null>(null);
   const [viewingEvent, setViewingEvent] = useState<CalendarEvent | null>(null);
-  const [isCreatingTestData, setIsCreatingTestData] = useState(false);
   const timelineRef = useRef<HTMLDivElement>(null);
   
   // Fetch data
@@ -164,35 +163,6 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
   // Academic calendar hook for holidays
   const { getHolidayEvents, getWeekNumberForDate } = useAcademicCalendar();
   
-  // Create test timetable data
-  const createTestTimetableData = async () => {
-    setIsCreatingTestData(true);
-    try {
-      const response = await fetch('/api/test-timetable', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Test timetable data created:', result);
-        // Refresh the data
-        mutateEvents();
-        mutateLessons();
-        mutate('/api/timetable');
-        mutate('/api/timetable-slots');
-      } else {
-        const error = await response.json();
-        console.error('Failed to create test data:', error);
-      }
-    } catch (error) {
-      console.error('Error creating test data:', error);
-    } finally {
-      setIsCreatingTestData(false);
-    }
-  };
   const holidayEvents = getHolidayEvents();
 
   // Delete functions
@@ -625,21 +595,6 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Test Data Button */}
-      {(!timetableEntries || timetableEntries.length === 0) && (
-        <div className="flex justify-center py-4 border-b border-gray-100 bg-yellow-50">
-          <Button
-            onClick={createTestTimetableData}
-            disabled={isCreatingTestData}
-            size="lg"
-            variant="default"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-          >
-            {isCreatingTestData ? 'Creating...' : '🚀 Create Test Timetable Data'}
-          </Button>
         </div>
       )}
 
