@@ -5,26 +5,46 @@ import { cn } from '@/lib/utils';
 
 interface TypewriterHeadlineProps {
   className?: string;
-  text?: string;
+  words?: string[];
   typingSpeed?: number;
+  pauseDuration?: number;
+  deleteSpeed?: number;
 }
+
+const DEFAULT_WORDS = ['Plan', 'Teach', 'Simplify'];
 
 export function TypewriterHeadline({
   className,
-  text = 'Plan. Teach. Organise.',
-  typingSpeed = 90
+  words = DEFAULT_WORDS,
+  typingSpeed = 120,
+  deleteSpeed = 60,
+  pauseDuration = 900
 }: TypewriterHeadlineProps) {
   const [displayText, setDisplayText] = useState('');
+  const [wordIndex, setWordIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (displayText === text) return;
+    const currentWord = words[wordIndex % words.length];
+
+    if (!isDeleting && displayText === currentWord) {
+      const timeout = setTimeout(() => setIsDeleting(true), pauseDuration);
+      return () => clearTimeout(timeout);
+    }
+
+    if (isDeleting && displayText === '') {
+      setIsDeleting(false);
+      setWordIndex((prev) => (prev + 1) % words.length);
+      return;
+    }
 
     const timeout = setTimeout(() => {
-      setDisplayText(text.slice(0, displayText.length + 1));
-    }, typingSpeed);
+      const nextLength = displayText.length + (isDeleting ? -1 : 1);
+      setDisplayText(currentWord.slice(0, nextLength));
+    }, isDeleting ? deleteSpeed : typingSpeed);
 
     return () => clearTimeout(timeout);
-  }, [displayText, text, typingSpeed]);
+  }, [displayText, isDeleting, pauseDuration, typingSpeed, deleteSpeed, wordIndex, words]);
 
   return (
     <h1 className={cn('relative font-bold text-[#001b3d]', className)}>
