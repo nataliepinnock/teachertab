@@ -169,13 +169,13 @@ export function TimetableActivityModal({
 
           <div className="space-y-2">
             <Label htmlFor="description" className="text-sm font-medium">
-              Description
+              Notes
             </Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Optional description of the activity"
+              placeholder="Notes about this activity (optional)"
               disabled={mode === 'view'}
               rows={3}
             />
@@ -229,19 +229,7 @@ export function TimetableActivityModal({
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="notes" className="text-sm font-medium">
-              Notes
-            </Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Additional notes or reminders"
-              disabled={mode === 'view'}
-              rows={2}
-            />
-          </div>
+          
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
