@@ -10,13 +10,9 @@ import { Label } from '@/components/ui/label';
 import { TeacherTabLogo } from '@/components/ui/logo';
 
 export function ForgotPasswordForm() {
-  const [state, formAction, pending] = useActionState(requestPasswordReset, {
-    error: '',
-    success: '',
-    email: ''
-  });
+  const [state, formAction, pending] = useActionState(requestPasswordReset, { error: '' });
 
-  const isComplete = Boolean(state?.success);
+  const isComplete = Boolean((state as any)?.success);
 
   return (
     <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
@@ -49,7 +45,7 @@ export function ForgotPasswordForm() {
                 type="email"
                 autoComplete="email"
                 required
-                defaultValue={state?.email ?? ''}
+                defaultValue={(state as any)?.email ?? ''}
                 maxLength={50}
                 disabled={pending || isComplete}
                 placeholder="Enter your email"
@@ -62,8 +58,8 @@ export function ForgotPasswordForm() {
             <div className="text-sm text-red-500">{state.error}</div>
           )}
 
-          {state?.success && (
-            <div className="text-sm text-green-600">{state.success}</div>
+          {(state as any)?.success && (
+            <div className="text-sm text-green-600">{(state as any).success}</div>
           )}
 
           <Button
