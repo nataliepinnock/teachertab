@@ -483,7 +483,7 @@ export default function AcademicYearSetupPage() {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">Academic Year: Holidays and Training Days</h1>
-                  <p className="text-gray-600">Set up your academic year, holidays, and week cycles. Add INSET/training or planning days to exclude them from teaching days.</p>
+                  <p className="text-gray-600">Set up your academic year, holidays, and week cycles.<br/> Add training or planning days to exclude them from teaching days.</p>
                 </div>
               </div>
             </div>

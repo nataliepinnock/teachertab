@@ -17,6 +17,7 @@ import {
   validatedAction,
   validatedActionWithUser
 } from '@/lib/auth/middleware';
+import nodemailer from 'nodemailer';
 
 const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -197,38 +198,97 @@ async function sendPasswordResetEmail(email: string, token: string) {
   const baseUrl = getAppBaseUrl();
   const resetLink = `${baseUrl}/reset-password/${token}`;
 
+  const emailSubject = 'Reset your TeacherTab password';
+  const emailHtml = `
+    <p>Hello,</p>
+    <p>We received a request to reset your TeacherTab password. Click the link below to set a new password. This link will expire in ${PASSWORD_RESET_EXPIRY_MINUTES} minutes.</p>
+    <p><a href="${resetLink}">${resetLink}</a></p>
+    <p>If you did not request a password reset, you can safely ignore this email.</p>
+  `;
+
+  // Try SMTP first (most flexible, works with Gmail, Outlook, custom SMTP)
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = process.env.SMTP_PORT;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPassword = process.env.SMTP_PASSWORD;
+  const smtpFrom = process.env.SMTP_FROM_EMAIL;
+
+  if (smtpHost && smtpPort && smtpUser && smtpPassword && smtpFrom) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: parseInt(smtpPort, 10),
+        secure: parseInt(smtpPort, 10) === 465, // true for 465, false for other ports
+        auth: {
+          user: smtpUser,
+          pass: smtpPassword,
+        },
+      });
+
+      await transporter.sendMail({
+        from: smtpFrom,
+        to: email,
+        subject: emailSubject,
+        html: emailHtml,
+      });
+
+      console.info(`[password-reset] Email sent via SMTP to ${email}`);
+      return;
+    } catch (error) {
+      console.error('[password-reset] Error sending email via SMTP:', error);
+      throw error;
+    }
+  }
+
+  // Fallback to Resend API if configured
   const resendApiKey = process.env.RESEND_API_KEY;
   const resendFrom = process.env.RESEND_FROM_EMAIL;
 
   if (resendApiKey && resendFrom) {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${resendApiKey}`
-      },
-      body: JSON.stringify({
-        from: resendFrom,
-        to: email,
-        subject: 'Reset your TeacherTab password',
-        html: `
-          <p>Hello,</p>
-          <p>We received a request to reset your TeacherTab password. Click the link below to set a new password. This link will expire in ${PASSWORD_RESET_EXPIRY_MINUTES} minutes.</p>
-          <p><a href="${resetLink}">${resetLink}</a></p>
-          <p>If you did not request a password reset, you can safely ignore this email.</p>
-        `
-      })
-    });
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${resendApiKey}`
+        },
+        body: JSON.stringify({
+          from: resendFrom,
+          to: email,
+          subject: emailSubject,
+          html: emailHtml
+        })
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Failed to send password reset email: ${response.status} ${errorText}`
-      );
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[password-reset] Resend API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        throw new Error(
+          `Failed to send password reset email: ${response.status} ${errorText}`
+        );
+      }
+
+      console.info(`[password-reset] Email sent via Resend to ${email}`);
+      return;
+    } catch (error) {
+      console.error('[password-reset] Error sending email via Resend:', error);
+      throw error;
     }
-  } else {
-    console.info(
-      `[password-reset] Generated link for ${email}: ${resetLink}`
+  }
+
+  // Development fallback: log the link
+  console.info(
+    `[password-reset] Email service not configured. Generated link for ${email}: ${resetLink}`
+  );
+  
+  // In production, require email configuration
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'Email service not configured. Please set SMTP_* variables or RESEND_API_KEY and RESEND_FROM_EMAIL.'
     );
   }
 }
@@ -266,7 +326,11 @@ export const requestPasswordReset = validatedAction(
 
       await sendPasswordResetEmail(email, token);
     } catch (error) {
-      console.error('Failed to generate password reset token', error);
+      console.error('[password-reset] Failed to process password reset request:', {
+        email,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
       return {
         error:
           'We were unable to send the reset email. Please try again in a few minutes.',
