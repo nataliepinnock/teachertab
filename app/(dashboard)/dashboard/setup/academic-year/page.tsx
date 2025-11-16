@@ -244,7 +244,6 @@ function HolidayModal({ open, onClose, onSave, mode, initialData, academicYearId
               <SelectContent>
                 <SelectItem value="holiday">Holiday</SelectItem>
                 <SelectItem value="half_term">Half Term</SelectItem>
-                <SelectItem value="term_break">Term Break</SelectItem>
                 <SelectItem value="inset_day">INSET Day</SelectItem>
               </SelectContent>
             </Select>
