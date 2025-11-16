@@ -244,13 +244,12 @@ function HolidayModal({ open, onClose, onSave, mode, initialData, academicYearId
               <SelectContent>
                 <SelectItem value="holiday">Holiday</SelectItem>
                 <SelectItem value="half_term">Half Term</SelectItem>
-                <SelectItem value="inset_day">INSET Day</SelectItem>
                 <SelectItem value="training_day">Training Day</SelectItem>
                 <SelectItem value="planning_day">Planning Day</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-gray-500">
-              Choose Holiday or Half Term for multi-day breaks. Use INSET/Training Day for staff development and Planning Day for preparation days — these are treated as non-teaching days.
+              Choose Holiday or Half Term for multi-day breaks. Use Training Day for staff development and Planning Day for preparation days — these are treated as non-teaching days.
             </p>
           </div>
           <div className="space-y-2">
