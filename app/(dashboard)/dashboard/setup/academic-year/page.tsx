@@ -196,12 +196,12 @@ function HolidayModal({ open, onClose, onSave, mode, initialData, academicYearId
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CalendarDays className="h-5 w-5" />
-            {mode === 'add' ? 'Add Holiday' : mode === 'edit' ? 'Edit Holiday' : 'Holiday Details'}
+            {mode === 'add' ? 'Add Holiday or Training Day' : mode === 'edit' ? 'Edit Holiday or Training Day' : 'Holiday / Training Day Details'}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label htmlFor="holiday-name" className="text-sm font-medium">Holiday Name</Label>
+            <Label htmlFor="holiday-name" className="text-sm font-medium">Name</Label>
             <Input 
               id="holiday-name" 
               value={name} 
@@ -245,8 +245,13 @@ function HolidayModal({ open, onClose, onSave, mode, initialData, academicYearId
                 <SelectItem value="holiday">Holiday</SelectItem>
                 <SelectItem value="half_term">Half Term</SelectItem>
                 <SelectItem value="inset_day">INSET Day</SelectItem>
+                <SelectItem value="training_day">Training Day</SelectItem>
+                <SelectItem value="planning_day">Planning Day</SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-xs text-gray-500">
+              Choose Holiday or Half Term for multi-day breaks. Use INSET/Training Day for staff development and Planning Day for preparation days — these are treated as non-teaching days.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="holiday-color" className="text-sm font-medium">Color</Label>
@@ -478,8 +483,8 @@ export default function AcademicYearSetupPage() {
                   <GraduationCap className="h-6 w-6 text-orange-600" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Academic Year</h1>
-                  <p className="text-gray-600">Set up your academic year, holidays, and week cycles</p>
+                  <h1 className="text-2xl font-bold text-gray-900">Academic Year: Holidays and Training Days</h1>
+                  <p className="text-gray-600">Set up your academic year, holidays, and week cycles. Add INSET/training or planning days to exclude them from teaching days.</p>
                 </div>
               </div>
             </div>
@@ -577,7 +582,7 @@ export default function AcademicYearSetupPage() {
                   <CardContent>
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="font-medium text-gray-900">
-                        Holidays ({yearHolidays.length})
+                        Holidays and Training Days ({yearHolidays.length})
                       </h4>
                       <Button 
                         variant="outline" 
@@ -585,7 +590,7 @@ export default function AcademicYearSetupPage() {
                         onClick={() => handleAddHoliday(academicYear.id)}
                       >
                         <Plus className="h-4 w-4 mr-2" />
-                        Add Holiday
+                        Add Holiday/Training Day
                       </Button>
                     </div>
                     
@@ -633,8 +638,8 @@ export default function AcademicYearSetupPage() {
                     ) : (
                       <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
                         <CalendarDays className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-gray-500 text-sm">No holidays added yet</p>
-                        <p className="text-gray-400 text-xs">Click "Add Holiday" to get started</p>
+                        <p className="text-gray-500 text-sm">No holidays or training days added yet</p>
+                        <p className="text-gray-400 text-xs">Click "Add Holiday/Training Day" to get started</p>
                       </div>
                     )}
                   </CardContent>

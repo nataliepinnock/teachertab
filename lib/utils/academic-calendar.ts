@@ -130,6 +130,10 @@ export function formatHolidayType(type: string): string {
   switch (type) {
     case 'half_term':
       return 'Half Term';
+    case 'training_day':
+      return 'Training Day';
+    case 'planning_day':
+      return 'Planning Day';
     case 'term_break':
       return 'Term Break';
     case 'inset_day':
@@ -147,6 +151,10 @@ export function getDefaultHolidayColor(type: string): string {
   switch (type) {
     case 'half_term':
       return '#10b981'; // emerald
+    case 'training_day':
+      return '#8b5cf6'; // violet
+    case 'planning_day':
+      return '#f97316'; // orange
     case 'term_break':
       return '#f59e0b'; // amber
     case 'inset_day':
