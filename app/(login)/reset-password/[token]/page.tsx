@@ -1,14 +1,18 @@
 import { Suspense } from 'react';
 import { ResetPasswordForm } from './reset-password-form';
 
-export default function ResetPasswordPage({
+export default async function ResetPasswordPage({
   params,
 }: {
-  params: { token: string };
+  // Accept either a plain object or a Promise (to satisfy differing Next.js type constraints)
+  params: any;
 }) {
+  const resolvedParams = typeof params?.then === 'function' ? await params : params;
+  const token: string = resolvedParams?.token;
+
   return (
     <Suspense>
-      <ResetPasswordForm token={params.token} />
+      <ResetPasswordForm token={token} />
     </Suspense>
   );
 }
