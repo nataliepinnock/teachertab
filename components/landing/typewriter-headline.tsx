@@ -11,7 +11,7 @@ interface TypewriterHeadlineProps {
   deleteSpeed?: number;
 }
 
-const DEFAULT_WORDS = ['Plan', 'Teach', 'Simplify'];
+const DEFAULT_WORDS = ['Plan.', 'Teach.', 'Simplify.'];
 
 export function TypewriterHeadline({
   className,

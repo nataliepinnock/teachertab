@@ -30,7 +30,29 @@ export const users = pgTable('users', {
   deletedAt: timestamp('deleted_at'),
 });
 
+export const passwordResetTokens = pgTable('password_reset_tokens', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: varchar('token_hash', { length: 64 }).notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  usedAt: timestamp('used_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const passwordResetTokensRelations = relations(
+  passwordResetTokens,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [passwordResetTokens.userId],
+      references: [users.id]
+    })
+  })
+);
+
 export const usersRelations = relations(users, ({ many }) => ({
+  passwordResetTokens: many(passwordResetTokens),
   classes: many(classes),
   subjects: many(subjects),
   timetableEntries: many(timetableEntries),
@@ -334,3 +356,6 @@ export type NewAcademicYear = typeof academicYears.$inferInsert;
 
 export type Holiday = typeof holidays.$inferSelect;
 export type NewHoliday = typeof holidays.$inferInsert;
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type NewPasswordResetToken = typeof passwordResetTokens.$inferInsert;

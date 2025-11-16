@@ -13,6 +13,7 @@ import { SlotDeletionModal } from '@/components/slot-deletion-modal';
 import { TimetableActivityModal } from '@/components/timetable-activity-modal';
 import React from 'react';
 import Link from 'next/link';
+import { TimetableSlotModal as MultiDayTimetableSlotModal } from '@/components/timetable-slot-modal';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -523,127 +524,6 @@ function TimetableGrid({ slots, onEditSlot, onDeleteSlot, onAssignClass, onAssig
   );
 }
 
-// Timetable Slot Modal
-function TimetableSlotModal({ open, onClose, onSave, mode, initialData }: {
-  open: boolean;
-  onClose: () => void;
-  onSave: (data: { dayOfWeek: string; weekNumber: number; startTime: string; endTime: string; label: string }) => Promise<void>;
-  mode: 'add' | 'view' | 'edit';
-  initialData?: { dayOfWeek: string; weekNumber: number; startTime: string; endTime: string; label: string };
-}) {
-  const [dayOfWeek, setDayOfWeek] = useState(initialData?.dayOfWeek || '');
-  const [weekNumber, setWeekNumber] = useState(initialData?.weekNumber || 1);
-  const [startTime, setStartTime] = useState(initialData?.startTime || '');
-  const [endTime, setEndTime] = useState(initialData?.endTime || '');
-  const [label, setLabel] = useState(initialData?.label || '');
-  const [loading, setLoading] = useState(false);
-
-  React.useEffect(() => {
-    setDayOfWeek(initialData?.dayOfWeek || '');
-    setWeekNumber(initialData?.weekNumber || 1);
-    setStartTime(initialData?.startTime || '');
-    setEndTime(initialData?.endTime || '');
-    setLabel(initialData?.label || '');
-  }, [open, initialData]);
-
-  const handleSave = async () => {
-    setLoading(true);
-    await onSave({ dayOfWeek, weekNumber, startTime, endTime, label });
-    setLoading(false);
-  };
-
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
-  return (
-    <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            {mode === 'add' ? 'Add New Timetable Slot' : mode === 'edit' ? 'Edit Timetable Slot' : 'Timetable Slot Details'}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="day-of-week" className="text-sm font-medium">Day of Week</Label>
-              <Select value={dayOfWeek} onValueChange={setDayOfWeek} disabled={mode === 'view'}>
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Select a day" />
-                </SelectTrigger>
-                <SelectContent>
-                  {days.map((day) => (
-                    <SelectItem key={day} value={day}>
-                      {day}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="week-number" className="text-sm font-medium">Week Number</Label>
-              <Input 
-                id="week-number" 
-                type="number" 
-                value={weekNumber} 
-                onChange={e => setWeekNumber(parseInt(e.target.value) || 1)} 
-                disabled={mode === 'view'}
-                placeholder="1"
-                className="h-10"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="start-time" className="text-sm font-medium">Start Time</Label>
-              <Input 
-                id="start-time" 
-                type="time" 
-                value={startTime} 
-                onChange={e => setStartTime(e.target.value)} 
-                disabled={mode === 'view'}
-                className="h-10"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="end-time" className="text-sm font-medium">End Time</Label>
-              <Input 
-                id="end-time" 
-                type="time" 
-                value={endTime} 
-                onChange={e => setEndTime(e.target.value)} 
-                disabled={mode === 'view'}
-                className="h-10"
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="label" className="text-sm font-medium">Label</Label>
-            <Input 
-              id="label" 
-              value={label} 
-              onChange={e => setLabel(e.target.value)} 
-              disabled={mode === 'view'}
-              placeholder="Enter slot label (e.g., Math Class, Break)"
-              className="h-10"
-            />
-          </div>
-        </div>
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose} type="button" className="flex-1 sm:flex-none">
-            Cancel
-          </Button>
-          {(mode === 'add' || mode === 'edit') && (
-            <Button onClick={handleSave} disabled={loading || !dayOfWeek || !startTime || !endTime || !label} type="button" className="flex-1 sm:flex-none">
-              {loading ? 'Saving...' : mode === 'add' ? 'Create Slot' : 'Save Changes'}
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 export default function TimetableSetupPage() {
   const { data: timetableSlots, error, mutate, isLoading } = useSWR<TimetableSlot[]>('/api/timetable-slots', fetcher);
   const { data: timetableEntries, mutate: mutateTimetableEntries } = useSWR<any[]>('/api/timetable', fetcher);
@@ -956,19 +836,13 @@ export default function TimetableSetupPage() {
         </div>
       </div>
 
-      {/* Timetable Slot Modal */}
-      <TimetableSlotModal
-        open={modalOpen}
+      {/* Timetable Slot Modal (multi-day/week capable) */}
+      <MultiDayTimetableSlotModal
+        isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
+        slot={modalMode === 'edit' || modalMode === 'view' ? selectedSlot : null}
         onSave={handleSaveSlot}
-        mode={modalMode}
-        initialData={selectedSlot ? {
-          dayOfWeek: selectedSlot.dayOfWeek,
-          weekNumber: selectedSlot.weekNumber,
-          startTime: selectedSlot.startTime,
-          endTime: selectedSlot.endTime,
-          label: selectedSlot.label
-        } : undefined}
+        onDelete={async (id: number) => handleDeleteSlot(id)}
       />
 
       {/* Class Assignment Modal */}

@@ -316,6 +316,17 @@ export function Login({
             </div>
           </div>
 
+        {mode === 'signin' && (
+          <div className="flex justify-end">
+            <Link
+              href="/forgot-password"
+              className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+            >
+              Forgot your password?
+            </Link>
+          </div>
+        )}
+
           {state?.error && (
             <div className="text-red-500 text-sm">{state.error}</div>
           )}

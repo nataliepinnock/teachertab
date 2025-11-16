@@ -11,10 +11,38 @@ export default function HomePage() {
           <div className="lg:grid lg:grid-cols-12 lg:gap-8">
             <div className="sm:text-center md:max-w-2xl md:mx-auto lg:col-span-6 lg:text-left">
               <TypewriterHeadline className="text-5xl leading-tight tracking-tight text-gray-900 sm:text-6xl md:text-7xl lg:text-8xl" />
-              <p className="mt-3 text-base text-gray-500 sm:mt-5 sm:text-xl lg:text-lg xl:text-xl">
-                Streamline your teaching workflow with intelligent lesson planning, 
-                timetable management, and student organization tools designed specifically for educators.
-              </p>
+              <div className="mt-4 sm:mt-6 text-left">
+                <span className="inline-flex items-center gap-2 rounded-full border border-[#fbae36]/40 bg-[#fbae36]/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#8c5a10]">
+                  Built for busy classrooms
+                </span>
+                <p className="mt-4 text-lg leading-relaxed text-gray-600 sm:text-xl lg:text-lg xl:text-xl text-pretty">
+                  Offload the admin to TeacherTab and focus on the moments that matter—deliver lessons with confidence, stay ahead of timetable changes, and keep every class on track without the Sunday-night scramble.
+                </p>
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  <div className="flex items-start gap-3 rounded-xl border border-[#fbae36]/30 bg-white/70 p-4 shadow-sm backdrop-blur">
+                    <CheckCircle className="mt-0.5 h-5 w-5 text-[#fbae36]" />
+                    <div>
+                      <p className="text-sm font-semibold uppercase tracking-wide text-[#001b3d]">
+                        Plan Smarter
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Build connected lesson sequences, attach resources, and stay aligned with curriculum goals.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 rounded-xl border border-[#fbae36]/30 bg-white/70 p-4 shadow-sm backdrop-blur">
+                    <CheckCircle className="mt-0.5 h-5 w-5 text-[#fbae36]" />
+                    <div>
+                      <p className="text-sm font-semibold uppercase tracking-wide text-[#001b3d]">
+                        Teach With Clarity
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        See every class, student, and timetable change in one place—without endless spreadsheets.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div className="mt-8 sm:max-w-lg sm:mx-auto sm:text-center lg:text-left lg:mx-0">
                 <Button
                   size="lg"

@@ -1,11 +1,12 @@
 'use server';
 
+import { randomBytes, createHash } from 'crypto';
 import { z } from 'zod';
-import { eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import {
   users,
-  type NewUser,
+  passwordResetTokens,
 } from '@/lib/db/schema';
 import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
@@ -155,6 +156,188 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     priceId: selectedPriceId
   };
 });
+
+const PASSWORD_RESET_TOKEN_BYTES = 32;
+const PASSWORD_RESET_EXPIRY_MINUTES = 60;
+const GENERIC_PASSWORD_RESET_MESSAGE =
+  'If an account exists for that email, we just sent over a reset link.';
+
+const requestPasswordResetSchema = z.object({
+  email: z.string().email('Invalid email address')
+});
+
+const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1, 'Reset token is required'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z
+      .string()
+      .min(8, 'Confirm password must be at least 8 characters')
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ['confirmPassword'],
+    message: 'Passwords do not match.'
+  });
+
+function getAppBaseUrl() {
+  const explicitUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (explicitUrl && explicitUrl.trim().length > 0) {
+    return explicitUrl.replace(/\/$/, '');
+  }
+
+  const vercelUrl = process.env.VERCEL_URL;
+  if (vercelUrl && vercelUrl.trim().length > 0) {
+    return `https://${vercelUrl.replace(/\/$/, '')}`;
+  }
+
+  return 'http://localhost:3000';
+}
+
+async function sendPasswordResetEmail(email: string, token: string) {
+  const baseUrl = getAppBaseUrl();
+  const resetLink = `${baseUrl}/reset-password/${token}`;
+
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const resendFrom = process.env.RESEND_FROM_EMAIL;
+
+  if (resendApiKey && resendFrom) {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${resendApiKey}`
+      },
+      body: JSON.stringify({
+        from: resendFrom,
+        to: email,
+        subject: 'Reset your TeacherTab password',
+        html: `
+          <p>Hello,</p>
+          <p>We received a request to reset your TeacherTab password. Click the link below to set a new password. This link will expire in ${PASSWORD_RESET_EXPIRY_MINUTES} minutes.</p>
+          <p><a href="${resetLink}">${resetLink}</a></p>
+          <p>If you did not request a password reset, you can safely ignore this email.</p>
+        `
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Failed to send password reset email: ${response.status} ${errorText}`
+      );
+    }
+  } else {
+    console.info(
+      `[password-reset] Generated link for ${email}: ${resetLink}`
+    );
+  }
+}
+
+export const requestPasswordReset = validatedAction(
+  requestPasswordResetSchema,
+  async ({ email }) => {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    if (!user) {
+      return { success: GENERIC_PASSWORD_RESET_MESSAGE };
+    }
+
+    const token = randomBytes(PASSWORD_RESET_TOKEN_BYTES).toString('hex');
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const expiresAt = new Date(
+      Date.now() + PASSWORD_RESET_EXPIRY_MINUTES * 60 * 1000
+    );
+
+    try {
+      await db.transaction(async (tx) => {
+        await tx
+          .delete(passwordResetTokens)
+          .where(eq(passwordResetTokens.userId, user.id));
+        await tx.insert(passwordResetTokens).values({
+          userId: user.id,
+          tokenHash,
+          expiresAt
+        });
+      });
+
+      await sendPasswordResetEmail(email, token);
+    } catch (error) {
+      console.error('Failed to generate password reset token', error);
+      return {
+        error:
+          'We were unable to send the reset email. Please try again in a few minutes.',
+        email
+      };
+    }
+
+    return { success: GENERIC_PASSWORD_RESET_MESSAGE };
+  }
+);
+
+export const resetPassword = validatedAction(
+  resetPasswordSchema,
+  async ({ token, password }) => {
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+
+    const [storedToken] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(eq(passwordResetTokens.tokenHash, tokenHash))
+      .limit(1);
+
+    if (
+      !storedToken ||
+      storedToken.usedAt ||
+      new Date(storedToken.expiresAt) < new Date()
+    ) {
+      return { error: 'This reset link is invalid or has expired.' };
+    }
+
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, storedToken.userId))
+      .limit(1);
+
+    if (!user) {
+      return { error: 'This reset link is invalid or has expired.' };
+    }
+
+    const newPasswordHash = await hashPassword(password);
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({
+          passwordHash: newPasswordHash,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, user.id));
+
+      await tx
+        .update(passwordResetTokens)
+        .set({ usedAt: new Date() })
+        .where(eq(passwordResetTokens.id, storedToken.id));
+
+      await tx
+        .delete(passwordResetTokens)
+        .where(
+          and(
+            eq(passwordResetTokens.userId, user.id),
+            ne(passwordResetTokens.id, storedToken.id)
+          )
+        );
+    });
+
+    return {
+      success: 'Your password has been updated. You can now sign in.'
+    };
+  }
+);
 
 export async function signOut() {
   (await cookies()).delete('session');
