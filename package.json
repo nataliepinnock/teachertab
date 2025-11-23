@@ -30,12 +30,12 @@
     "jose": "^6.0.11",
     "lucide-react": "^0.511.0",
     "next": "15.4.0-canary.47",
-    "nodemailer": "^7.0.10",
     "postcss": "^8.5.3",
     "postgres": "^3.4.5",
     "radix-ui": "^1.4.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "resend": "^6.5.2",
     "server-only": "^0.0.1",
     "stripe": "^18.1.0",
     "swr": "^2.3.3",
@@ -44,8 +44,5 @@
     "tw-animate-css": "^1.3.0",
     "typescript": "^5.8.3",
     "zod": "^3.24.4"
-  },
-  "devDependencies": {
-    "@types/nodemailer": "^7.0.3"
   }
 }

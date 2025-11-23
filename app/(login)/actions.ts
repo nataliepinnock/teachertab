@@ -17,7 +17,7 @@ import {
   validatedAction,
   validatedActionWithUser
 } from '@/lib/auth/middleware';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -206,76 +206,29 @@ async function sendPasswordResetEmail(email: string, token: string) {
     <p>If you did not request a password reset, you can safely ignore this email.</p>
   `;
 
-  // Try SMTP first (most flexible, works with Gmail, Outlook, custom SMTP)
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpPort = process.env.SMTP_PORT;
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPassword = process.env.SMTP_PASSWORD;
-  const smtpFrom = process.env.SMTP_FROM_EMAIL;
+  // Resend email service configuration
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const resendFromEmail = process.env.RESEND_FROM_EMAIL;
 
-  if (smtpHost && smtpPort && smtpUser && smtpPassword && smtpFrom) {
+  if (resendApiKey) {
     try {
-      const transporter = nodemailer.createTransport({
-        host: smtpHost,
-        port: parseInt(smtpPort, 10),
-        secure: parseInt(smtpPort, 10) === 465, // true for 465, false for other ports
-        auth: {
-          user: smtpUser,
-          pass: smtpPassword,
-        },
-      });
+      const resend = new Resend(resendApiKey);
 
-      await transporter.sendMail({
-        from: smtpFrom,
+      await resend.emails.send({
+        from: resendFromEmail || 'onboarding@resend.dev', // Default Resend email if not configured
         to: email,
         subject: emailSubject,
         html: emailHtml,
       });
 
-      console.info(`[password-reset] Email sent via SMTP to ${email}`);
+      console.info(`[password-reset] Email sent via Resend to ${email} from ${resendFromEmail || 'onboarding@resend.dev'}`);
       return;
     } catch (error) {
-      console.error('[password-reset] Error sending email via SMTP:', error);
-      throw error;
-    }
-  }
-
-  // Fallback to Resend API if configured
-  const resendApiKey = process.env.RESEND_API_KEY;
-  const resendFrom = process.env.RESEND_FROM_EMAIL;
-
-  if (resendApiKey && resendFrom) {
-    try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${resendApiKey}`
-        },
-        body: JSON.stringify({
-          from: resendFrom,
-          to: email,
-          subject: emailSubject,
-          html: emailHtml
-        })
+      console.error('[password-reset] Error sending email via Resend:', {
+        error: error instanceof Error ? error.message : String(error),
+        from: resendFromEmail || 'onboarding@resend.dev',
+        to: email
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[password-reset] Resend API error:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorText
-        });
-        throw new Error(
-          `Failed to send password reset email: ${response.status} ${errorText}`
-        );
-      }
-
-      console.info(`[password-reset] Email sent via Resend to ${email}`);
-      return;
-    } catch (error) {
-      console.error('[password-reset] Error sending email via Resend:', error);
       throw error;
     }
   }
@@ -288,7 +241,7 @@ async function sendPasswordResetEmail(email: string, token: string) {
   // In production, require email configuration
   if (process.env.NODE_ENV === 'production') {
     throw new Error(
-      'Email service not configured. Please set SMTP_* variables or RESEND_API_KEY and RESEND_FROM_EMAIL.'
+      'Email service not configured. Please set RESEND_API_KEY environment variable.'
     );
   }
 }
@@ -326,11 +279,24 @@ export const requestPasswordReset = validatedAction(
 
       await sendPasswordResetEmail(email, token);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('[password-reset] Failed to process password reset request:', {
         email,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
+        error: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined,
+        // Log which email service was attempted
+        resendConfigured: !!process.env.RESEND_API_KEY,
+        nodeEnv: process.env.NODE_ENV
       });
+      
+      // Provide more specific error message if it's a configuration issue
+      if (errorMessage.includes('Email service not configured')) {
+        return {
+          error: 'Email service is not configured. Please contact support.',
+          email
+        };
+      }
+      
       return {
         error:
           'We were unable to send the reset email. Please try again in a few minutes.',
