@@ -67,7 +67,6 @@ export function PricingSection() {
     ? Math.round(((monthlyAmount - annualMonthlyEquivalent) / monthlyAmount) * 100)
     : 0;
   const savingsAmount = monthlyAnnualTotal - annualAmount;
-  const currency = data.annual.currency || 'gbp';
 
   return (
     <section id="pricing" className="py-16 sm:py-24 bg-white">
@@ -102,7 +101,6 @@ export function PricingSection() {
             popular={true}
             savingsPercentage={savingsPercentage}
             savingsAmount={savingsAmount}
-            currency={currency}
           />
         </div>
       </div>
