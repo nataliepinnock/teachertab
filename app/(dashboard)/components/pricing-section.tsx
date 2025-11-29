@@ -1,0 +1,192 @@
+'use client';
+
+import { checkoutAction } from '@/lib/payments/actions';
+import { ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import useSWR from 'swr';
+
+interface PricingData {
+  monthly: {
+    name: string;
+    price: number;
+    currency: string;
+    interval: string;
+    trialDays: number;
+    priceId?: string;
+  };
+  annual: {
+    name: string;
+    price: number;
+    currency: string;
+    interval: string;
+    trialDays: number;
+    priceId?: string;
+  };
+}
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+export function PricingSection() {
+  const { data, error, isLoading } = useSWR<PricingData>('/api/pricing', fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    refreshInterval: 3600000, // Revalidate every hour
+  });
+
+  if (isLoading) {
+    return (
+      <section id="pricing" className="py-16 sm:py-24 bg-white">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-base font-semibold leading-7 text-[#001b3d]">
+              Pricing
+            </h2>
+            <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              Simple, transparent pricing
+            </p>
+          </div>
+          <div className="mx-auto mt-16 grid max-w-lg grid-cols-1 gap-8 lg:max-w-4xl lg:grid-cols-2">
+            <div className="rounded-2xl bg-gray-50 p-8 ring-1 ring-gray-900/10 h-64 animate-pulse" />
+            <div className="rounded-2xl bg-gray-50 p-8 ring-1 ring-gray-900/10 h-64 animate-pulse" />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error || !data) {
+    return null; // Fail silently if pricing data unavailable
+  }
+
+  // Calculate savings if annual plan exists
+  const monthlyAmount = data.monthly.price || 0;
+  const annualAmount = data.annual.price || 0;
+  const monthlyAnnualTotal = monthlyAmount * 12;
+  const annualMonthlyEquivalent = annualAmount / 12;
+  const savingsPercentage = monthlyAmount > 0 && annualMonthlyEquivalent > 0
+    ? Math.round(((monthlyAmount - annualMonthlyEquivalent) / monthlyAmount) * 100)
+    : 0;
+  const savingsAmount = monthlyAnnualTotal - annualAmount;
+  const currency = data.annual.currency || 'gbp';
+
+  return (
+    <section id="pricing" className="py-16 sm:py-24 bg-white">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-base font-semibold leading-7 text-[#001b3d]">
+            Pricing
+          </h2>
+          <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            Simple, transparent pricing
+          </p>
+          <p className="mt-6 text-lg leading-8 text-gray-600">
+            Choose the plan that works best for you. Cancel anytime.
+          </p>
+        </div>
+        <div className="mx-auto mt-16 grid max-w-lg grid-cols-1 gap-8 lg:max-w-4xl lg:grid-cols-2">
+          <PricingCard
+            name={data.monthly.name}
+            price={data.monthly.price}
+            currency={data.monthly.currency}
+            interval={data.monthly.interval}
+            trialDays={data.monthly.trialDays}
+            priceId={data.monthly.priceId}
+          />
+          <PricingCard
+            name={data.annual.name}
+            price={data.annual.price}
+            currency={data.annual.currency}
+            interval={data.annual.interval}
+            trialDays={data.annual.trialDays}
+            priceId={data.annual.priceId}
+            popular={true}
+            savingsPercentage={savingsPercentage}
+            savingsAmount={savingsAmount}
+            currency={currency}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PricingCard({
+  name,
+  price,
+  currency,
+  interval,
+  trialDays,
+  priceId,
+  popular = false,
+  savingsPercentage = 0,
+  savingsAmount = 0,
+}: {
+  name: string;
+  price: number;
+  currency: string;
+  interval: string;
+  trialDays: number;
+  priceId?: string;
+  popular?: boolean;
+  savingsPercentage?: number;
+  savingsAmount?: number;
+}) {
+  const formatPrice = (amount: number, curr: string) => {
+    const symbol = curr.toUpperCase() === 'GBP' ? '£' : curr.toUpperCase() === 'USD' ? '$' : '€';
+    return `${symbol}${(amount / 100).toFixed(2)}`;
+  };
+
+  return (
+    <div 
+      className={`rounded-2xl bg-gray-50 p-8 ring-1 relative ${
+        popular 
+          ? 'ring-2 ring-[#fbae36]' 
+          : 'ring-gray-900/10'
+      }`}
+    >
+      {popular && (
+        <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
+          <span className="bg-[#fbae36] text-[#001b3d] px-4 py-1 rounded-full text-sm font-semibold">
+            Most Popular
+          </span>
+        </div>
+      )}
+      <h3 className="text-lg font-bold leading-8 text-gray-900">
+        {name}
+      </h3>
+      {trialDays > 0 && (
+        <p className="mt-4 text-sm leading-6 text-gray-600">
+          {trialDays} day free trial
+        </p>
+      )}
+      <p className="mt-6 flex items-baseline gap-x-2">
+        <span className="text-5xl font-bold tracking-tight text-gray-900">
+          {formatPrice(price, currency)}
+        </span>
+        <span className="text-sm font-semibold leading-6 text-gray-600">
+          /{interval}
+        </span>
+      </p>
+      {popular && savingsPercentage > 0 && savingsAmount > 0 && (
+        <p className="mt-3 text-sm text-[#001b3d] font-semibold">
+          Save {formatPrice(savingsAmount, currency)} per year ({savingsPercentage}% off)
+        </p>
+      )}
+      <form action={checkoutAction} className="mt-8">
+        <input type="hidden" name="priceId" value={priceId} />
+        <Button
+          type="submit"
+          variant={popular ? 'accent' : 'default'}
+          className={`w-full rounded-full ${
+            popular 
+              ? 'bg-[#fbae36] hover:bg-[#d69225] text-white' 
+              : 'bg-[#001b3d] hover:bg-[#000e28] text-white'
+          }`}
+        >
+          Get started
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      </form>
+    </div>
+  );
+}

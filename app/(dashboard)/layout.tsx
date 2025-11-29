@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { use, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { CircleIcon, Home, LogOut } from 'lucide-react';
-import { TeacherTabLogo } from '@/components/ui/logo';
+import { Home, LogOut } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,32 +34,45 @@ function UserMenu() {
       <>
         <Link
           href="/pricing"
-          className="text-sm font-medium text-gray-700 hover:text-gray-900"
+          className="text-sm font-medium text-white hover:text-gray-200"
         >
           Pricing
         </Link>
-        <Button asChild className="rounded-full" variant="default">
+        <Button asChild className="rounded-full bg-white text-[#001b3d] hover:bg-gray-100" variant="default">
           <Link href="/sign-in">Sign In</Link>
         </Button>
-        <Button asChild className="rounded-full px-6" variant="accent">
+        <Button asChild className="rounded-full px-6 bg-[#fbae36] text-white hover:bg-[#d69225]" variant="accent">
           <Link href="/sign-up">Sign Up</Link>
         </Button>
       </>
     );
   }
 
+  // Generate initials from name or email
+  const getInitials = () => {
+    if (user.name) {
+      const nameParts = user.name.trim().split(' ');
+      if (nameParts.length >= 2) {
+        return (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
+      }
+      return user.name.substring(0, 2).toUpperCase();
+    }
+    // Fallback to email: use first letter before @ and first letter after @
+    const emailParts = user.email.split('@');
+    return (emailParts[0][0] + (emailParts[1]?.[0] || emailParts[0][1] || '')).toUpperCase();
+  };
+
   return (
     <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-      <DropdownMenuTrigger>
-        <Avatar className="cursor-pointer size-9">
-          <AvatarImage alt={user.name || ''} />
-          <AvatarFallback>
-            {user.email
-              .split(' ')
-              .map((n) => n[0])
-              .join('')}
-          </AvatarFallback>
-        </Avatar>
+      <DropdownMenuTrigger asChild>
+        <button className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#001b3d] rounded-full">
+          <Avatar className="size-9 ring-2 ring-white/20 hover:ring-white/40 transition-all">
+            <AvatarImage alt={user.name || user.email} />
+            <AvatarFallback className="bg-[#fbae36] text-[#001b3d] font-semibold text-sm">
+              {getInitials()}
+            </AvatarFallback>
+          </Avatar>
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="flex flex-col gap-1">
         <DropdownMenuItem className="cursor-pointer">
@@ -84,11 +96,10 @@ function UserMenu() {
 
 function Header() {
   return (
-    <header className="border-b border-gray-200">
+    <header className="bg-[#001b3d] border-b border-[#001b3d]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <Link href="/" className="flex items-center">
-          <TeacherTabLogo size="lg" className="text-primary" />
-          <span className="ml-3 text-2xl font-semibold text-gray-900">TeacherTab</span>
+          <span className="text-3xl font-semibold text-[#fbae36]">TeacherTab</span>
         </Link>
         <div className="flex items-center space-x-4">
           <Suspense fallback={<div className="h-9" />}>
