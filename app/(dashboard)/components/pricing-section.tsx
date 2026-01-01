@@ -4,6 +4,7 @@ import { checkoutAction } from '@/lib/payments/actions';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import useSWR from 'swr';
+import { useState } from 'react';
 
 interface PricingData {
   monthly: {
@@ -26,7 +27,20 @@ interface PricingData {
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+// Nice round price equivalents for USD and EUR
+const PRICING = {
+  usd: {
+    monthly: 1200, // $12.00
+    annual: 12000, // $120.00
+  },
+  eur: {
+    monthly: 1000, // €10.00
+    annual: 10000, // €100.00
+  },
+};
+
 export function PricingSection() {
+  const [currency, setCurrency] = useState<'gbp' | 'usd' | 'eur'>('gbp');
   const { data, error, isLoading } = useSWR<PricingData>('/api/pricing', fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
@@ -58,9 +72,13 @@ export function PricingSection() {
     return null; // Fail silently if pricing data unavailable
   }
 
-  // Calculate savings if annual plan exists
-  const monthlyAmount = data.monthly.price || 0;
-  const annualAmount = data.annual.price || 0;
+  // Use original GBP pricing from API, or round equivalents for USD/EUR
+  const monthlyAmount = currency === 'gbp' 
+    ? (data.monthly.price || 0)
+    : PRICING[currency].monthly;
+  const annualAmount = currency === 'gbp'
+    ? (data.annual.price || 0)
+    : PRICING[currency].annual;
   const monthlyAnnualTotal = monthlyAmount * 12;
   const annualMonthlyEquivalent = annualAmount / 12;
   const savingsPercentage = monthlyAmount > 0 && annualMonthlyEquivalent > 0
@@ -81,20 +99,60 @@ export function PricingSection() {
           <p className="mt-6 text-lg leading-8 text-gray-600">
             Choose the plan that works best for you. Cancel anytime.
           </p>
+          
+          {/* Currency Toggle */}
+          <div className="mt-8 flex items-center justify-center gap-4">
+            <span className="text-sm font-medium text-gray-700">Currency:</span>
+            <div className="inline-flex rounded-lg bg-gray-100 p-1">
+              <button
+                type="button"
+                onClick={() => setCurrency('gbp')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  currency === 'gbp'
+                    ? 'bg-white text-[#001b3d] shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                GBP
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrency('usd')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  currency === 'usd'
+                    ? 'bg-white text-[#001b3d] shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                USD
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrency('eur')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  currency === 'eur'
+                    ? 'bg-white text-[#001b3d] shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                EUR
+              </button>
+            </div>
+          </div>
         </div>
         <div className="mx-auto mt-16 grid max-w-lg grid-cols-1 gap-8 lg:max-w-4xl lg:grid-cols-2">
           <PricingCard
             name={data.monthly.name}
-            price={data.monthly.price}
-            currency={data.monthly.currency}
+            price={monthlyAmount}
+            currency={currency.toUpperCase()}
             interval={data.monthly.interval}
             trialDays={data.monthly.trialDays}
             priceId={data.monthly.priceId}
           />
           <PricingCard
             name={data.annual.name}
-            price={data.annual.price}
-            currency={data.annual.currency}
+            price={annualAmount}
+            currency={currency.toUpperCase()}
             interval={data.annual.interval}
             trialDays={data.annual.trialDays}
             priceId={data.annual.priceId}
@@ -131,7 +189,8 @@ function PricingCard({
 }) {
   const formatPrice = (amount: number, curr: string) => {
     const symbol = curr.toUpperCase() === 'GBP' ? '£' : curr.toUpperCase() === 'USD' ? '$' : '€';
-    return `${symbol}${(amount / 100).toFixed(2)}`;
+    const isEur = curr.toUpperCase() === 'EUR';
+    return `${symbol}${(amount / 100).toFixed(isEur ? 0 : 2)}`;
   };
 
   return (
@@ -145,7 +204,7 @@ function PricingCard({
       {popular && (
         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
           <span className="bg-[#fbae36] text-[#001b3d] px-4 py-1 rounded-full text-sm font-semibold">
-            Most Popular
+            Best Value
           </span>
         </div>
       )}

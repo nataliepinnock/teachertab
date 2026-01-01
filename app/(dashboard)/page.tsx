@@ -8,7 +8,7 @@ import {
   Calendar,
   Users,
   CheckCircle,
-  Plus,
+  Plus, 
   MapPin,
   Clock,
   Star,
@@ -21,6 +21,8 @@ import { TeacherTabLogo } from '@/components/ui/logo';
 import { TypewriterHeadline } from '@/components/landing/typewriter-headline';
 import { useState, useEffect } from 'react';
 import { PricingSection } from './components/pricing-section';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 const features = [
   {
@@ -136,13 +138,39 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 }
 
 function CalendarPreview() {
+  // Helper function to lighten color (matching the main app exactly)
+  function lightenColor(color: string, amount: number = 0.7): string {
+    if (!color || !color.startsWith('#')) return color;
+    
+    const hex = color.slice(1);
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    
+    // Lighten by blending with white
+    const lightenedR = Math.round(r + (255 - r) * amount);
+    const lightenedG = Math.round(g + (255 - g) * amount);
+    const lightenedB = Math.round(b + (255 - b) * amount);
+    
+    return `#${lightenedR.toString(16).padStart(2, '0')}${lightenedG.toString(16).padStart(2, '0')}${lightenedB.toString(16).padStart(2, '0')}`;
+  }
+
+  const lessons = [
+    { color: '#001b3d', subject: 'Mathematics', class: 'Year 9A', location: 'Room 101', top: 1, height: 2 },
+    { color: '#fbae36', subject: 'English', class: 'Year 11B', location: 'Room 205', top: 2.5, height: 1.5 },
+    { color: '#059669', subject: 'Science', class: 'Year 10C', location: 'Lab 3', top: 0.5, height: 2 },
+    { color: '#DC2626', subject: 'History', class: 'Year 8A', location: 'Room 112', top: 3, height: 1.5 },
+    { color: '#7C3AED', subject: 'Physics', class: 'Year 12B', location: 'Lab 1', top: 1.5, height: 2 },
+    { color: '#6B7280', subject: 'Art', class: 'Year 9B', location: 'Studio A', top: 4, height: 1.5 },
+  ];
+
   return (
-    <div className="w-full flex flex-col h-[500px] overflow-hidden select-none pointer-events-none">
-      {/* Week Header */}
-      <div className="flex-none bg-white border-b border-gray-200">
-        <div className="flex">
-          <div className="w-14 flex-none border-r border-gray-200" />
-          <div className="flex-auto grid grid-cols-7 divide-x divide-gray-200 text-sm text-gray-600">
+    <div className="w-full flex flex-col h-[500px] overflow-hidden select-none pointer-events-none bg-white">
+      {/* Week Header - matching main app */}
+      <div className="flex-none bg-white">
+        <div className="hidden sm:flex">
+          <div className="w-14 flex-none" />
+          <div className="flex-auto grid grid-cols-7 divide-x divide-gray-100 border-r border-gray-100 text-sm/6 text-gray-500">
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(
               (day, index) => {
                 const today = new Date();
@@ -154,12 +182,12 @@ function CalendarPreview() {
                     key={index}
                     className="flex items-center justify-center py-3"
                   >
-                    <span className="flex items-baseline gap-1.5">
-                      {day}
+                    <span className="flex items-baseline">
+                      {day}{' '}
                       <span
-                        className={`flex h-7 w-7 items-center justify-center text-sm font-semibold ${
+                        className={`ml-1.5 flex h-8 w-8 items-center justify-center font-semibold ${
                           isToday
-                            ? 'rounded-full bg-[#001b3d] text-white'
+                            ? 'rounded-full bg-indigo-600 text-white'
                             : 'text-gray-900'
                         }`}
                       >
@@ -173,40 +201,97 @@ function CalendarPreview() {
           </div>
         </div>
       </div>
-      {/* Calendar Grid */}
-      <div className="flex relative h-full" style={{ height: 'calc(500px - 60px)' }}>
-        <div className="w-14 flex-none bg-white border-r-2 border-gray-200 overflow-hidden">
-          <div className="grid divide-y divide-gray-100 h-full" style={{ gridTemplateRows: 'repeat(16, 2.4rem)' }}>
-            {Array.from({ length: 16 }, (_, i) => i + 8).map((hour) => (
-              <div key={hour} className="flex items-start justify-end pr-2 pt-1" style={{ height: '2.4rem' }}>
-                <span className="text-xs text-gray-400">
+      {/* Calendar Grid - matching main app */}
+      <div className="flex relative h-full flex-auto" style={{ height: 'calc(500px - 60px)' }}>
+        <div className="sticky left-0 z-10 w-14 flex-none bg-white border-r-2 border-gray-200" />
+        <div className="grid flex-auto grid-cols-1 grid-rows-1">
+          {/* Horizontal lines - matching main app */}
+          <div
+            className="col-start-1 col-end-2 row-start-1 grid divide-y divide-gray-100"
+            style={{ gridTemplateRows: 'repeat(16, 2.4rem)' }}
+          >
+            <div className="row-end-1 h-7"></div>
+            {Array.from({ length: 16 }, (_, i) => i + 8).map((hour, i) => (
+              <div key={hour} style={{ gridRow: `${i + 1} / span 1` }}>
+                <div className="sticky left-0 z-20 -mt-2.5 -ml-14 w-14 pr-2 text-right text-xs/5 text-gray-400">
                   {hour === 12 ? '12PM' : hour < 12 ? `${hour}AM` : `${hour - 12}PM`}
-                </span>
+                </div>
               </div>
             ))}
           </div>
-        </div>
-        <div className="flex-auto relative overflow-hidden">
-          <div className="grid grid-cols-7 divide-x divide-gray-200 h-full" style={{ gridTemplateRows: 'repeat(16, 2.4rem)' }}>
-            {Array.from({ length: 7 }).map((_, colIndex) => (
-              <div key={colIndex} className="relative overflow-hidden">
-                {Array.from({ length: 16 }).map((_, rowIndex) => (
-                  <div key={rowIndex} className="border-b border-gray-100" style={{ height: '2.4rem' }} />
-                ))}
-              </div>
-            ))}
+
+          {/* Vertical lines - matching main app */}
+          <div className="col-start-1 col-end-2 row-start-1 hidden grid-cols-7 grid-rows-1 divide-x divide-gray-200 sm:grid sm:grid-cols-7">
+            <div className="col-start-1 row-span-full border-r border-gray-200" />
+            <div className="col-start-2 row-span-full border-r border-gray-200" />
+            <div className="col-start-3 row-span-full border-r border-gray-200" />
+            <div className="col-start-4 row-span-full border-r border-gray-200" />
+            <div className="col-start-5 row-span-full border-r border-gray-200" />
+            <div className="col-start-6 row-span-full border-r border-gray-200" />
+            <div className="col-start-7 row-span-full" />
           </div>
-          <div className="absolute inset-0 pointer-events-none">
-            {/* Sample lessons */}
-            <div className="absolute rounded-lg border-2 px-2.5 py-1.5 text-xs shadow-sm" style={{ backgroundColor: '#001b3d15', borderColor: '#001b3dCC', left: 'calc(0% + 0.25rem)', width: 'calc(14.285% - 0.5rem)', top: 'calc(1 * 2.4rem)', height: 'calc(2 * 2.4rem - 0.25rem)' }}>
-              <div className="font-semibold truncate" style={{ color: '#001b3dE6' }}>Algebra Basics</div>
-              <div className="truncate text-xs mt-0.5" style={{ color: '#001b3dCC' }}>Year 9A</div>
-            </div>
-            <div className="absolute rounded-lg border-2 px-2.5 py-1.5 text-xs shadow-sm" style={{ backgroundColor: '#fbae3615', borderColor: '#fbae36CC', left: 'calc(14.285% + 0.25rem)', width: 'calc(14.285% - 0.5rem)', top: 'calc(2.5 * 2.4rem)', height: 'calc(1.5 * 2.4rem - 0.25rem)' }}>
-              <div className="font-semibold truncate" style={{ color: '#fbae36E6' }}>English Literature</div>
-              <div className="truncate text-xs mt-0.5" style={{ color: '#fbae36CC' }}>Year 11B</div>
-            </div>
-          </div>
+
+          {/* Events - matching main app styling */}
+          <ol
+            className="col-start-1 col-end-2 row-start-1 grid grid-cols-1 sm:grid-cols-7"
+            style={{ gridTemplateRows: '1.75rem repeat(16, 2.4rem) auto' }}
+          >
+            {lessons.map((lesson, index) => {
+              const dayColumn = index % 7 + 1;
+              // Account for header row (1.75rem = row 1) and convert time position to grid rows
+              const startRow = Math.floor(lesson.top) + 2; // +2 because row 1 is header
+              const duration = Math.ceil(lesson.height);
+              
+              return (
+                <li
+                  key={index}
+                  className="relative mt-px flex"
+                  style={{
+                    gridRow: `${startRow} / span ${duration}`,
+                    gridColumn: `${dayColumn} / span 1`,
+                    paddingRight: '2px',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <div
+                    className="group flex flex-col text-xs transition-colors border-2 rounded-md z-10 overflow-hidden px-1.5 py-1 h-full w-full shadow-sm hover:shadow-md cursor-pointer"
+                    style={{
+                      backgroundColor: lesson.color ? lightenColor(lesson.color, 0.85) : '#F9FAFB',
+                      borderColor: lesson.color ? `${lesson.color}CC` : '#374151',
+                      transform: 'translateZ(0)'
+                    }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-1">
+                        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                          <div className="flex-1 min-w-0">
+                            <div
+                              className="text-xs font-semibold truncate"
+                              style={{ color: lesson.color !== '#6B7280' ? `${lesson.color}E6` : '#111827' }}
+                            >
+                              {lesson.subject}
+                            </div>
+                            <div
+                              className="text-xs truncate"
+                              style={{ color: `${lesson.color}CC` }}
+                            >
+                              {lesson.class}
+                            </div>
+                            {lesson.location && (
+                              <div className="flex items-center text-xs mt-0.5">
+                                <MapPin className="h-3 w-3 mr-1 flex-shrink-0" style={{ color: `${lesson.color}CC` }} />
+                                <span className="truncate" style={{ color: `${lesson.color}CC` }}>{lesson.location}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
         </div>
       </div>
     </div>
@@ -508,7 +593,9 @@ export default function HomePage() {
                     <div className="w-6 h-6 bg-[#fbae36]/20 rounded-full flex items-center justify-center">
                       <BookOpen className="h-3 w-3 text-[#fbae36]" />
                     </div>
-                    <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                    <div className="w-8 h-8 bg-[#001b3d] rounded-full flex items-center justify-center">
+                      <span className="text-xs font-semibold text-white">S</span>
+                    </div>
                   </div>
                 </div>
 
@@ -562,6 +649,183 @@ export default function HomePage() {
 
       {/* Pricing Section */}
       <PricingSection />
+
+      {/* Footer */}
+      <footer className="bg-[#001b3d] text-white">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8 py-16">
+          <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
+            {/* Contact Form */}
+            <div>
+              <h3 className="text-2xl font-bold mb-6">Get in Touch</h3>
+              <p className="text-gray-300 mb-6">
+                Have questions or feedback? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+              </p>
+              <form className="space-y-4" onSubmit={(e) => {
+                e.preventDefault();
+                // Handle form submission
+                alert('Thank you for your message! We\'ll get back to you soon.');
+              }}>
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium mb-2">
+                    Name
+                  </label>
+                  <Input
+                    id="name"
+                    name="name"
+                    type="text"
+                    required
+                    className="bg-white text-gray-900"
+                    placeholder="Your name"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium mb-2">
+                    Email
+                  </label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    className="bg-white text-gray-900"
+                    placeholder="your.email@example.com"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="message" className="block text-sm font-medium mb-2">
+                    Message
+                  </label>
+                  <Textarea
+                    id="message"
+                    name="message"
+                    required
+                    rows={4}
+                    className="bg-white text-gray-900 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:shadow-md"
+                    placeholder="Your message..."
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  variant="accent"
+                  className="w-full rounded-full bg-[#fbae36] hover:bg-[#d69225] text-white"
+                >
+                  Send Message
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </form>
+            </div>
+
+            {/* Footer Links */}
+            <div className="grid grid-cols-2 gap-8">
+              <div>
+                <h4 className="text-lg font-semibold mb-4">Product</h4>
+                <ul className="space-y-3">
+                  <li>
+                    <Link href="#features" className="text-gray-300 hover:text-white transition-colors">
+                      Features
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#pricing" className="text-gray-300 hover:text-white transition-colors">
+                      Pricing
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/sign-up" className="text-gray-300 hover:text-white transition-colors">
+                      Get Started
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/dashboard" className="text-gray-300 hover:text-white transition-colors">
+                      Dashboard
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-lg font-semibold mb-4">Company</h4>
+                <ul className="space-y-3">
+                  <li>
+                    <Link href="/about" className="text-gray-300 hover:text-white transition-colors">
+                      About Us
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/blog" className="text-gray-300 hover:text-white transition-colors">
+                      Blog
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/careers" className="text-gray-300 hover:text-white transition-colors">
+                      Careers
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/contact" className="text-gray-300 hover:text-white transition-colors">
+                      Contact
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-lg font-semibold mb-4">Legal</h4>
+                <ul className="space-y-3">
+                  <li>
+                    <Link href="/privacy" className="text-gray-300 hover:text-white transition-colors">
+                      Privacy Policy
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/terms" className="text-gray-300 hover:text-white transition-colors">
+                      Terms of Service
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/cookies" className="text-gray-300 hover:text-white transition-colors">
+                      Cookie Policy
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-lg font-semibold mb-4">Support</h4>
+                <ul className="space-y-3">
+                  <li>
+                    <Link href="/help" className="text-gray-300 hover:text-white transition-colors">
+                      Help Center
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/faq" className="text-gray-300 hover:text-white transition-colors">
+                      FAQ
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/documentation" className="text-gray-300 hover:text-white transition-colors">
+                      Documentation
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="mt-12 pt-8 border-t border-gray-700">
+            <div className="flex flex-col sm:flex-row justify-between items-center">
+              <div className="flex items-center mb-4 sm:mb-0">
+                <TeacherTabLogo size="sm" className="text-[#fbae36]" />
+                <span className="ml-2 text-lg font-semibold text-[#fbae36]">
+                  TeacherTab
+                </span>
+              </div>
+              <p className="text-gray-400 text-sm">
+                © {new Date().getFullYear()} TeacherTab. All rights reserved.
+              </p>
+            </div>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
