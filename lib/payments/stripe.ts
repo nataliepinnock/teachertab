@@ -237,7 +237,7 @@ export async function getStripePrices() {
       unitAmount: price.unit_amount || 0,
       currency: price.currency,
       interval: price.recurring?.interval,
-      trialPeriodDays: price.recurring?.trial_period_days
+      trialPeriodDays: price.recurring?.trial_period_days ?? undefined
     });
 
     // Check for currency_options (multi-currency pricing)
@@ -251,7 +251,7 @@ export async function getStripePrices() {
             unitAmount: options.unit_amount || 0,
             currency: currency.toLowerCase(),
             interval: price.recurring?.interval,
-            trialPeriodDays: price.recurring?.trial_period_days
+            trialPeriodDays: price.recurring?.trial_period_days ?? undefined
           });
         }
       });
