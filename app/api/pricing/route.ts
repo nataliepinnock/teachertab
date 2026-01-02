@@ -13,6 +13,15 @@ export async function GET() {
     const monthlyPlan = products.find((product) => product.name === 'Monthly');
     const annualPlan = products.find((product) => product.name === 'Annual');
 
+    // Debug: Log ALL prices to see what Stripe is returning
+    console.log('ALL prices from Stripe:', prices.map(p => ({
+      id: p.id,
+      productId: p.productId,
+      currency: p.currency,
+      interval: p.interval,
+      amount: p.unitAmount
+    })));
+
     // Get all prices for each product, then organize by currency and interval
     const monthlyPrices = prices.filter((price) => price.productId === monthlyPlan?.id);
     const annualPrices = prices.filter((price) => price.productId === annualPlan?.id);
@@ -49,6 +58,14 @@ export async function GET() {
         annualProductId: annualPlan?.id,
         monthlyPricesCount: monthlyPrices.length,
         annualPricesCount: annualPrices.length,
+        // Show ALL prices from Stripe (not filtered by product)
+        allPricesFromStripe: prices.map(p => ({
+          id: p.id,
+          productId: p.productId,
+          currency: p.currency,
+          interval: p.interval,
+          amount: p.unitAmount
+        })),
         monthlyPrices: monthlyPrices.map(p => ({
           id: p.id,
           currency: p.currency,
