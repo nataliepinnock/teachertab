@@ -13,23 +13,6 @@ export async function GET() {
     const monthlyPlan = products.find((product) => product.name === 'Monthly');
     const annualPlan = products.find((product) => product.name === 'Annual');
 
-    // Debug: Log ALL prices to see what Stripe is returning
-    console.log('ALL prices from Stripe (including currency variants):', prices.map(p => ({
-      id: p.id,
-      productId: p.productId,
-      currency: p.currency,
-      interval: p.interval,
-      amount: p.unitAmount
-    })));
-    console.log('Total prices found:', prices.length);
-    
-    // Check if we can see the raw Stripe price objects
-    // This will help us understand the structure better
-    if (process.env.NODE_ENV === 'development') {
-      const { getStripePrices: getRawPrices } = await import('@/lib/payments/stripe');
-      // We already have prices, but this helps with debugging
-    }
-
     // Get all prices for each product, then organize by currency and interval
     // Filter to only active prices for actual use
     const monthlyPrices = prices.filter((price) => 
@@ -56,54 +39,7 @@ export async function GET() {
     const eurMonthly = findPrice(monthlyPrices, 'eur', 'month');
     const eurAnnual = findPrice(annualPrices, 'eur', 'year');
 
-    // Debug logging
-    console.log('Monthly product ID:', monthlyPlan?.id);
-    console.log('Annual product ID:', annualPlan?.id);
-    console.log('Monthly prices found:', monthlyPrices.length);
-    console.log('Annual prices found:', annualPrices.length);
-    console.log('Monthly prices:', monthlyPrices.map(p => ({ currency: p.currency, interval: p.interval, amount: p.unitAmount })));
-    console.log('Annual prices:', annualPrices.map(p => ({ currency: p.currency, interval: p.interval, amount: p.unitAmount })));
-
     const response = {
-      // Debug info at the top for easy access
-      _debug: {
-        monthlyProductId: monthlyPlan?.id,
-        annualProductId: annualPlan?.id,
-        monthlyPricesCount: monthlyPrices.length,
-        annualPricesCount: annualPrices.length,
-        // Show ALL prices from Stripe (not filtered by product)
-        allPricesFromStripe: prices.map(p => ({
-          id: p.id,
-          productId: p.productId,
-          currency: p.currency,
-          interval: p.interval,
-          amount: p.unitAmount,
-          active: (p as any).active, // Include active status
-          // Show unique currencies found
-        })),
-        uniqueCurrencies: [...new Set(prices.map(p => p.currency))],
-        uniqueProductIds: [...new Set(prices.map(p => p.productId))],
-        monthlyPrices: monthlyPrices.map(p => ({
-          id: p.id,
-          currency: p.currency,
-          interval: p.interval,
-          amount: p.unitAmount
-        })),
-        annualPrices: annualPrices.map(p => ({
-          id: p.id,
-          currency: p.currency,
-          interval: p.interval,
-          amount: p.unitAmount
-        })),
-        foundPrices: {
-          gbpMonthly: gbpMonthly ? { id: gbpMonthly.id, amount: gbpMonthly.unitAmount } : null,
-          gbpAnnual: gbpAnnual ? { id: gbpAnnual.id, amount: gbpAnnual.unitAmount } : null,
-          usdMonthly: usdMonthly ? { id: usdMonthly.id, amount: usdMonthly.unitAmount } : null,
-          usdAnnual: usdAnnual ? { id: usdAnnual.id, amount: usdAnnual.unitAmount } : null,
-          eurMonthly: eurMonthly ? { id: eurMonthly.id, amount: eurMonthly.unitAmount } : null,
-          eurAnnual: eurAnnual ? { id: eurAnnual.id, amount: eurAnnual.unitAmount } : null,
-        }
-      },
       gbp: {
         monthly: {
           name: monthlyPlan?.name || 'Monthly',
