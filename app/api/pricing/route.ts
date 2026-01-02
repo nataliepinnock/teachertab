@@ -22,6 +22,13 @@ export async function GET() {
       amount: p.unitAmount
     })));
     console.log('Total prices found:', prices.length);
+    
+    // Check if we can see the raw Stripe price objects
+    // This will help us understand the structure better
+    if (process.env.NODE_ENV === 'development') {
+      const { getStripePrices: getRawPrices } = await import('@/lib/payments/stripe');
+      // We already have prices, but this helps with debugging
+    }
 
     // Get all prices for each product, then organize by currency and interval
     // Filter to only active prices for actual use
@@ -71,8 +78,11 @@ export async function GET() {
           currency: p.currency,
           interval: p.interval,
           amount: p.unitAmount,
-          active: (p as any).active // Include active status
+          active: (p as any).active, // Include active status
+          // Show unique currencies found
         })),
+        uniqueCurrencies: [...new Set(prices.map(p => p.currency))],
+        uniqueProductIds: [...new Set(prices.map(p => p.productId))],
         monthlyPrices: monthlyPrices.map(p => ({
           id: p.id,
           currency: p.currency,

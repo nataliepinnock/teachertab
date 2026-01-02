@@ -202,13 +202,35 @@ export async function handleSubscriptionChange(
 export async function getStripePrices() {
   // Query ALL prices (no filters) to see everything that exists
   const allPricesResponse = await stripe.prices.list({
-    expand: ['data.product'],
+    expand: ['data.product', 'data.currency_options'],
     limit: 100 // Get up to 100 prices
   });
 
+  // Also try to get prices for the specific products we know about
+  // This helps if prices are linked differently
+  const monthlyProductId = 'prod_TKUx0QJx33pMnN';
+  const annualProductId = 'prod_TKUxYvCGdybfX9';
+  
+  const monthlyProductPrices = await stripe.prices.list({
+    expand: ['data.product', 'data.currency_options'],
+    limit: 100
+  });
+  
+  const annualProductPrices = await stripe.prices.list({
+    expand: ['data.product', 'data.currency_options'],
+    limit: 100
+  });
+  
+  // Combine all results
+  const allPricesData = [
+    ...allPricesResponse.data,
+    ...monthlyProductPrices.data,
+    ...annualProductPrices.data
+  ];
+
   // Filter to only recurring prices and remove duplicates
   const seenPriceIds = new Set<string>();
-  const allPriceData = allPricesResponse.data.filter((price) => {
+  const allPriceData = allPricesData.filter((price) => {
     // Only include recurring prices
     if (price.type !== 'recurring') return false;
     // Remove duplicates
