@@ -43,6 +43,33 @@ export async function GET() {
     console.log('Annual prices:', annualPrices.map(p => ({ currency: p.currency, interval: p.interval, amount: p.unitAmount })));
 
     const response = {
+      // Debug info at the top for easy access
+      _debug: {
+        monthlyProductId: monthlyPlan?.id,
+        annualProductId: annualPlan?.id,
+        monthlyPricesCount: monthlyPrices.length,
+        annualPricesCount: annualPrices.length,
+        monthlyPrices: monthlyPrices.map(p => ({
+          id: p.id,
+          currency: p.currency,
+          interval: p.interval,
+          amount: p.unitAmount
+        })),
+        annualPrices: annualPrices.map(p => ({
+          id: p.id,
+          currency: p.currency,
+          interval: p.interval,
+          amount: p.unitAmount
+        })),
+        foundPrices: {
+          gbpMonthly: gbpMonthly ? { id: gbpMonthly.id, amount: gbpMonthly.unitAmount } : null,
+          gbpAnnual: gbpAnnual ? { id: gbpAnnual.id, amount: gbpAnnual.unitAmount } : null,
+          usdMonthly: usdMonthly ? { id: usdMonthly.id, amount: usdMonthly.unitAmount } : null,
+          usdAnnual: usdAnnual ? { id: usdAnnual.id, amount: usdAnnual.unitAmount } : null,
+          eurMonthly: eurMonthly ? { id: eurMonthly.id, amount: eurMonthly.unitAmount } : null,
+          eurAnnual: eurAnnual ? { id: eurAnnual.id, amount: eurAnnual.unitAmount } : null,
+        }
+      },
       gbp: {
         monthly: {
           name: monthlyPlan?.name || 'Monthly',
@@ -96,33 +123,6 @@ export async function GET() {
           trialDays: eurAnnual?.trialPeriodDays || 0,
           priceId: eurAnnual?.id,
         },
-      },
-      // Include debug info (can be removed later)
-      _debug: {
-        monthlyProductId: monthlyPlan?.id,
-        annualProductId: annualPlan?.id,
-        monthlyPricesCount: monthlyPrices.length,
-        annualPricesCount: annualPrices.length,
-        monthlyPrices: monthlyPrices.map(p => ({
-          id: p.id,
-          currency: p.currency,
-          interval: p.interval,
-          amount: p.unitAmount
-        })),
-        annualPrices: annualPrices.map(p => ({
-          id: p.id,
-          currency: p.currency,
-          interval: p.interval,
-          amount: p.unitAmount
-        })),
-        foundPrices: {
-          gbpMonthly: gbpMonthly ? { id: gbpMonthly.id, amount: gbpMonthly.unitAmount } : null,
-          gbpAnnual: gbpAnnual ? { id: gbpAnnual.id, amount: gbpAnnual.unitAmount } : null,
-          usdMonthly: usdMonthly ? { id: usdMonthly.id, amount: usdMonthly.unitAmount } : null,
-          usdAnnual: usdAnnual ? { id: usdAnnual.id, amount: usdAnnual.unitAmount } : null,
-          eurMonthly: eurMonthly ? { id: eurMonthly.id, amount: eurMonthly.unitAmount } : null,
-          eurAnnual: eurAnnual ? { id: eurAnnual.id, amount: eurAnnual.unitAmount } : null,
-        }
       }
     };
 
