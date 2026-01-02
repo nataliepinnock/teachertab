@@ -8,20 +8,33 @@ import { getUser } from '@/lib/db/queries';
  */
 async function deleteLessonsForHoliday(userId: number, startDate: string, endDate: string) {
   try {
+    // Normalize dates to YYYY-MM-DD format
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
+    
+    // Check if dates are valid
+    if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
+      console.error('Invalid date format in deleteLessonsForHoliday:', { startDate, endDate });
+      return 0;
+    }
+    
+    const start = startDateObj.toISOString().split('T')[0];
+    const end = endDateObj.toISOString().split('T')[0];
+    
     // Delete lessons where the date falls within the holiday range
     const deletedLessons = await db
       .delete(lessons)
       .where(
         and(
           eq(lessons.userId, userId),
-          gte(lessons.date, startDate),
-          lte(lessons.date, endDate)
+          gte(lessons.date, start),
+          lte(lessons.date, end)
         )
       )
       .returning({ id: lessons.id });
 
     if (deletedLessons.length > 0) {
-      console.log(`Deleted ${deletedLessons.length} lesson(s) for holiday period ${startDate} to ${endDate}`);
+      console.log(`Deleted ${deletedLessons.length} lesson(s) for holiday period ${start} to ${end}`);
     }
     
     return deletedLessons.length;
