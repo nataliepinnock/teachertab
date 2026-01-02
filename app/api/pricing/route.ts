@@ -13,17 +13,8 @@ export async function GET() {
     const monthlyPlan = products.find((product) => product.name === 'Monthly');
     const annualPlan = products.find((product) => product.name === 'Annual');
 
-    // Filter prices by product ID AND currency (GBP) to ensure we get the right prices
-    const monthlyPrice = prices.find(
-      (price) => price.productId === monthlyPlan?.id && 
-                 price.currency.toLowerCase() === 'gbp' &&
-                 price.interval === 'month'
-    );
-    const annualPrice = prices.find(
-      (price) => price.productId === annualPlan?.id && 
-                 price.currency.toLowerCase() === 'gbp' &&
-                 price.interval === 'year'
-    );
+    const monthlyPrice = prices.find((price) => price.productId === monthlyPlan?.id);
+    const annualPrice = prices.find((price) => price.productId === annualPlan?.id);
 
     return NextResponse.json({
       monthly: {
