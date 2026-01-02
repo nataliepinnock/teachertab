@@ -38,8 +38,9 @@ export function getWeekNumber(date: Date, academicYear: AcademicYear, holidays: 
 /**
  * Calculate which week (1 or 2) a given date falls on for ANY day of the week
  * This is used for filtering timetable slots and lessons
+ * When skipHolidayWeeks is enabled, holiday weeks are not counted in the cycle
  */
-export function getWeekNumberForDate(date: Date, academicYear: AcademicYear): number | null {
+export function getWeekNumberForDate(date: Date, academicYear: AcademicYear, holidays: Holiday[] = []): number | null {
   // Check if the date is within the academic year
   const dateStr = date.toISOString().split('T')[0];
   if (dateStr < academicYear.startDate || dateStr > academicYear.endDate) {
@@ -64,11 +65,29 @@ export function getWeekNumberForDate(date: Date, academicYear: AcademicYear): nu
   const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert Sunday (0) to 6
   currentMonday.setDate(currentMonday.getDate() - daysToMonday);
   
-  // Calculate how many weeks from the first Monday this date is
-  const weeksDiff = Math.floor((currentMonday.getTime() - firstMonday.getTime()) / (1000 * 60 * 60 * 24 * 7));
-  
-  // Return alternating week numbers: Week 1, Week 2, Week 1, Week 2, etc.
-  return (weeksDiff % 2 === 0) ? 1 : 2;
+  // If skipHolidayWeeks is enabled, count only teaching weeks (skip fully covered holiday weeks)
+  if (academicYear.skipHolidayWeeks === 1 && holidays && holidays.length > 0) {
+    let teachingWeekCount = 0;
+    let weekMonday = new Date(firstMonday);
+    
+    // Iterate through each week from the start until we reach the current week
+    while (weekMonday <= currentMonday) {
+      // Check if this week is fully covered by holidays
+      if (!isWeekFullyCoveredByHolidays(weekMonday, holidays)) {
+        // This is a teaching week, count it
+        teachingWeekCount++;
+      }
+      // Move to next Monday
+      weekMonday.setDate(weekMonday.getDate() + 7);
+    }
+    
+    // Return alternating week numbers based on teaching week count
+    return (teachingWeekCount % 2 === 0) ? 1 : 2;
+  } else {
+    // Original logic: count all weeks including holidays
+    const weeksDiff = Math.floor((currentMonday.getTime() - firstMonday.getTime()) / (1000 * 60 * 60 * 24 * 7));
+    return (weeksDiff % 2 === 0) ? 1 : 2;
+  }
 }
 
 /**

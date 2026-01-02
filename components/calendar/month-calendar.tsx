@@ -812,6 +812,12 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
               // Get week number for this date
               const weekNumber = activeAcademicYear ? getWeekNumberForDate(date) : null;
               
+              // If skipHolidayWeeks is enabled, don't show week label during fully covered holiday weeks
+              const shouldShowWeekLabel = weekNumber && date.getDay() === 1 && (
+                !activeAcademicYear?.skipHolidayWeeks || 
+                !holidays || 
+                !isWeekFullyCoveredByHolidays(date, holidays)
+              );
 
               return (
                 <div
@@ -836,8 +842,8 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
                     >
                       {date.getDate()}
                     </button>
-                    {/* Week Number Indicator - show on all Mondays within academic year */}
-                    {weekNumber && date.getDay() === 1 && (
+                    {/* Week Number Indicator - show on Mondays within academic year, but not during fully covered holiday weeks */}
+                    {shouldShowWeekLabel && (
                       <div className={`px-1 py-0.5 rounded text-xs font-medium ${
                         weekNumber === 1 
                           ? 'bg-blue-50 text-blue-600 border border-blue-200' 

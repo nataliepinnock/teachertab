@@ -39,9 +39,9 @@ export function useAcademicCalendar() {
   // Helper function to get week number for a specific date (works for ANY day of the week)
   const getWeekNumberForDate = useCallback((date: Date): number | null => {
     if (!activeAcademicYear) return null;
-    // Use the new function that works for any day of the week
-    return getWeekNumberForDateUtil(date, activeAcademicYear);
-  }, [activeAcademicYear]);
+    // Use the new function that works for any day of the week, passing holidays for skipHolidayWeeks logic
+    return getWeekNumberForDateUtil(date, activeAcademicYear, holidays || []);
+  }, [activeAcademicYear, holidays]);
 
   // Helper function to check if a date is a school day
   const isSchoolDayForDate = (date: Date): boolean => {
