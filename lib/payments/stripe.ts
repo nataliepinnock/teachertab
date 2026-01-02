@@ -200,9 +200,17 @@ export async function handleSubscriptionChange(
 }
 
 export async function getStripePrices() {
+  // Get active prices first
   const prices = await stripe.prices.list({
     expand: ['data.product'],
     active: true,
+    type: 'recurring'
+  });
+
+  // Also check for inactive prices to see if USD/EUR exist but are inactive
+  const inactivePrices = await stripe.prices.list({
+    expand: ['data.product'],
+    active: false,
     type: 'recurring'
   });
 
@@ -215,8 +223,11 @@ export async function getStripePrices() {
     trialPeriodDays: number | undefined;
   }> = [];
 
+  // Combine active and inactive prices for processing
+  const allPriceData = [...prices.data, ...inactivePrices.data];
+
   // Process each price and extract currency variants
-  prices.data.forEach((price) => {
+  allPriceData.forEach((price) => {
     const productId = typeof price.product === 'string' ? price.product : price.product.id;
     
     // Add the default currency price
