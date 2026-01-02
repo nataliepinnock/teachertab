@@ -13,23 +13,34 @@ export async function GET() {
     const monthlyPlan = products.find((product) => product.name === 'Monthly');
     const annualPlan = products.find((product) => product.name === 'Annual');
 
-    // Helper function to find price by product, currency, and interval
-    const findPrice = (productId: string | undefined, currency: string, interval: string) => {
-      return prices.find(
+    // Get all prices for each product, then organize by currency and interval
+    const monthlyPrices = prices.filter((price) => price.productId === monthlyPlan?.id);
+    const annualPrices = prices.filter((price) => price.productId === annualPlan?.id);
+
+    // Helper function to find price by currency and interval from a list of prices
+    const findPrice = (priceList: typeof prices, currency: string, interval: string) => {
+      return priceList.find(
         (price) =>
-          price.productId === productId &&
           price.currency.toLowerCase() === currency.toLowerCase() &&
           price.interval === interval
       );
     };
 
     // Get prices for all currencies
-    const gbpMonthly = findPrice(monthlyPlan?.id, 'gbp', 'month');
-    const gbpAnnual = findPrice(annualPlan?.id, 'gbp', 'year');
-    const usdMonthly = findPrice(monthlyPlan?.id, 'usd', 'month');
-    const usdAnnual = findPrice(annualPlan?.id, 'usd', 'year');
-    const eurMonthly = findPrice(monthlyPlan?.id, 'eur', 'month');
-    const eurAnnual = findPrice(annualPlan?.id, 'eur', 'year');
+    const gbpMonthly = findPrice(monthlyPrices, 'gbp', 'month');
+    const gbpAnnual = findPrice(annualPrices, 'gbp', 'year');
+    const usdMonthly = findPrice(monthlyPrices, 'usd', 'month');
+    const usdAnnual = findPrice(annualPrices, 'usd', 'year');
+    const eurMonthly = findPrice(monthlyPrices, 'eur', 'month');
+    const eurAnnual = findPrice(annualPrices, 'eur', 'year');
+
+    // Debug logging
+    console.log('Monthly product ID:', monthlyPlan?.id);
+    console.log('Annual product ID:', annualPlan?.id);
+    console.log('Monthly prices found:', monthlyPrices.length);
+    console.log('Annual prices found:', annualPrices.length);
+    console.log('Monthly prices:', monthlyPrices.map(p => ({ currency: p.currency, interval: p.interval, amount: p.unitAmount })));
+    console.log('Annual prices:', annualPrices.map(p => ({ currency: p.currency, interval: p.interval, amount: p.unitAmount })));
 
     return NextResponse.json({
       gbp: {
