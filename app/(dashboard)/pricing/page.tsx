@@ -6,38 +6,31 @@ import { SubmitButton } from './submit-button';
 import { useState } from 'react';
 import useSWR from 'swr';
 
+interface PlanData {
+  name: string;
+  price: number;
+  currency: string;
+  interval: string;
+  trialDays: number;
+  priceId?: string;
+}
+
 interface PricingData {
-  monthly: {
-    name: string;
-    price: number;
-    currency: string;
-    interval: string;
-    trialDays: number;
-    priceId?: string;
+  gbp: {
+    monthly: PlanData;
+    annual: PlanData;
   };
-  annual: {
-    name: string;
-    price: number;
-    currency: string;
-    interval: string;
-    trialDays: number;
-    priceId?: string;
+  usd: {
+    monthly: PlanData;
+    annual: PlanData;
+  };
+  eur: {
+    monthly: PlanData;
+    annual: PlanData;
   };
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
-// Nice round price equivalents for USD and EUR
-const PRICING = {
-  usd: {
-    monthly: 1200, // $12.00
-    annual: 12000, // $120.00
-  },
-  eur: {
-    monthly: 1000, // €10.00
-    annual: 10000, // €100.00
-  },
-};
 
 export default function PricingPage() {
   const [currency, setCurrency] = useState<'gbp' | 'usd' | 'eur'>('gbp');
@@ -75,13 +68,10 @@ export default function PricingPage() {
     );
   }
 
-  // Use original GBP pricing from API, or round equivalents for USD/EUR
-  const monthlyAmount = currency === 'gbp' 
-    ? (data.monthly.price || 0)
-    : PRICING[currency].monthly;
-  const annualAmount = currency === 'gbp'
-    ? (data.annual.price || 0)
-    : PRICING[currency].annual;
+  // Get prices for selected currency from API
+  const currencyData = data[currency];
+  const monthlyAmount = currencyData?.monthly?.price || 0;
+  const annualAmount = currencyData?.annual?.price || 0;
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -133,11 +123,11 @@ export default function PricingPage() {
       </div>
       <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
         <PricingCard
-          name={data.monthly.name}
+          name={currencyData?.monthly?.name || 'Monthly'}
           price={monthlyAmount}
           currency={currency.toUpperCase()}
-          interval={data.monthly.interval}
-          trialDays={data.monthly.trialDays}
+          interval={currencyData?.monthly?.interval || 'month'}
+          trialDays={currencyData?.monthly?.trialDays || 0}
           features={[
             'Unlimited lesson planning',
             'Calendar management',
@@ -145,14 +135,14 @@ export default function PricingPage() {
             'Basic reports',
             'Email support',
           ]}
-          priceId={data.monthly.priceId}
+          priceId={currencyData?.monthly?.priceId}
         />
         <PricingCard
-          name={data.annual.name}
+          name={currencyData?.annual?.name || 'Annual'}
           price={annualAmount}
           currency={currency.toUpperCase()}
-          interval={data.annual.interval}
-          trialDays={data.annual.trialDays}
+          interval={currencyData?.annual?.interval || 'year'}
+          trialDays={currencyData?.annual?.trialDays || 0}
           features={[
             'Everything in Monthly, plus:',
             'Advanced analytics',
@@ -160,7 +150,7 @@ export default function PricingPage() {
             'Priority support',
             'Save 17% with annual billing',
           ]}
-          priceId={data.annual.priceId}
+          priceId={currencyData?.annual?.priceId}
           popular={true}
         />
       </div>

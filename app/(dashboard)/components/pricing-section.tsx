@@ -6,38 +6,31 @@ import { Button } from '@/components/ui/button';
 import useSWR from 'swr';
 import { useState } from 'react';
 
+interface PlanData {
+  name: string;
+  price: number;
+  currency: string;
+  interval: string;
+  trialDays: number;
+  priceId?: string;
+}
+
 interface PricingData {
-  monthly: {
-    name: string;
-    price: number;
-    currency: string;
-    interval: string;
-    trialDays: number;
-    priceId?: string;
+  gbp: {
+    monthly: PlanData;
+    annual: PlanData;
   };
-  annual: {
-    name: string;
-    price: number;
-    currency: string;
-    interval: string;
-    trialDays: number;
-    priceId?: string;
+  usd: {
+    monthly: PlanData;
+    annual: PlanData;
+  };
+  eur: {
+    monthly: PlanData;
+    annual: PlanData;
   };
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
-// Nice round price equivalents for USD and EUR
-const PRICING = {
-  usd: {
-    monthly: 1200, // $12.00
-    annual: 12000, // $120.00
-  },
-  eur: {
-    monthly: 1000, // €10.00
-    annual: 10000, // €100.00
-  },
-};
 
 export function PricingSection() {
   const [currency, setCurrency] = useState<'gbp' | 'usd' | 'eur'>('gbp');
@@ -72,13 +65,10 @@ export function PricingSection() {
     return null; // Fail silently if pricing data unavailable
   }
 
-  // Use original GBP pricing from API, or round equivalents for USD/EUR
-  const monthlyAmount = currency === 'gbp' 
-    ? (data.monthly.price || 0)
-    : PRICING[currency].monthly;
-  const annualAmount = currency === 'gbp'
-    ? (data.annual.price || 0)
-    : PRICING[currency].annual;
+  // Get prices for selected currency from API
+  const currencyData = data[currency];
+  const monthlyAmount = currencyData?.monthly?.price || 0;
+  const annualAmount = currencyData?.annual?.price || 0;
   const monthlyAnnualTotal = monthlyAmount * 12;
   const annualMonthlyEquivalent = annualAmount / 12;
   const savingsPercentage = monthlyAmount > 0 && annualMonthlyEquivalent > 0
@@ -142,20 +132,20 @@ export function PricingSection() {
         </div>
         <div className="mx-auto mt-16 grid max-w-lg grid-cols-1 gap-8 lg:max-w-4xl lg:grid-cols-2">
           <PricingCard
-            name={data.monthly.name}
+            name={currencyData?.monthly?.name || 'Monthly'}
             price={monthlyAmount}
             currency={currency.toUpperCase()}
-            interval={data.monthly.interval}
-            trialDays={data.monthly.trialDays}
-            priceId={data.monthly.priceId}
+            interval={currencyData?.monthly?.interval || 'month'}
+            trialDays={currencyData?.monthly?.trialDays || 0}
+            priceId={currencyData?.monthly?.priceId}
           />
           <PricingCard
-            name={data.annual.name}
+            name={currencyData?.annual?.name || 'Annual'}
             price={annualAmount}
             currency={currency.toUpperCase()}
-            interval={data.annual.interval}
-            trialDays={data.annual.trialDays}
-            priceId={data.annual.priceId}
+            interval={currencyData?.annual?.interval || 'year'}
+            trialDays={currencyData?.annual?.trialDays || 0}
+            priceId={currencyData?.annual?.priceId}
             popular={true}
             savingsPercentage={savingsPercentage}
             savingsAmount={savingsAmount}
