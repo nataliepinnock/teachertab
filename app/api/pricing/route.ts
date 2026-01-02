@@ -97,27 +97,33 @@ export async function GET() {
           priceId: eurAnnual?.id,
         },
       },
-      // Include debug info in development
-      ...(process.env.NODE_ENV === 'development' && {
-        _debug: {
-          monthlyProductId: monthlyPlan?.id,
-          annualProductId: annualPlan?.id,
-          monthlyPricesCount: monthlyPrices.length,
-          annualPricesCount: annualPrices.length,
-          monthlyPrices: monthlyPrices.map(p => ({
-            id: p.id,
-            currency: p.currency,
-            interval: p.interval,
-            amount: p.unitAmount
-          })),
-          annualPrices: annualPrices.map(p => ({
-            id: p.id,
-            currency: p.currency,
-            interval: p.interval,
-            amount: p.unitAmount
-          }))
+      // Include debug info (can be removed later)
+      _debug: {
+        monthlyProductId: monthlyPlan?.id,
+        annualProductId: annualPlan?.id,
+        monthlyPricesCount: monthlyPrices.length,
+        annualPricesCount: annualPrices.length,
+        monthlyPrices: monthlyPrices.map(p => ({
+          id: p.id,
+          currency: p.currency,
+          interval: p.interval,
+          amount: p.unitAmount
+        })),
+        annualPrices: annualPrices.map(p => ({
+          id: p.id,
+          currency: p.currency,
+          interval: p.interval,
+          amount: p.unitAmount
+        })),
+        foundPrices: {
+          gbpMonthly: gbpMonthly ? { id: gbpMonthly.id, amount: gbpMonthly.unitAmount } : null,
+          gbpAnnual: gbpAnnual ? { id: gbpAnnual.id, amount: gbpAnnual.unitAmount } : null,
+          usdMonthly: usdMonthly ? { id: usdMonthly.id, amount: usdMonthly.unitAmount } : null,
+          usdAnnual: usdAnnual ? { id: usdAnnual.id, amount: usdAnnual.unitAmount } : null,
+          eurMonthly: eurMonthly ? { id: eurMonthly.id, amount: eurMonthly.unitAmount } : null,
+          eurAnnual: eurAnnual ? { id: eurAnnual.id, amount: eurAnnual.unitAmount } : null,
         }
-      })
+      }
     };
 
     return NextResponse.json(response);
