@@ -7,6 +7,7 @@ import { EventModal } from '@/components/event-modal';
 import { LessonModal } from '@/components/lesson-modal';
 import { mutate } from 'swr';
 import { useAcademicCalendar } from '@/lib/hooks/useAcademicCalendar';
+import { isWeekFullyCoveredByHolidays } from '@/lib/utils/academic-calendar';
 import { 
   DropdownMenu, 
   DropdownMenuTrigger, 
@@ -30,7 +31,7 @@ export default function CalendarPage() {
   console.log('Calendar page showEventsOnly state:', showEventsOnly, '(true = Events Only, false = Lessons & Events)');
   
   // Use academic calendar hook for week numbers
-  const { getWeekNumberForDate, activeAcademicYear } = useAcademicCalendar();
+  const { getWeekNumberForDate, activeAcademicYear, holidays } = useAcademicCalendar();
 
   // Handle client-side initialization and localStorage loading
   useEffect(() => {
@@ -241,10 +242,16 @@ export default function CalendarPage() {
               <h1 className="text-xl font-bold text-gray-900">{getDisplayDate()}</h1>
             )}
             
-            {/* Week Number Display - only show for day and week views */}
+            {/* Week Number Display - only show for day and week views, but not during fully covered holiday weeks */}
             {currentView !== 'month' && activeAcademicYear && (() => {
               const weekNumber = getWeekNumberForDate(currentDate);
-              return weekNumber ? (
+              // If skipHolidayWeeks is enabled, don't show week label during fully covered holiday weeks
+              const shouldShowWeekLabel = weekNumber && (
+                !activeAcademicYear?.skipHolidayWeeks || 
+                !holidays || 
+                !isWeekFullyCoveredByHolidays(currentDate, holidays)
+              );
+              return shouldShowWeekLabel ? (
                 <div className={`px-2 py-1 rounded text-xs font-medium ${
                   weekNumber === 1 
                     ? 'bg-blue-50 text-blue-600 border border-blue-200' 
