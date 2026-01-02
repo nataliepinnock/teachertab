@@ -206,15 +206,48 @@ export async function getStripePrices() {
     type: 'recurring'
   });
 
-  return prices.data.map((price) => ({
-    id: price.id,
-    productId:
-      typeof price.product === 'string' ? price.product : price.product.id,
-    unitAmount: price.unit_amount,
-    currency: price.currency,
-    interval: price.recurring?.interval,
-    trialPeriodDays: price.recurring?.trial_period_days
-  }));
+  const allPrices: Array<{
+    id: string;
+    productId: string;
+    unitAmount: number;
+    currency: string;
+    interval: string | undefined;
+    trialPeriodDays: number | undefined;
+  }> = [];
+
+  // Process each price and extract currency variants
+  prices.data.forEach((price) => {
+    const productId = typeof price.product === 'string' ? price.product : price.product.id;
+    
+    // Add the default currency price
+    allPrices.push({
+      id: price.id,
+      productId,
+      unitAmount: price.unit_amount || 0,
+      currency: price.currency,
+      interval: price.recurring?.interval,
+      trialPeriodDays: price.recurring?.trial_period_days
+    });
+
+    // Check for currency_options (multi-currency pricing)
+    // In Stripe, currency_options contains additional currencies for the same price
+    if (price.currency_options && typeof price.currency_options === 'object') {
+      Object.entries(price.currency_options).forEach(([currency, options]: [string, any]) => {
+        if (options && typeof options === 'object' && 'unit_amount' in options) {
+          allPrices.push({
+            id: price.id, // Same price ID, different currency
+            productId,
+            unitAmount: options.unit_amount || 0,
+            currency: currency.toLowerCase(),
+            interval: price.recurring?.interval,
+            trialPeriodDays: price.recurring?.trial_period_days
+          });
+        }
+      });
+    }
+  });
+
+  return allPrices;
 }
 
 export async function getStripeProducts() {
