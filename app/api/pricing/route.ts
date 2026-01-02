@@ -42,7 +42,7 @@ export async function GET() {
     console.log('Monthly prices:', monthlyPrices.map(p => ({ currency: p.currency, interval: p.interval, amount: p.unitAmount })));
     console.log('Annual prices:', annualPrices.map(p => ({ currency: p.currency, interval: p.interval, amount: p.unitAmount })));
 
-    return NextResponse.json({
+    const response = {
       gbp: {
         monthly: {
           name: monthlyPlan?.name || 'Monthly',
@@ -97,7 +97,30 @@ export async function GET() {
           priceId: eurAnnual?.id,
         },
       },
-    });
+      // Include debug info in development
+      ...(process.env.NODE_ENV === 'development' && {
+        _debug: {
+          monthlyProductId: monthlyPlan?.id,
+          annualProductId: annualPlan?.id,
+          monthlyPricesCount: monthlyPrices.length,
+          annualPricesCount: annualPrices.length,
+          monthlyPrices: monthlyPrices.map(p => ({
+            id: p.id,
+            currency: p.currency,
+            interval: p.interval,
+            amount: p.unitAmount
+          })),
+          annualPrices: annualPrices.map(p => ({
+            id: p.id,
+            currency: p.currency,
+            interval: p.interval,
+            amount: p.unitAmount
+          }))
+        }
+      })
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error fetching pricing:', error);
     return NextResponse.json(
