@@ -11,6 +11,7 @@ import { DndContext, useDraggable, useDroppable } from '@dnd-kit/core';
 import { LessonModal } from '@/components/lesson-modal';
 import { EventModal as EventEditModal } from '@/components/event-modal';
 import { useAcademicCalendar } from '@/lib/hooks/useAcademicCalendar';
+import { isWeekFullyCoveredByHolidays } from '@/lib/utils/academic-calendar';
 
 // Function to lighten a hex color
 function lightenColor(color: string, amount: number = 0.7): string {
@@ -360,7 +361,7 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
   });
   
   // Academic calendar hook for week number calculation
-  const { getWeekNumberForDate } = useAcademicCalendar();
+  const { getWeekNumberForDate, activeAcademicYear, holidays: academicHolidays } = useAcademicCalendar();
   
   // Delete functions
   const handleDeleteLesson = async (event: CalendarEvent) => {
@@ -555,6 +556,14 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
     lessons.forEach(lesson => {
       const lessonDate = new Date(lesson.date);
       if (lessonDate >= weekDates[0] && lessonDate <= weekDates[6]) {
+        // If skipHolidayWeeks is enabled, check if the week is fully covered by holidays
+        if (activeAcademicYear?.skipHolidayWeeks === 1 && academicHolidays) {
+          if (isWeekFullyCoveredByHolidays(lessonDate, academicHolidays)) {
+            // Skip this lesson - it's in a fully covered holiday week
+            return;
+          }
+        }
+        
         const lClassInfo = classes.find(c => c.id === lesson.classId);
         const lSubjectInfo = subjects.find(s => s.id === lesson.subjectId);
         
@@ -719,6 +728,15 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
     if (timetableEntries && timetableSlots) {
       weekDates.forEach(date => {
         const dateStr = date.toISOString().split('T')[0];
+        
+        // If skipHolidayWeeks is enabled, check if the week is fully covered by holidays
+        if (activeAcademicYear?.skipHolidayWeeks === 1 && academicHolidays) {
+          if (isWeekFullyCoveredByHolidays(date, academicHolidays)) {
+            // Skip generating unfinished lessons for this day - it's in a fully covered holiday week
+            return;
+          }
+        }
+        
         const dayOfWeek = date.toLocaleDateString('en-GB', { weekday: 'long' });
         const weekNumber = getWeekNumberForDate(date);
         
@@ -787,7 +805,7 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
     }
     setCalendarEvents(initialEvents);
 
-  }, [events, lessons, classes, subjects, holidays, weekDates, timetableEntries, timetableSlots, user]);
+  }, [events, lessons, classes, subjects, holidays, weekDates, timetableEntries, timetableSlots, user, getWeekNumberForDate, activeAcademicYear, academicHolidays]);
 
   const allDayEvents = useMemo(() => {
     const allDay = calendarEvents.filter(event => event.allDay);

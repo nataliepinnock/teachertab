@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import useSWR, { mutate } from 'swr';
 import { Event, Lesson, Class, Subject, User } from '@/lib/db/schema';
 import { useAcademicCalendar } from '@/lib/hooks/useAcademicCalendar';
+import { isWeekFullyCoveredByHolidays } from '@/lib/utils/academic-calendar';
 import { Button } from '@/components/ui/button';
 
 // Function to lighten a hex color
@@ -161,7 +162,7 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
   
 
   // Academic calendar hook for holidays
-  const { getHolidayEvents, getWeekNumberForDate } = useAcademicCalendar();
+  const { getHolidayEvents, getWeekNumberForDate, activeAcademicYear, holidays: academicHolidays } = useAcademicCalendar();
   
   const holidayEvents = getHolidayEvents();
 
@@ -350,7 +351,7 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
     });
 
     // Add lessons for the current date
-    const dayLessons = lessons.filter(lesson => {
+    let dayLessons = lessons.filter(lesson => {
       // Handle date comparison without timezone conversion
       if (typeof lesson.date === 'string' && lesson.date.includes('T')) {
         // If it's a full ISO string, extract just the date part
@@ -360,6 +361,14 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
         return lesson.date === dateStr;
       }
     });
+    
+    // If skipHolidayWeeks is enabled, filter out lessons in fully covered holiday weeks
+    if (activeAcademicYear?.skipHolidayWeeks === 1 && academicHolidays) {
+      dayLessons = dayLessons.filter(lesson => {
+        const lessonDate = new Date(lesson.date);
+        return !isWeekFullyCoveredByHolidays(lessonDate, academicHolidays);
+      });
+    }
 
 
 
@@ -460,14 +469,19 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
 
     // Generate unfinished lessons from timetable entries
     if (timetableEntries && timetableSlots) {
-      const dayOfWeek = currentDate.toLocaleDateString('en-GB', { weekday: 'long' });
-      const weekNumber = getWeekNumberForDate(currentDate);
-      
-      // Find timetable entries for this day and week
-      const entriesForDay = timetableEntries.filter(entry => 
-        entry.dayOfWeek === dayOfWeek && 
-        entry.weekNumber === weekNumber
-      );
+      // If skipHolidayWeeks is enabled, check if the week is fully covered by holidays
+      if (activeAcademicYear?.skipHolidayWeeks === 1 && academicHolidays) {
+        if (isWeekFullyCoveredByHolidays(currentDate, academicHolidays)) {
+          // Skip generating unfinished lessons for this day - it's in a fully covered holiday week
+        } else {
+          const dayOfWeek = currentDate.toLocaleDateString('en-GB', { weekday: 'long' });
+          const weekNumber = getWeekNumberForDate(currentDate);
+          
+          // Find timetable entries for this day and week
+          const entriesForDay = timetableEntries.filter(entry => 
+            entry.dayOfWeek === dayOfWeek && 
+            entry.weekNumber === weekNumber
+          );
 
       console.log('🔍 Day Calendar Timetable Debug:', {
         dayOfWeek: dayOfWeek,
@@ -526,6 +540,8 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
           });
         }
       });
+        }
+      }
     }
 
 
@@ -533,7 +549,7 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
       timedEvents: timedEvents.sort((a, b) => a.startTime.getTime() - b.startTime.getTime()),
       allDayEvents: allDayEvents.sort((a, b) => a.title.localeCompare(b.title))
     };
-  }, [events, lessons, classes, subjects, currentDate, holidayEvents, timetableEntries, timetableSlots, user, getWeekNumberForDate]);
+  }, [events, lessons, classes, subjects, currentDate, holidayEvents, timetableEntries, timetableSlots, user, getWeekNumberForDate, activeAcademicYear, academicHolidays]);
   
   if (!events || !lessons || !classes || !subjects || !user) {
     return <div>Loading...</div>;

@@ -164,3 +164,38 @@ export function getDefaultHolidayColor(type: string): string {
       return '#ef4444'; // red
   }
 }
+
+/**
+ * Check if a week (Monday-Friday) is fully covered by holidays
+ * Returns true if all school days (Mon-Fri) in the week are covered by holidays
+ */
+export function isWeekFullyCoveredByHolidays(date: Date, holidays: Holiday[] = []): boolean {
+  if (!holidays || holidays.length === 0) return false;
+  
+  // Find the Monday of the week containing the date
+  const properDate = new Date(date.toISOString().split('T')[0] + 'T12:00:00');
+  const dayOfWeek = properDate.getDay();
+  const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert Sunday (0) to 6
+  const monday = new Date(properDate);
+  monday.setDate(monday.getDate() - daysToMonday);
+  
+  // Check each school day (Monday-Friday) of the week
+  for (let i = 0; i < 5; i++) {
+    const schoolDay = new Date(monday);
+    schoolDay.setDate(schoolDay.getDate() + i);
+    const schoolDayStr = schoolDay.toISOString().split('T')[0];
+    
+    // Check if this school day is covered by a holiday
+    const isCovered = holidays.some(holiday => 
+      schoolDayStr >= holiday.startDate && schoolDayStr <= holiday.endDate
+    );
+    
+    // If any school day is not covered, the week is not fully covered
+    if (!isCovered) {
+      return false;
+    }
+  }
+  
+  // All school days are covered by holidays
+  return true;
+}

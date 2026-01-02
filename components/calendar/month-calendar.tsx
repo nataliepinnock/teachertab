@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import useSWR, { mutate } from 'swr';
 import { Event, Lesson, Class, Subject, User } from '@/lib/db/schema';
 import { useAcademicCalendar } from '@/lib/hooks/useAcademicCalendar';
+import { isWeekFullyCoveredByHolidays } from '@/lib/utils/academic-calendar';
 
 // Function to lighten a hex color
 function lightenColor(color: string, amount: number = 0.7): string {
@@ -209,7 +210,7 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
   const { data: timetableSlots } = useSWR<any[]>('/api/timetable-slots', fetcher);
   
   // Academic calendar hook for week number calculation
-  const { getWeekNumberForDate, activeAcademicYear, getHolidayEvents } = useAcademicCalendar();
+  const { getWeekNumberForDate, activeAcademicYear, getHolidayEvents, holidays } = useAcademicCalendar();
   
   // Delete functions
   const handleDeleteLesson = async (event: CalendarEvent) => {
@@ -374,6 +375,14 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
         // Only create calendar events for lessons that fall within the current month view
         const lessonDate = new Date(lesson.date);
         if (lessonDate >= monthStart && lessonDate <= monthEnd) {
+          // If skipHolidayWeeks is enabled, check if the week is fully covered by holidays
+          if (activeAcademicYear?.skipHolidayWeeks === 1 && holidays) {
+            if (isWeekFullyCoveredByHolidays(lessonDate, holidays)) {
+              // Skip this lesson - it's in a fully covered holiday week
+              return;
+            }
+          }
+          
           const lessonColor = lesson.color || lSubjectInfo.color || '#4F46E5';
           // Debug logging only in development
           if (process.env.NODE_ENV === 'development') {
@@ -631,6 +640,15 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
         const date = new Date(year, month, day);
         date.setHours(12, 0, 0, 0);
         const dateStr = date.toISOString().split('T')[0];
+        
+        // If skipHolidayWeeks is enabled, check if the week is fully covered by holidays
+        if (activeAcademicYear?.skipHolidayWeeks === 1 && holidays) {
+          if (isWeekFullyCoveredByHolidays(date, holidays)) {
+            // Skip generating unfinished lessons for this day - it's in a fully covered holiday week
+            continue;
+          }
+        }
+        
         const dayOfWeek = date.toLocaleDateString('en-GB', { weekday: 'long' });
         const weekNumber = getWeekNumberForDate(date);
         
@@ -695,7 +713,7 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
     }
     setCalendarEvents(allEvents);
 
-  }, [events, lessons, classes, subjects, currentDate, getHolidayEvents, timetableEntries, timetableSlots, user, getWeekNumberForDate]);
+  }, [events, lessons, classes, subjects, currentDate, getHolidayEvents, timetableEntries, timetableSlots, user, getWeekNumberForDate, activeAcademicYear, holidays]);
 
   const monthGrid = useMemo(() => {
     const year = currentDate.getFullYear();
