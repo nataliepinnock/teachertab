@@ -24,8 +24,13 @@ export async function GET() {
     console.log('Total prices found:', prices.length);
 
     // Get all prices for each product, then organize by currency and interval
-    const monthlyPrices = prices.filter((price) => price.productId === monthlyPlan?.id);
-    const annualPrices = prices.filter((price) => price.productId === annualPlan?.id);
+    // Filter to only active prices for actual use
+    const monthlyPrices = prices.filter((price) => 
+      price.productId === monthlyPlan?.id && (price as any).active !== false
+    );
+    const annualPrices = prices.filter((price) => 
+      price.productId === annualPlan?.id && (price as any).active !== false
+    );
 
     // Helper function to find price by currency and interval from a list of prices
     const findPrice = (priceList: typeof prices, currency: string, interval: string) => {
@@ -65,7 +70,8 @@ export async function GET() {
           productId: p.productId,
           currency: p.currency,
           interval: p.interval,
-          amount: p.unitAmount
+          amount: p.unitAmount,
+          active: (p as any).active // Include active status
         })),
         monthlyPrices: monthlyPrices.map(p => ({
           id: p.id,

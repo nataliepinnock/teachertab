@@ -200,18 +200,21 @@ export async function handleSubscriptionChange(
 }
 
 export async function getStripePrices() {
-  // Get active prices first
-  const prices = await stripe.prices.list({
+  // Query ALL prices (no filters) to see everything that exists
+  const allPricesResponse = await stripe.prices.list({
     expand: ['data.product'],
-    active: true,
-    type: 'recurring'
+    limit: 100 // Get up to 100 prices
   });
 
-  // Also check for inactive prices to see if USD/EUR exist but are inactive
-  const inactivePrices = await stripe.prices.list({
-    expand: ['data.product'],
-    active: false,
-    type: 'recurring'
+  // Filter to only recurring prices and remove duplicates
+  const seenPriceIds = new Set<string>();
+  const allPriceData = allPricesResponse.data.filter((price) => {
+    // Only include recurring prices
+    if (price.type !== 'recurring') return false;
+    // Remove duplicates
+    if (seenPriceIds.has(price.id)) return false;
+    seenPriceIds.add(price.id);
+    return true;
   });
 
   const allPrices: Array<{
@@ -221,10 +224,8 @@ export async function getStripePrices() {
     currency: string;
     interval: string | undefined;
     trialPeriodDays: number | undefined;
+    active: boolean;
   }> = [];
-
-  // Combine active and inactive prices for processing
-  const allPriceData = [...prices.data, ...inactivePrices.data];
 
   // Process each price and extract currency variants
   allPriceData.forEach((price) => {
@@ -237,7 +238,8 @@ export async function getStripePrices() {
       unitAmount: price.unit_amount || 0,
       currency: price.currency,
       interval: price.recurring?.interval,
-      trialPeriodDays: price.recurring?.trial_period_days ?? undefined
+      trialPeriodDays: price.recurring?.trial_period_days ?? undefined,
+      active: price.active
     });
 
     // Check for currency_options (multi-currency pricing)
@@ -251,7 +253,8 @@ export async function getStripePrices() {
             unitAmount: options.unit_amount || 0,
             currency: currency.toLowerCase(),
             interval: price.recurring?.interval,
-            trialPeriodDays: price.recurring?.trial_period_days ?? undefined
+            trialPeriodDays: price.recurring?.trial_period_days ?? undefined,
+            active: price.active
           });
         }
       });
