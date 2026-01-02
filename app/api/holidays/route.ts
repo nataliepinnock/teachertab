@@ -1,7 +1,36 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, gte, lte } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
-import { holidays, academicYears } from '@/lib/db/schema';
+import { holidays, academicYears, lessons } from '@/lib/db/schema';
 import { getUser } from '@/lib/db/queries';
+
+/**
+ * Delete all lessons that fall within a holiday date range
+ */
+async function deleteLessonsForHoliday(userId: number, startDate: string, endDate: string) {
+  try {
+    // Delete lessons where the date falls within the holiday range
+    const deletedLessons = await db
+      .delete(lessons)
+      .where(
+        and(
+          eq(lessons.userId, userId),
+          gte(lessons.date, startDate),
+          lte(lessons.date, endDate)
+        )
+      )
+      .returning({ id: lessons.id });
+
+    if (deletedLessons.length > 0) {
+      console.log(`Deleted ${deletedLessons.length} lesson(s) for holiday period ${startDate} to ${endDate}`);
+    }
+    
+    return deletedLessons.length;
+  } catch (error) {
+    console.error('Error deleting lessons for holiday:', error);
+    // Don't throw - we still want to create/update the holiday even if lesson deletion fails
+    return 0;
+  }
+}
 
 export async function GET(request: Request) {
   const user = await getUser();
@@ -77,7 +106,10 @@ export async function POST(request: Request) {
       })
       .returning();
 
-    return Response.json(newHoliday, { status: 201 });
+    // Delete any lessons that fall on the holiday dates
+    const deletedCount = await deleteLessonsForHoliday(user.id, startDate, endDate);
+
+    return Response.json({ ...newHoliday, deletedLessonsCount: deletedCount }, { status: 201 });
   } catch (error) {
     console.error('Error creating holiday:', error);
     return Response.json({ error: 'Failed to create holiday' }, { status: 500 });
@@ -121,7 +153,10 @@ export async function PUT(request: Request) {
       .where(and(eq(holidays.id, id), eq(holidays.userId, user.id)))
       .returning();
 
-    return Response.json(updatedHoliday);
+    // Delete any lessons that fall on the updated holiday dates
+    const deletedCount = await deleteLessonsForHoliday(user.id, startDate, endDate);
+
+    return Response.json({ ...updatedHoliday, deletedLessonsCount: deletedCount });
   } catch (error) {
     console.error('Error updating holiday:', error);
     return Response.json({ error: 'Failed to update holiday' }, { status: 500 });
