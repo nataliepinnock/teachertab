@@ -342,6 +342,19 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
     const month = currentDate.getMonth();
     const monthStart = new Date(year, month, 1);
     const monthEnd = new Date(year, month + 1, 0);
+    
+    // Calculate the visible calendar grid range (includes days from adjacent months)
+    const firstDayOfMonth = new Date(year, month, 1);
+    const lastDayOfMonth = new Date(year, month + 1, 0);
+    const startDay = firstDayOfMonth.getDay();
+    const startOffset = startDay === 0 ? 6 : startDay - 1; // Monday is start
+    const visibleStart = new Date(year, month, 1 - startOffset);
+    visibleStart.setHours(0, 0, 0, 0);
+    
+    const endDay = lastDayOfMonth.getDay();
+    const endOffset = endDay === 0 ? 0 : 7 - endDay;
+    const visibleEnd = new Date(year, month + 1, endOffset);
+    visibleEnd.setHours(23, 59, 59, 999);
 
     // Debug logging only in development
     if (process.env.NODE_ENV === 'development') {
@@ -426,16 +439,17 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
       const startDate = new Date(eventStartDate.getFullYear(), eventStartDate.getMonth(), eventStartDate.getDate());
       const endDate = new Date(eventEndDate.getFullYear(), eventEndDate.getMonth(), eventEndDate.getDate());
       
-      // Check if event overlaps with current month view
-      if (startDate <= monthEnd && endDate >= monthStart) {
+      // Check if event overlaps with visible calendar grid (includes adjacent month days)
+      if (startDate <= visibleEnd && endDate >= visibleStart) {
         // Create individual events for each day the event spans
         // Start from the actual event start date, not limited to month view
         const currentDate = new Date(startDate);
         const lastDate = new Date(endDate);
         
         while (currentDate <= lastDate) {
-          // Only create events for days that are visible in the current month view
-          if (currentDate >= monthStart && currentDate <= monthEnd) {
+          // Only create events for days that are visible in the calendar grid (includes adjacent months)
+          const currentDateNormalized = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+          if (currentDateNormalized >= visibleStart && currentDateNormalized <= visibleEnd) {
             // Debug logging only in development
             if (process.env.NODE_ENV === 'development') {
               console.log(`Creating individual event for day:`, currentDate.toDateString());
@@ -529,16 +543,17 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
       const startDate = new Date(holidayStartDate.getFullYear(), holidayStartDate.getMonth(), holidayStartDate.getDate());
       const endDate = new Date(holidayEndDate.getFullYear(), holidayEndDate.getMonth(), holidayEndDate.getDate());
       
-      // Check if holiday overlaps with current month view
-      if (startDate <= monthEnd && endDate >= monthStart) {
+      // Check if holiday overlaps with visible calendar grid (includes adjacent month days)
+      if (startDate <= visibleEnd && endDate >= visibleStart) {
         // Create individual events for each day the holiday spans
         // Start from the actual holiday start date, not limited to month view
         const currentDate = new Date(startDate);
         const lastDate = new Date(endDate);
         
         while (currentDate <= lastDate) {
-          // Only create events for days that are visible in the current month view
-          if (currentDate >= monthStart && currentDate <= monthEnd) {
+          // Only create events for days that are visible in the calendar grid (includes adjacent months)
+          const currentDateNormalized = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+          if (currentDateNormalized >= visibleStart && currentDateNormalized <= visibleEnd) {
             // Debug logging only in development
             if (process.env.NODE_ENV === 'development') {
               console.log(`Creating individual holiday event for day:`, currentDate.toDateString());
