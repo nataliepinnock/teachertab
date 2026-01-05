@@ -53,6 +53,30 @@ const features = [
   },
 ];
 
+function BetaHeader() {
+  return (
+    <header className="bg-[#001b3d] border-b border-[#001b3d]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+        <Link href="/beta" className="flex items-center">
+          <TeacherTabLogo size="sm" variant="inverse" />
+          <span className="ml-2 text-xl font-semibold text-[#fbae36]">TeacherTab</span>
+        </Link>
+        <div className="flex items-center space-x-4">
+          <Link
+            href="/sign-in"
+            className="text-sm font-medium text-white hover:text-gray-200"
+          >
+            Sign In
+          </Link>
+          <Button asChild className="rounded-full px-6 bg-[#fbae36] text-white hover:bg-[#d69225]" variant="accent">
+            <Link href="/sign-up">Sign Up</Link>
+          </Button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
 export default function BetaPage() {
   const [formData, setFormData] = useState({
     name: '',
