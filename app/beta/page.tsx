@@ -100,7 +100,7 @@ export default function BetaPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#001b3d] via-[#001b3d] to-[#002855]">
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-20 pb-32 px-6">
+      <section className="relative overflow-hidden pt-20 pb-20 px-6">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0" style={{
             backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
