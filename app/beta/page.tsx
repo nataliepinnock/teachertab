@@ -116,9 +116,7 @@ export default function BetaPage() {
           </div>
           
           <div className="flex items-center justify-center mb-8">
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-              <TeacherTabLogo size="lg" variant="light" />
-            </div>
+            <TeacherTabLogo size="lg" variant="default" />
           </div>
           
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-white mb-6">
@@ -300,9 +298,7 @@ export default function BetaPage() {
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0">
-              <div className="bg-white/10 backdrop-blur-sm rounded p-2 border border-white/20">
-                <TeacherTabLogo size="sm" variant="light" />
-              </div>
+              <TeacherTabLogo size="sm" variant="default" />
               <span className="ml-2 text-lg font-semibold text-white">
                 TeacherTab
               </span>
