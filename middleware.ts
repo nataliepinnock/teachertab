@@ -3,11 +3,28 @@ import type { NextRequest } from 'next/server';
 import { signToken, verifyToken } from '@/lib/auth/session';
 
 const protectedRoutes = '/dashboard';
+const publicRoutes = ['/beta', '/sign-in', '/sign-up', '/forgot-password', '/reset-password'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('session');
   const isProtectedRoute = pathname.startsWith(protectedRoutes);
+  const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route));
+
+  // Redirect root and other non-public routes to beta page
+  if (!isPublicRoute && !isProtectedRoute && pathname !== '/') {
+    // Allow API routes and static files
+    if (pathname.startsWith('/api') || pathname.startsWith('/_next')) {
+      return NextResponse.next();
+    }
+    // Redirect to beta page
+    return NextResponse.redirect(new URL('/beta', request.url));
+  }
+
+  // Redirect root to beta page
+  if (pathname === '/') {
+    return NextResponse.redirect(new URL('/beta', request.url));
+  }
 
   if (isProtectedRoute && !sessionCookie) {
     return NextResponse.redirect(new URL('/sign-in', request.url));
