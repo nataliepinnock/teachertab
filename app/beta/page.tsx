@@ -492,7 +492,13 @@ export default function BetaPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to submit signup. Please try again.');
+        const errorMessage = data.error || `Failed to submit signup (${response.status}). Please try again.`;
+        console.error('Beta signup API error:', {
+          status: response.status,
+          error: data.error,
+          details: data.details,
+        });
+        throw new Error(errorMessage);
       }
 
       setSubmitted(true);

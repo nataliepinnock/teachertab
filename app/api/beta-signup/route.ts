@@ -20,7 +20,8 @@ export async function POST(request: NextRequest) {
     const resendFromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
     const betaSignupRecipientEmail = process.env.BETA_SIGNUP_RECIPIENT_EMAIL;
 
-    if (!betaSignupRecipientEmail) {
+    // In production, require email configuration
+    if (process.env.NODE_ENV === 'production' && !betaSignupRecipientEmail) {
       console.error('[beta-signup] BETA_SIGNUP_RECIPIENT_EMAIL environment variable is not set');
       return NextResponse.json(
         { error: 'Email service is not configured. Please contact support.' },
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
     `;
 
     // Send email if Resend is configured
-    if (resendApiKey) {
+    if (resendApiKey && betaSignupRecipientEmail) {
       try {
         const resend = new Resend(resendApiKey);
         await resend.emails.send({
@@ -61,7 +62,15 @@ export async function POST(request: NextRequest) {
           from: resendFromEmail,
           to: betaSignupRecipientEmail,
         });
-        // Continue even if email fails - we still want to log the signup
+        // In production, fail if email sending fails
+        if (process.env.NODE_ENV === 'production') {
+          return NextResponse.json(
+            { error: 'Failed to send email notification. Please try again later.' },
+            { status: 500 }
+          );
+        }
+        // In development, continue even if email fails
+        console.warn('[beta-signup] Email sending failed, but continuing in development mode');
       }
     } else {
       // Development fallback: log the signup
