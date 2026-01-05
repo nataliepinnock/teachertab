@@ -4,6 +4,13 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TeacherTabLogo } from '@/components/ui/logo';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { 
   ArrowRight, 
   CheckCircle, 
@@ -51,11 +58,17 @@ export default function BetaPage() {
     name: '',
     email: '',
     school: '',
+    location: '',
+    stage: '',
   });
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.location || !formData.stage) {
+      alert('Please fill in all required fields');
+      return;
+    }
     // TODO: Add API endpoint to save beta signups
     console.log('Beta signup:', formData);
     setSubmitted(true);
@@ -103,7 +116,9 @@ export default function BetaPage() {
           </div>
           
           <div className="flex items-center justify-center mb-8">
-            <TeacherTabLogo size="lg" variant="light" />
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+              <TeacherTabLogo size="lg" variant="light" />
+            </div>
           </div>
           
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-white mb-6">
@@ -219,6 +234,48 @@ export default function BetaPage() {
                 />
               </div>
 
+              <div>
+                <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+                  Location *
+                </label>
+                <Select
+                  value={formData.location}
+                  onValueChange={(value) => setFormData({ ...formData, location: value })}
+                >
+                  <SelectTrigger id="location" className="w-full">
+                    <SelectValue placeholder="Select your location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="england">England</SelectItem>
+                    <SelectItem value="scotland">Scotland</SelectItem>
+                    <SelectItem value="wales">Wales</SelectItem>
+                    <SelectItem value="northern-ireland">Northern Ireland</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label htmlFor="stage" className="block text-sm font-medium text-gray-700 mb-2">
+                  Teaching Stage *
+                </label>
+                <Select
+                  value={formData.stage}
+                  onValueChange={(value) => setFormData({ ...formData, stage: value })}
+                >
+                  <SelectTrigger id="stage" className="w-full">
+                    <SelectValue placeholder="Select teaching stage" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="primary">Primary</SelectItem>
+                    <SelectItem value="secondary">Secondary</SelectItem>
+                    <SelectItem value="sixth-form">Sixth Form / College</SelectItem>
+                    <SelectItem value="special">Special Educational Needs</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <Button
                 type="submit"
                 size="lg"
@@ -243,7 +300,9 @@ export default function BetaPage() {
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0">
-              <TeacherTabLogo size="sm" variant="light" />
+              <div className="bg-white/10 backdrop-blur-sm rounded p-2 border border-white/20">
+                <TeacherTabLogo size="sm" variant="light" />
+              </div>
               <span className="ml-2 text-lg font-semibold text-white">
                 TeacherTab
               </span>
