@@ -3,27 +3,24 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { TeacherTabLogo } from '@/components/ui/logo';
 import { 
   ArrowRight, 
   CheckCircle, 
   Calendar, 
   BookOpen, 
-  Users, 
   Clock,
   ClipboardList,
-  Star,
   Sparkles
 } from 'lucide-react';
 import { useState } from 'react';
 
 const benefits = [
+  'Free access during beta',
+  'Heavily discounted access after launch',
   'Early access to all features',
   'Shape the product with your feedback',
-  'Free lifetime access for beta testers',
   'Priority support',
-  'Exclusive beta community',
 ];
 
 const features = [
@@ -54,9 +51,6 @@ export default function BetaPage() {
     name: '',
     email: '',
     school: '',
-    role: '',
-    experience: '',
-    why: '',
   });
   const [submitted, setSubmitted] = useState(false);
 
@@ -109,7 +103,7 @@ export default function BetaPage() {
           </div>
           
           <div className="flex items-center justify-center mb-8">
-            <TeacherTabLogo size="lg" className="text-white" />
+            <TeacherTabLogo size="lg" variant="light" />
           </div>
           
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-white mb-6">
@@ -172,106 +166,56 @@ export default function BetaPage() {
                 Apply to Become a Beta Tester
               </h2>
               <p className="text-gray-600">
-                Tell us about yourself and why you'd like to join our beta program.
+                Sign up to join our beta program and get free access.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name *
-                  </label>
-                  <Input
-                    id="name"
-                    name="name"
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full"
-                    placeholder="John Smith"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address *
-                  </label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full"
-                    placeholder="john@example.com"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="school" className="block text-sm font-medium text-gray-700 mb-2">
-                    School/Institution *
-                  </label>
-                  <Input
-                    id="school"
-                    name="school"
-                    type="text"
-                    required
-                    value={formData.school}
-                    onChange={(e) => setFormData({ ...formData, school: e.target.value })}
-                    className="w-full"
-                    placeholder="Example High School"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
-                    Your Role *
-                  </label>
-                  <Input
-                    id="role"
-                    name="role"
-                    type="text"
-                    required
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    className="w-full"
-                    placeholder="e.g., Math Teacher, Head of Department"
-                  />
-                </div>
-              </div>
-
               <div>
-                <label htmlFor="experience" className="block text-sm font-medium text-gray-700 mb-2">
-                  Years of Teaching Experience *
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                  Full Name *
                 </label>
                 <Input
-                  id="experience"
-                  name="experience"
+                  id="name"
+                  name="name"
                   type="text"
                   required
-                  value={formData.experience}
-                  onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full"
-                  placeholder="e.g., 5 years"
+                  placeholder="John Smith"
                 />
               </div>
 
               <div>
-                <label htmlFor="why" className="block text-sm font-medium text-gray-700 mb-2">
-                  Why are you interested in joining the beta? *
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address *
                 </label>
-                <Textarea
-                  id="why"
-                  name="why"
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
                   required
-                  rows={4}
-                  value={formData.why}
-                  onChange={(e) => setFormData({ ...formData, why: e.target.value })}
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="w-full"
-                  placeholder="Tell us what excites you about TeacherTab and how you'd like to contribute..."
+                  placeholder="john@example.com"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="school" className="block text-sm font-medium text-gray-700 mb-2">
+                  School/Institution *
+                </label>
+                <Input
+                  id="school"
+                  name="school"
+                  type="text"
+                  required
+                  value={formData.school}
+                  onChange={(e) => setFormData({ ...formData, school: e.target.value })}
+                  className="w-full"
+                  placeholder="Example High School"
                 />
               </div>
 
@@ -287,7 +231,7 @@ export default function BetaPage() {
 
               <p className="text-sm text-gray-500 text-center">
                 By applying, you agree to provide feedback and help us improve TeacherTab.
-                We'll review applications and get back to you within 1-2 weeks.
+                We'll review applications and get back to you soon.
               </p>
             </form>
           </div>
@@ -299,7 +243,7 @@ export default function BetaPage() {
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0">
-              <TeacherTabLogo size="sm" className="text-white" />
+              <TeacherTabLogo size="sm" variant="light" />
               <span className="ml-2 text-lg font-semibold text-white">
                 TeacherTab
               </span>
