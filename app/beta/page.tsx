@@ -116,7 +116,7 @@ export default function BetaPage() {
           </div>
           
           <div className="flex items-center justify-center mb-8">
-            <TeacherTabLogo size="lg" variant="inverse" />
+            <TeacherTabLogo size="md" variant="inverse" />
           </div>
           
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-white mb-6">
