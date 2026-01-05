@@ -61,17 +61,6 @@ function BetaHeader() {
           <TeacherTabLogo size="sm" variant="inverse" />
           <span className="ml-2 text-xl font-semibold text-[#fbae36]">TeacherTab</span>
         </Link>
-        <div className="flex items-center space-x-4">
-          <Link
-            href="/sign-in"
-            className="text-sm font-medium text-white hover:text-gray-200"
-          >
-            Sign In
-          </Link>
-          <Button asChild className="rounded-full px-6 bg-[#fbae36] text-white hover:bg-[#d69225]" variant="accent">
-            <Link href="/sign-up">Sign Up</Link>
-          </Button>
-        </div>
       </div>
     </header>
   );
@@ -122,31 +111,23 @@ export default function BetaPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#001b3d] via-[#001b3d] to-[#002855]">
+    <main className="min-h-screen bg-white">
       <BetaHeader />
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-20 pb-20 px-6">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-            backgroundSize: '50px 50px'
-          }}></div>
-        </div>
-        
+      <section className="relative overflow-hidden pt-20 pb-20 px-6 bg-white">
         <div className="mx-auto max-w-4xl text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#fbae36]/20 border border-[#fbae36]/30 rounded-full text-[#fbae36] text-sm font-medium mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#fbae36]/10 border border-[#fbae36]/30 rounded-full text-[#fbae36] text-sm font-medium mb-6">
             <Sparkles className="h-4 w-4" />
             <span>Join the Beta Program</span>
           </div>
           
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-white mb-4">
+          <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-gray-900 mb-4">
             Help Shape the Future of
             <br />
-            <span className="text-[#fbae36]">Teacher Planning</span>
+            <span className="text-[#001b3d]">Teacher Planning</span>
           </h1>
           
-          <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
             We're looking for passionate teachers to join our beta program. 
             Get early access, provide feedback, and help us build the perfect tool for educators.
           </p>
@@ -156,10 +137,10 @@ export default function BetaPage() {
             {benefits.map((benefit, index) => (
               <div
                 key={index}
-                className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-4 text-center"
+                className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center"
               >
                 <CheckCircle className="h-6 w-6 text-[#fbae36] mx-auto mb-2" />
-                <p className="text-sm text-white font-medium">{benefit}</p>
+                <p className="text-sm text-gray-900 font-medium">{benefit}</p>
               </div>
             ))}
           </div>
@@ -167,24 +148,24 @@ export default function BetaPage() {
       </section>
 
       {/* Features Preview */}
-      <section className="py-16 px-6 bg-white/5 backdrop-blur-sm">
+      <section className="py-16 px-6 bg-gray-50">
         <div className="mx-auto max-w-6xl">
-          <h2 className="text-3xl font-bold text-white text-center mb-12">
+          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
             What You'll Get Access To
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature, index) => (
               <div
                 key={index}
-                className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-6 text-center"
+                className="bg-white border border-gray-200 rounded-lg p-6 text-center shadow-sm"
               >
                 <div className="w-12 h-12 bg-[#fbae36]/20 rounded-lg flex items-center justify-center mx-auto mb-4">
                   <feature.icon className="h-6 w-6 text-[#fbae36]" />
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   {feature.name}
                 </h3>
-                <p className="text-sm text-gray-300">{feature.description}</p>
+                <p className="text-sm text-gray-600">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -315,16 +296,16 @@ export default function BetaPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-6 border-t border-white/10">
+      <footer className="py-12 px-6 border-t border-gray-200 bg-white">
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0">
-              <TeacherTabLogo size="sm" variant="inverse" />
-              <span className="ml-2 text-lg font-semibold text-white">
+              <TeacherTabLogo size="sm" variant="default" />
+              <span className="ml-2 text-lg font-semibold text-gray-900">
                 TeacherTab
               </span>
             </div>
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-600 text-sm">
               © {new Date().getFullYear()} TeacherTab. All rights reserved.
             </p>
           </div>
