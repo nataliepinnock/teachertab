@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 
 interface LogoProps {
   className?: string;
@@ -26,11 +28,39 @@ export function TeacherTabLogo({
   variant = 'default',
   alt = 'TeacherTab logo'
 }: LogoProps) {
+  const [imgError, setImgError] = useState(false);
   const src = variantSrc[variant] ?? variantSrc.default;
+
+  const handleError = () => {
+    console.error(`Failed to load logo: ${src}`);
+    setImgError(true);
+  };
+
+  if (imgError) {
+    // Fallback to default variant if the requested variant fails
+    const fallbackSrc = variant === 'default' ? '/images/Tt.svg' : variantSrc.default;
+    return (
+      <div className={`${sizeClasses[size]} ${className}`}>
+        <img 
+          src={fallbackSrc} 
+          alt={alt} 
+          className="h-full w-full object-contain"
+          onError={() => {
+            console.error(`Failed to load fallback logo: ${fallbackSrc}`);
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={`${sizeClasses[size]} ${className}`}>
-      <img src={src} alt={alt} className="h-full w-full object-contain" />
+      <img 
+        src={src} 
+        alt={alt} 
+        className="h-full w-full object-contain"
+        onError={handleError}
+      />
     </div>
   );
 }
