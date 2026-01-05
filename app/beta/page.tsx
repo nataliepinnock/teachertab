@@ -116,7 +116,7 @@ export default function BetaPage() {
           </div>
           
           <div className="flex items-center justify-center mb-8">
-            <TeacherTabLogo size="lg" variant="default" />
+            <TeacherTabLogo size="lg" variant="inverse" />
           </div>
           
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-white mb-6">
@@ -298,7 +298,7 @@ export default function BetaPage() {
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0">
-              <TeacherTabLogo size="sm" variant="default" />
+              <TeacherTabLogo size="sm" variant="inverse" />
               <span className="ml-2 text-lg font-semibold text-white">
                 TeacherTab
               </span>

@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 interface LogoProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
-  variant?: 'default' | 'light' | 'dark' | 'mark';
+  variant?: 'default' | 'light' | 'dark' | 'mark' | 'inverse';
   alt?: string;
 }
 
@@ -19,7 +19,8 @@ const variantSrc: Record<NonNullable<LogoProps['variant']>, string> = {
   default: '/images/logo.svg',
   light: '/images/logo-light.svg',
   dark: '/images/logo-dark.svg',
-  mark: '/images/Tt.svg'
+  mark: '/images/Tt.svg',
+  inverse: '/images/logo-inverse.svg'
 };
 
 export function TeacherTabLogo({
