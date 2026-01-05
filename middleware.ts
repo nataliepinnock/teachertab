@@ -2,62 +2,57 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { signToken, verifyToken } from '@/lib/auth/session';
 
-const protectedRoutes = '/dashboard';
-const publicRoutes = ['/beta', '/sign-in', '/sign-up', '/forgot-password', '/reset-password'];
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('session');
-  const isProtectedRoute = pathname.startsWith(protectedRoutes);
-  const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route));
 
-  // Redirect root and other non-public routes to beta page
-  if (!isPublicRoute && !isProtectedRoute && pathname !== '/') {
-    // Allow API routes and static files
-    if (pathname.startsWith('/api') || pathname.startsWith('/_next') || pathname.startsWith('/images')) {
-      return NextResponse.next();
-    }
-    // Redirect to beta page
-    return NextResponse.redirect(new URL('/beta', request.url));
-  }
+  // Allow beta page and its sub-routes
+  if (pathname === '/beta' || pathname.startsWith('/beta/')) {
+    let res = NextResponse.next();
+    
+    // Still handle session refresh for beta page (in case needed later)
+    if (sessionCookie && request.method === 'GET') {
+      try {
+        const parsed = await verifyToken(sessionCookie.value);
+        const expiresInOneDay = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-  // Redirect root to beta page
-  if (pathname === '/') {
-    return NextResponse.redirect(new URL('/beta', request.url));
-  }
-
-  if (isProtectedRoute && !sessionCookie) {
-    return NextResponse.redirect(new URL('/sign-in', request.url));
-  }
-
-  let res = NextResponse.next();
-
-  if (sessionCookie && request.method === 'GET') {
-    try {
-      const parsed = await verifyToken(sessionCookie.value);
-      const expiresInOneDay = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-      res.cookies.set({
-        name: 'session',
-        value: await signToken({
-          ...parsed,
-          expires: expiresInOneDay.toISOString()
-        }),
-        httpOnly: true,
-        secure: true,
-        sameSite: 'lax',
-        expires: expiresInOneDay
-      });
-    } catch (error) {
-      console.error('Error updating session:', error);
-      res.cookies.delete('session');
-      if (isProtectedRoute) {
-        return NextResponse.redirect(new URL('/sign-in', request.url));
+        res.cookies.set({
+          name: 'session',
+          value: await signToken({
+            ...parsed,
+            expires: expiresInOneDay.toISOString()
+          }),
+          httpOnly: true,
+          secure: true,
+          sameSite: 'lax',
+          expires: expiresInOneDay
+        });
+      } catch (error) {
+        console.error('Error updating session:', error);
+        res.cookies.delete('session');
       }
     }
+    
+    return res;
   }
 
-  return res;
+  // Allow API routes (needed for beta signup form)
+  if (pathname.startsWith('/api')) {
+    return NextResponse.next();
+  }
+
+  // Allow static files and Next.js internals
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/images') ||
+    pathname === '/favicon.ico' ||
+    pathname.startsWith('/favicon')
+  ) {
+    return NextResponse.next();
+  }
+
+  // Redirect everything else to beta page
+  return NextResponse.redirect(new URL('/beta', request.url));
 }
 
 export const config = {
