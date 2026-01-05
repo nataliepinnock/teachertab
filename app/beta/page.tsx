@@ -115,17 +115,17 @@ export default function BetaPage() {
             <span>Join the Beta Program</span>
           </div>
           
-          <div className="flex items-center justify-center mb-8">
+          <div className="flex items-center justify-center mb-6">
             <TeacherTabLogo size="md" variant="inverse" />
           </div>
           
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-white mb-6">
+          <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-white mb-4">
             Help Shape the Future of
             <br />
             <span className="text-[#fbae36]">Teacher Planning</span>
           </h1>
           
-          <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
             We're looking for passionate teachers to join our beta program. 
             Get early access, provide feedback, and help us build the perfect tool for educators.
           </p>
