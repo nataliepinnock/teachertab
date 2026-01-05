@@ -14,7 +14,7 @@ export async function middleware(request: NextRequest) {
   // Redirect root and other non-public routes to beta page
   if (!isPublicRoute && !isProtectedRoute && pathname !== '/') {
     // Allow API routes and static files
-    if (pathname.startsWith('/api') || pathname.startsWith('/_next')) {
+    if (pathname.startsWith('/api') || pathname.startsWith('/_next') || pathname.startsWith('/images')) {
       return NextResponse.next();
     }
     // Redirect to beta page
@@ -61,6 +61,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|images).*)'],
   runtime: 'nodejs'
 };
