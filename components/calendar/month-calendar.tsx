@@ -731,6 +731,7 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
     for (let i = startOffset; i > 0; i--) {
       const date = new Date(firstDayOfMonth);
       date.setDate(date.getDate() - i);
+      date.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues - consistent with current month dates
       daysInMonth.push({ date, isCurrentMonth: false });
     }
 
@@ -748,6 +749,7 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
     for (let i = 1; i <= endOffset; i++) {
       const date = new Date(lastDayOfMonth);
       date.setDate(date.getDate() + i);
+      date.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues - consistent with current month dates
       daysInMonth.push({ date, isCurrentMonth: false });
     }
     

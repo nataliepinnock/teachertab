@@ -499,7 +499,7 @@ export default function AcademicYearSetupPage() {
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Active Academic Year Summary */}
         {activeYear && (
-          <div className="mb-8">
+          <div className="mb-8 space-y-4">
             <Card className="border-orange-200 bg-orange-50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-orange-800">
@@ -528,6 +528,36 @@ export default function AcademicYearSetupPage() {
                 </div>
               </CardContent>
             </Card>
+            
+            {/* Next Step Prompt: Add Holidays */}
+            {holidays && !holidays.some((h: Holiday) => h.academicYearId === activeYear.id) && (
+              <Card className="border-blue-200 bg-blue-50">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3">
+                    <CalendarDays className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="font-semibold text-blue-900 mb-1">Next: Add holiday dates</p>
+                      <p className="text-sm text-blue-800 mb-3">
+                        Add your school holidays, training days, and term breaks to your calendar. This helps the system understand your teaching schedule and exclude non-teaching days.
+                      </p>
+                      <Button 
+                        size="sm" 
+                        className="bg-blue-600 text-white hover:bg-blue-700"
+                        onClick={() => {
+                          setHolidayAcademicYearId(activeYear.id);
+                          setHolidayModalMode('add');
+                          setSelectedHoliday(null);
+                          setHolidayModalOpen(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Holiday
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
 

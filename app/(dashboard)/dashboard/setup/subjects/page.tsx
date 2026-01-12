@@ -201,38 +201,6 @@ export default function SubjectsSetupPage() {
 
       {/* Content Section */}
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Stats Summary */}
-        {subjects && subjects.length > 0 && (
-          <div className="mb-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <div className="flex items-center">
-                  <div className="p-2 bg-gray-100 rounded-lg">
-                    <BookOpen className="h-5 w-5 text-gray-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-500">Total Subjects</p>
-                    <p className="text-2xl font-bold text-gray-900">{subjects.length}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <div className="flex items-center">
-                  <div className="p-2 bg-gray-100 rounded-lg">
-                    <Palette className="h-5 w-5 text-gray-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-500">With Colors</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {subjects.filter(s => s.color).length}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Subjects Grid */}
         {subjects && subjects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

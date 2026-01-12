@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeacherTab - Lesson Planning</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            width: 1080px;
+            height: 1080px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            color: #001b3d;
+            position: relative;
+            padding: 40px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            z-index: 10;
+        }
+        
+        .emoji {
+            font-size: 64px;
+            margin-bottom: 15px;
+        }
+        
+        .title {
+            font-size: 64px;
+            font-weight: 800;
+            color: #001b3d;
+            margin-bottom: 10px;
+            line-height: 1.1;
+        }
+        
+        .subtitle {
+            font-size: 28px;
+            color: #6b7280;
+            font-weight: 400;
+        }
+        
+        .tablet-container {
+            width: 750px;
+            height: 550px;
+            background: #1a1a1a;
+            border-radius: 30px;
+            padding: 20px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+            margin: 20px 0 30px;
+            position: relative;
+            z-index: 5;
+        }
+        
+        .tablet-screen {
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        
+        .app-header {
+            background: #001b3d;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+        }
+        
+        .logo-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo-circle-small {
+            width: 32px;
+            height: 32px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 18px;
+            color: #001b3d;
+        }
+        
+        .brand-name-small {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fbae36;
+        }
+        
+        .app-content {
+            padding: 20px;
+            height: calc(100% - 60px);
+            overflow-y: auto;
+        }
+        
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .content-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #001b3d;
+        }
+        
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .filter-tab {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .filter-tab.inactive {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+        
+        .filter-tab.active {
+            background: #001b3d;
+            color: white;
+        }
+        
+        .plan-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .plan-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            background: white;
+        }
+        
+        .plan-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .plan-color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .plan-color-dot.math {
+            background: #001b3d;
+        }
+        
+        .plan-color-dot.english {
+            background: #fbae36;
+        }
+        
+        .plan-color-dot.science {
+            background: #6b7280;
+        }
+        
+        .plan-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #001b3d;
+        }
+        
+        .plan-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 6px;
+        }
+        
+        .plan-description {
+            font-size: 12px;
+            color: #9ca3af;
+            line-height: 1.4;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 750px;
+            z-index: 10;
+        }
+        
+        .feature-box {
+            background: rgba(0, 27, 61, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .feature-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #001b3d;
+        }
+        
+        .brand-footer {
+            position: absolute;
+            bottom: 30px;
+            right: 40px;
+            font-size: 20px;
+            font-weight: 600;
+            color: #001b3d;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="emoji">📚</div>
+        <div class="title">Lesson Planning Made Simple</div>
+        <div class="subtitle">Create and organize detailed lesson plans for every class</div>
+    </div>
+    
+    <div class="tablet-container">
+        <div class="tablet-screen">
+            <div class="app-header">
+                <div class="logo-brand">
+                    <div class="logo-circle-small">TT</div>
+                    <div class="brand-name-small">TeacherTab</div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <div style="width: 24px; height: 24px; background: rgba(255,255,255,0.2); border-radius: 6px;"></div>
+                    <div style="width: 24px; height: 24px; background: rgba(255,255,255,0.2); border-radius: 6px;"></div>
+                </div>
+            </div>
+            <div class="app-content">
+                <div class="content-header">
+                    <div class="content-title">Lesson Plans</div>
+                    <div class="filter-tabs">
+                        <div class="filter-tab inactive">All Classes</div>
+                        <div class="filter-tab active">Math</div>
+                    </div>
+                </div>
+                <div class="plan-list">
+                    <div class="plan-card">
+                        <div class="plan-header">
+                            <div class="plan-color-dot math"></div>
+                            <div class="plan-title">Introduction to Algebra</div>
+                        </div>
+                        <div class="plan-meta">
+                            <span>Year 9A</span>
+                            <span>•</span>
+                            <span>Mathematics</span>
+                            <span>•</span>
+                            <span>Today, 9:00 AM</span>
+                        </div>
+                        <div class="plan-description">Lesson objectives, activities, and assessment criteria...</div>
+                    </div>
+                    <div class="plan-card">
+                        <div class="plan-header">
+                            <div class="plan-color-dot english"></div>
+                            <div class="plan-title">Shakespeare Analysis</div>
+                        </div>
+                        <div class="plan-meta">
+                            <span>Year 11B</span>
+                            <span>•</span>
+                            <span>English</span>
+                            <span>•</span>
+                            <span>Tomorrow, 10:30 AM</span>
+                        </div>
+                        <div class="plan-description">Exploring themes and character development...</div>
+                    </div>
+                    <div class="plan-card">
+                        <div class="plan-header">
+                            <div class="plan-color-dot science"></div>
+                            <div class="plan-title">Physics Lab: Forces</div>
+                        </div>
+                        <div class="plan-meta">
+                            <span>Year 10C</span>
+                            <span>•</span>
+                            <span>Physics</span>
+                            <span>•</span>
+                            <span>Wed, 2:00 PM</span>
+                        </div>
+                        <div class="plan-description">Hands-on experiments and practical applications...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="features-grid">
+        <div class="feature-box">
+            <div class="feature-icon">📝</div>
+            <div class="feature-text">Plan weeks ahead</div>
+        </div>
+        <div class="feature-box">
+            <div class="feature-icon">🗂️</div>
+            <div class="feature-text">Organize by subject</div>
+        </div>
+        <div class="feature-box">
+            <div class="feature-icon">📌</div>
+            <div class="feature-text">Add notes & objectives</div>
+        </div>
+        <div class="feature-box">
+            <div class="feature-icon">⚡</div>
+            <div class="feature-text">Quick access</div>
+        </div>
+    </div>
+    
+    <div class="brand-footer">@TeacherTab</div>
+</body>
+</html>

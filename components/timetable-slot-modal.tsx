@@ -17,13 +17,13 @@ interface TimetableSlotModalProps {
 }
 
 const DAYS_OF_WEEK = [
-  { value: 'Monday', label: 'Monday' },
-  { value: 'Tuesday', label: 'Tuesday' },
-  { value: 'Wednesday', label: 'Wednesday' },
-  { value: 'Thursday', label: 'Thursday' },
-  { value: 'Friday', label: 'Friday' },
-  { value: 'Saturday', label: 'Saturday' },
-  { value: 'Sunday', label: 'Sunday' },
+  { value: 'Monday', label: 'Mon', fullLabel: 'Monday' },
+  { value: 'Tuesday', label: 'Tue', fullLabel: 'Tuesday' },
+  { value: 'Wednesday', label: 'Wed', fullLabel: 'Wednesday' },
+  { value: 'Thursday', label: 'Thu', fullLabel: 'Thursday' },
+  { value: 'Friday', label: 'Fri', fullLabel: 'Friday' },
+  { value: 'Saturday', label: 'Sat', fullLabel: 'Saturday' },
+  { value: 'Sunday', label: 'Sun', fullLabel: 'Sunday' },
 ];
 
 export function TimetableSlotModal({ 
@@ -186,94 +186,110 @@ export function TimetableSlotModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-xl font-semibold text-gray-900">
             {isEditing ? 'Edit Timetable Slot' : 'Add New Timetable Slot'}
           </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <Label htmlFor="label" className="mb-2 block">Label</Label>
+            <Label htmlFor="label" className="mb-2.5 block text-sm font-medium text-gray-700">Label</Label>
             <Input
               id="label"
               placeholder="e.g., Morning Session, Break, Maths, etc."
               value={formData.label}
               onChange={(e) => setFormData(prev => ({ ...prev, label: e.target.value }))}
-              className={errors.label ? 'border-red-500' : ''}
+              className={`h-10 ${errors.label ? 'border-red-500 focus:ring-red-500' : ''}`}
               required
             />
-            {errors.label && <p className="text-sm text-red-500 mt-1">{errors.label}</p>}
+            {errors.label && <p className="text-sm text-red-500 mt-1.5">{errors.label}</p>}
           </div>
 
           <div>
-            <Label className="mb-2 block">Days of the Week</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {DAYS_OF_WEEK.map((day) => (
-                <label key={day.value} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedDays.includes(day.value)}
-                    onChange={(e) => handleDayChange(day.value, e.target.checked)}
-                    disabled={isEditing}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:bg-gray-100"
-                  />
-                  <span className="text-sm">{day.label}</span>
-                </label>
-              ))}
+            <Label className="mb-3 block text-sm font-medium text-gray-700">Days of the Week</Label>
+            <div className="grid grid-cols-7 gap-2">
+              {DAYS_OF_WEEK.map((day) => {
+                const isChecked = selectedDays.includes(day.value);
+                return (
+                  <label
+                    key={day.value}
+                    className={`
+                      flex flex-col items-center justify-center gap-1.5 px-2 py-2.5 cursor-pointer transition-all duration-200
+                      ${isChecked
+                        ? 'text-[#001b3d]'
+                        : 'text-gray-600 hover:text-gray-900'
+                      }
+                      ${isEditing ? 'opacity-60 cursor-not-allowed' : ''}
+                    `}
+                    title={day.fullLabel}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => handleDayChange(day.value, e.target.checked)}
+                      disabled={isEditing}
+                      className="h-4 w-4 rounded border-gray-300 text-[#001b3d] focus:ring-2 focus:ring-[#001b3d] focus:ring-offset-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                    <span className="text-xs font-medium text-center">{day.label}</span>
+                  </label>
+                );
+              })}
             </div>
-            {errors.dayOfWeek && <p className="text-sm text-red-500 mt-1">{errors.dayOfWeek}</p>}
+            {errors.dayOfWeek && <p className="text-sm text-red-500 mt-2">{errors.dayOfWeek}</p>}
           </div>
 
           <div>
-            <Label htmlFor="weekSelect" className="mb-2 block">Week</Label>
+            <Label htmlFor="weekSelect" className="mb-2.5 block text-sm font-medium text-gray-700">Week</Label>
             <select
               id="weekSelect"
               value={selectedWeeks.length === 2 ? 'both' : selectedWeeks[0]}
               onChange={handleWeekChange}
               disabled={isEditing}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="w-full h-10 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#001b3d] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-500"
             >
               <option value="1">Week 1</option>
               <option value="2">Week 2</option>
               <option value="both">Both Weeks</option>
             </select>
-            {errors.weekNumber && <p className="text-sm text-red-500 mt-1">{errors.weekNumber}</p>}
+            {errors.weekNumber && <p className="text-sm text-red-500 mt-1.5">{errors.weekNumber}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="startTime" className="mb-2 block">Start Time</Label>
+              <Label htmlFor="startTime" className="mb-2.5 block text-sm font-medium text-gray-700">Start Time</Label>
               <Input
                 id="startTime"
                 type="time"
                 value={formData.startTime}
                 onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
-                className={errors.startTime ? 'border-red-500' : ''}
+                className={`h-10 ${errors.startTime ? 'border-red-500 focus:ring-red-500' : ''}`}
               />
-              {errors.startTime && <p className="text-sm text-red-500 mt-1">{errors.startTime}</p>}
+              {errors.startTime && <p className="text-sm text-red-500 mt-1.5">{errors.startTime}</p>}
             </div>
             
             <div>
-              <Label htmlFor="endTime" className="mb-2 block">End Time</Label>
+              <Label htmlFor="endTime" className="mb-2.5 block text-sm font-medium text-gray-700">End Time</Label>
               <Input
                 id="endTime"
                 type="time"
                 value={formData.endTime}
                 onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
-                className={errors.endTime ? 'border-red-500' : ''}
+                className={`h-10 ${errors.endTime ? 'border-red-500 focus:ring-red-500' : ''}`}
               />
-              {errors.endTime && <p className="text-sm text-red-500 mt-1">{errors.endTime}</p>}
+              {errors.endTime && <p className="text-sm text-red-500 mt-1.5">{errors.endTime}</p>}
             </div>
           </div>
 
           {!isEditing && getTotalSlotsToCreate() > 1 && (
-            <div className="p-3 bg-blue-50 rounded-md">
-              <p className="text-sm text-blue-800">
-                This will create <strong>{getTotalSlotsToCreate()}</strong> separate slots:
-                <br />
-                {selectedDays.length} day(s) × {selectedWeeks.length} week(s) = {getTotalSlotsToCreate()} slot(s)
+            <div className="p-3.5 bg-[#001b3d]/5 border border-[#001b3d]/20 rounded-lg">
+              <p className="text-sm text-gray-700">
+                This will create <strong className="font-semibold text-[#001b3d]">{getTotalSlotsToCreate()}</strong> separate slots:
+                <br className="hidden sm:block" />
+                <span className="block sm:inline mt-1 sm:mt-0">
+                  {selectedDays.length} day{selectedDays.length !== 1 ? 's' : ''} × {selectedWeeks.length} week{selectedWeeks.length !== 1 ? 's' : ''} = {getTotalSlotsToCreate()} slot{getTotalSlotsToCreate() > 1 ? 's' : ''}
+                </span>
               </p>
             </div>
           )}
@@ -282,7 +298,7 @@ export function TimetableSlotModal({
             <p className="text-sm text-red-500">{errors.submit}</p>
           )}
 
-          <DialogFooter className="flex justify-between">
+          <DialogFooter className="flex justify-between gap-2 sm:justify-between pt-4">
             <div className="flex gap-2">
               {isEditing && onDelete && (
                 <Button
@@ -290,7 +306,7 @@ export function TimetableSlotModal({
                   variant="destructive"
                   onClick={handleDelete}
                   disabled={isLoading}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 h-10"
                 >
                   <Trash2 className="h-4 w-4" />
                   Delete
@@ -298,10 +314,10 @@ export function TimetableSlotModal({
               )}
             </div>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+              <Button type="button" variant="outline" onClick={onClose} disabled={isLoading} className="h-10">
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" disabled={isLoading} className="h-10 bg-[#001b3d] hover:bg-[#001b3d]/90 text-white">
                 {isLoading ? 'Saving...' : (isEditing ? 'Update' : `Create ${getTotalSlotsToCreate()} Slot${getTotalSlotsToCreate() > 1 ? 's' : ''}`)}
               </Button>
             </div>

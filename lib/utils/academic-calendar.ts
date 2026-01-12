@@ -3,6 +3,8 @@ import { AcademicYear, Holiday } from '@/lib/db/schema';
 /**
  * Calculate which week (1 or 2) a given date falls on based on the academic year's week cycle
  * This version only returns week numbers for Mondays (for calendar display)
+ * Uses weekCycleStartDate as the reference point for Week 1
+ * Uses getWeekNumberForDate internally for consistency with skipHolidayWeeks logic
  */
 export function getWeekNumber(date: Date, academicYear: AcademicYear, holidays: Holiday[] = []): number | null {
   // Check if the date is within the academic year
@@ -17,27 +19,14 @@ export function getWeekNumber(date: Date, academicYear: AcademicYear, holidays: 
     return null;
   }
 
-  // Find the first Monday of the academic year
-  const yearStartDate = new Date(academicYear.startDate + 'T12:00:00');
-  const firstMonday = new Date(yearStartDate);
-  
-  // Find the first Monday on or after the start date
-  while (firstMonday.getDay() !== 1) {
-    firstMonday.setDate(firstMonday.getDate() + 1);
-  }
-
-  // Calculate how many weeks from the first Monday this date is
-  const currentMonday = new Date(properDate);
-  
-  const weeksDiff = Math.floor((currentMonday.getTime() - firstMonday.getTime()) / (1000 * 60 * 60 * 24 * 7));
-  
-  // Return alternating week numbers: Week 1, Week 2, Week 1, Week 2, etc.
-  return (weeksDiff % 2 === 0) ? 1 : 2;
+  // Delegate to getWeekNumberForDate for consistency, which handles skipHolidayWeeks properly
+  return getWeekNumberForDate(properDate, academicYear, holidays);
 }
 
 /**
  * Calculate which week (1 or 2) a given date falls on for ANY day of the week
  * This is used for filtering timetable slots and lessons
+ * Uses weekCycleStartDate as the reference point for Week 1
  * When skipHolidayWeeks is enabled, holiday weeks are not counted in the cycle
  */
 export function getWeekNumberForDate(date: Date, academicYear: AcademicYear, holidays: Holiday[] = []): number | null {
@@ -50,43 +39,95 @@ export function getWeekNumberForDate(date: Date, academicYear: AcademicYear, hol
   // Use proper date handling to avoid timezone issues
   const properDate = new Date(dateStr + 'T12:00:00');
   
-  // Find the first Monday of the academic year
-  const yearStartDate = new Date(academicYear.startDate + 'T12:00:00');
-  const firstMonday = new Date(yearStartDate);
+  // Helper function to get Monday of the week containing a date
+  const getMondayOfWeek = (date: Date): Date => {
+    const monday = new Date(date);
+    const dayOfWeek = monday.getDay();
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert Sunday (0) to 6
+    monday.setDate(monday.getDate() - daysToMonday);
+    monday.setHours(0, 0, 0, 0); // Normalize to midnight for consistent comparison
+    return monday;
+  };
   
-  // Find the first Monday on or after the start date
-  while (firstMonday.getDay() !== 1) {
-    firstMonday.setDate(firstMonday.getDate() + 1);
-  }
+  // Use weekCycleStartDate as the reference point for Week 1
+  // The cycle start date determines when the cycle begins
+  const cycleStartDate = new Date(academicYear.weekCycleStartDate + 'T12:00:00');
+  const cycleStartDateStr = cycleStartDate.toISOString().split('T')[0];
+  
+  // Find the Monday of the week containing weekCycleStartDate - this is our reference Monday
+  // The week containing the cycle start date is always Week 1, regardless of which day the cycle starts
+  const cycleStartMonday = getMondayOfWeek(cycleStartDate);
+  const cycleStartMondayStr = cycleStartMonday.toISOString().split('T')[0];
 
   // Find the Monday of the week containing the current date
-  const currentMonday = new Date(properDate);
-  const dayOfWeek = currentMonday.getDay();
-  const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert Sunday (0) to 6
-  currentMonday.setDate(currentMonday.getDate() - daysToMonday);
+  const currentMonday = getMondayOfWeek(properDate);
+  const currentMondayStr = currentMonday.toISOString().split('T')[0];
+  
+  // If we're in a week before the cycle start week (different Monday), return null
+  if (currentMondayStr < cycleStartMondayStr) {
+    return null;
+  }
+  
+  // If we're in the same week as cycle start (same Monday) but before the cycle start date, return null
+  // This allows the cycle to start mid-week if needed
+  if (currentMondayStr === cycleStartMondayStr && dateStr < cycleStartDateStr) {
+    return null;
+  }
+  
+  // Calculate calendar weeks difference from cycle start Monday
+  // Both are already normalized to midnight Monday, so this should be exact
+  const calendarWeeksDiff = Math.floor((currentMonday.getTime() - cycleStartMonday.getTime()) / (1000 * 60 * 60 * 24 * 7));
+  
+  // If current week is the cycle start week (same Monday), it's always Week 1
+  // This means any date in the week containing the cycle start date is Week 1
+  if (calendarWeeksDiff === 0) {
+    return 1;
+  }
   
   // If skipHolidayWeeks is enabled, count only teaching weeks (skip fully covered holiday weeks)
-  if (academicYear.skipHolidayWeeks === 1 && holidays && holidays.length > 0) {
-    let teachingWeekCount = 0;
-    let weekMonday = new Date(firstMonday);
+  // The cycle start week (weekCycleStartDate) is always Week 1
+  if (academicYear.skipHolidayWeeks === 1) {
+    // Count teaching weeks from cycle start to current week
+    // The cycle start week always counts as teaching week 1 (Week 1), even if it's a holiday week
+    let teachingWeekCount = 1; // Cycle start week is always Week 1
     
-    // Iterate through each week from the start until we reach the current week
-    while (weekMonday <= currentMonday) {
-      // Check if this week is fully covered by holidays
-      if (!isWeekFullyCoveredByHolidays(weekMonday, holidays)) {
-        // This is a teaching week, count it
+    // Iterate through each week from 1 week after cycle start to current week (inclusive)
+    for (let i = 1; i <= calendarWeeksDiff; i++) {
+      // Calculate the Monday that is exactly 'i' weeks after the cycle start Monday
+      // Add exactly i weeks worth of milliseconds
+      const weekMondayMs = cycleStartMonday.getTime() + (i * 7 * 24 * 60 * 60 * 1000);
+      const weekMonday = new Date(weekMondayMs);
+      // Normalize to midnight Monday for consistent comparison
+      weekMonday.setHours(0, 0, 0, 0);
+      
+      // Check if this week is fully covered by holidays (only if holidays exist)
+      const isHolidayWeek = holidays && holidays.length > 0 
+        ? isWeekFullyCoveredByHolidays(weekMonday, holidays)
+        : false;
+      
+      // Only count if not fully covered by holidays
+      // When a week is skipped (holiday), we don't increment the count, so the cycle position stays the same
+      if (!isHolidayWeek) {
         teachingWeekCount++;
       }
-      // Move to next Monday
-      weekMonday.setDate(weekMonday.getDate() + 7);
     }
     
     // Return alternating week numbers based on teaching week count
-    return (teachingWeekCount % 2 === 0) ? 1 : 2;
+    // Cycle start week = Week 1 (count=1), next teaching week = Week 2 (count=2), next = Week 1 (count=3)...
+    // So: odd counts are Week 1, even counts are Week 2
+    const weekNumber = (teachingWeekCount % 2 === 1) ? 1 : 2;
+    
+    // Debug logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Week Calculation] Date: ${dateStr}, Cycle Start: ${academicYear.weekCycleStartDate}, Calendar Weeks Diff: ${calendarWeeksDiff}, Teaching Week Count: ${teachingWeekCount}, Week Number: ${weekNumber}, Skip Holidays: ${academicYear.skipHolidayWeeks}`);
+    }
+    
+    return weekNumber;
   } else {
-    // Original logic: count all weeks including holidays
-    const weeksDiff = Math.floor((currentMonday.getTime() - firstMonday.getTime()) / (1000 * 60 * 60 * 24 * 7));
-    return (weeksDiff % 2 === 0) ? 1 : 2;
+    // When skipHolidayWeeks is disabled, count all calendar weeks including holidays
+    // Week 1 is the cycle start week (calendarWeeksDiff === 0), so even differences are Week 1
+    // Odd differences are Week 2
+    return (calendarWeeksDiff % 2 === 0) ? 1 : 2;
   }
 }
 

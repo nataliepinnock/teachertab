@@ -51,8 +51,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Redirect everything else to beta page
-  return NextResponse.redirect(new URL('/beta', request.url));
+  // Allow all other routes to pass through
+  return NextResponse.next();
 }
 
 export const config = {

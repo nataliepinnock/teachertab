@@ -235,54 +235,6 @@ export default function ClassesSetupPage() {
 
       {/* Content Section */}
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Stats Summary */}
-        {classes && classes.length > 0 && (
-          <div className="mb-8">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <div className="flex items-center">
-                  <div className="p-2 bg-gray-100 rounded-lg">
-                    <Users className="h-5 w-5 text-gray-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-500">Total Classes</p>
-                    <p className="text-2xl font-bold text-gray-900">{classes.length}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <div className="flex items-center">
-                  <div className="p-2 bg-gray-100 rounded-lg">
-                    <Users className="h-5 w-5 text-gray-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-500">Total Students</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {classes.reduce((sum, cls) => sum + (cls.numberOfStudents || 0), 0)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <div className="flex items-center">
-                  <div className="p-2 bg-gray-100 rounded-lg">
-                    <Users className="h-5 w-5 text-gray-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-500">Average Class Size</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {classes.length > 0 
-                        ? Math.round(classes.reduce((sum, cls) => sum + (cls.numberOfStudents || 0), 0) / classes.length)
-                        : 0
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Classes Grid */}
         {classes && classes.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

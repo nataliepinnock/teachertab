@@ -38,13 +38,13 @@ export function Login({
     { error: '' }
   );
 
-  // Ensure plans is always a valid array with strict validation
+  // Ensure plans is always a valid array with strict validation and deduplication
   const safePlans = useMemo(() => {
     try {
       if (!Array.isArray(plans)) {
         return [];
       }
-      return plans.filter((plan): plan is PlanOption => {
+      const validatedPlans = plans.filter((plan): plan is PlanOption => {
         try {
           // Strict validation - ensure plan is an object with all required properties
           if (!plan || typeof plan !== 'object' || Array.isArray(plan)) {
@@ -75,6 +75,16 @@ export function Login({
         } catch {
           return false;
         }
+      });
+      
+      // Deduplicate by plan ID - keep first occurrence of each unique ID
+      const seenIds = new Set<string>();
+      return validatedPlans.filter((plan) => {
+        if (seenIds.has(plan.id)) {
+          return false;
+        }
+        seenIds.add(plan.id);
+        return true;
       });
     } catch {
       return [];
