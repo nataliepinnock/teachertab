@@ -2,7 +2,10 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Calendar, Clock, BookOpen, Users, CheckCircle, Circle, FileText, ChevronRight, Archive, ArrowLeft, Edit, Trash2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Plus, Calendar, Clock, BookOpen, Users, CheckCircle, Circle, FileText, ChevronRight, Archive, ArrowLeft, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Filter, X } from 'lucide-react';
 import useSWR from 'swr';
 import { Suspense, useState } from 'react';
 import { LessonModal } from '@/components/lesson-modal';
@@ -26,9 +29,22 @@ function LessonsSkeleton() {
 
 function LessonsList() {
   const { data: lessons, error: lessonsError, mutate } = useSWR<any[]>('/api/lessons', fetcher);
+  const { data: classes } = useSWR<any[]>('/api/classes', fetcher);
+  const { data: subjects } = useSWR<any[]>('/api/subjects', fetcher);
   const [showArchived, setShowArchived] = useState(false);
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
+  
+  // Sorting state
+  const [sortColumn, setSortColumn] = useState<'date' | 'title' | 'subject' | 'class' | 'status'>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  // Filtering state
+  const [filterSubject, setFilterSubject] = useState<string>('all');
+  const [filterClass, setFilterClass] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showFilters, setShowFilters] = useState(false);
 
   if (lessonsError) {
     return (
@@ -127,26 +143,110 @@ function LessonsList() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
+    let filtered = lessons;
+    
+    // Apply archive filter
     if (showArchived) {
-      // Show past lessons, sorted by most recent first
-      return lessons
-        .filter(lesson => new Date(lesson.date) < today)
-        .sort((a, b) => {
-          const dateA = new Date(a.date);
-          const dateB = new Date(b.date);
-          return dateB.getTime() - dateA.getTime(); // Most recent first
-        });
+      filtered = filtered.filter(lesson => new Date(lesson.date) < today);
     } else {
-      // Show current and future lessons, sorted by soonest first
-      return lessons
-        .filter(lesson => new Date(lesson.date) >= today)
-        .sort((a, b) => {
-          const dateA = new Date(a.date);
-          const dateB = new Date(b.date);
-          return dateA.getTime() - dateB.getTime(); // Soonest first
-        });
+      filtered = filtered.filter(lesson => new Date(lesson.date) >= today);
+    }
+    
+    // Apply subject filter
+    if (filterSubject !== 'all') {
+      filtered = filtered.filter(lesson => lesson.subjectId?.toString() === filterSubject);
+    }
+    
+    // Apply class filter
+    if (filterClass !== 'all') {
+      filtered = filtered.filter(lesson => lesson.classId?.toString() === filterClass);
+    }
+    
+    // Apply status filter
+    if (filterStatus !== 'all') {
+      if (filterStatus === 'completed') {
+        filtered = filtered.filter(lesson => lesson.planCompleted);
+      } else if (filterStatus === 'pending') {
+        filtered = filtered.filter(lesson => !lesson.planCompleted && !isPast(lesson.date));
+      } else if (filterStatus === 'overdue') {
+        filtered = filtered.filter(lesson => !lesson.planCompleted && isPast(lesson.date));
+      }
+    }
+    
+    // Apply search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(lesson => 
+        lesson.title?.toLowerCase().includes(query) ||
+        lesson.lessonPlan?.toLowerCase().includes(query) ||
+        lesson.subjectName?.toLowerCase().includes(query) ||
+        lesson.className?.toLowerCase().includes(query)
+      );
+    }
+    
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortColumn) {
+        case 'date':
+          // Normalize dates to midnight for consistent comparison
+          const dateA = a.date ? new Date(a.date) : new Date(0);
+          const dateB = b.date ? new Date(b.date) : new Date(0);
+          dateA.setHours(0, 0, 0, 0);
+          dateB.setHours(0, 0, 0, 0);
+          comparison = dateA.getTime() - dateB.getTime();
+          // If dates are equal, sort by time
+          if (comparison === 0 && a.slotStartTime && b.slotStartTime) {
+            const timeA = a.slotStartTime.split(':').map(Number);
+            const timeB = b.slotStartTime.split(':').map(Number);
+            const timeAValue = timeA[0] * 60 + timeA[1];
+            const timeBValue = timeB[0] * 60 + timeB[1];
+            comparison = timeAValue - timeBValue;
+          }
+          break;
+        case 'title':
+          comparison = (a.title || '').localeCompare(b.title || '');
+          break;
+        case 'subject':
+          comparison = (a.subjectName || '').localeCompare(b.subjectName || '');
+          break;
+        case 'class':
+          comparison = (a.className || '').localeCompare(b.className || '');
+          break;
+        case 'status':
+          // Completed first, then pending, then overdue
+          const aStatus = a.planCompleted ? 0 : (isPast(a.date) ? 2 : 1);
+          const bStatus = b.planCompleted ? 0 : (isPast(b.date) ? 2 : 1);
+          comparison = aStatus - bStatus;
+          break;
+        default:
+          comparison = 0;
+      }
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+    
+    return sorted;
+  };
+  
+  const handleSort = (column: typeof sortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
     }
   };
+  
+  const clearFilters = () => {
+    setFilterSubject('all');
+    setFilterClass('all');
+    setFilterStatus('all');
+    setSearchQuery('');
+  };
+  
+  const hasActiveFilters = filterSubject !== 'all' || filterClass !== 'all' || filterStatus !== 'all' || searchQuery.trim() !== '';
 
   const sortedLessons = filterAndSortLessons();
   const pastLessonsCount = lessons && Array.isArray(lessons) ? lessons.filter(lesson => isPast(lesson.date)).length : 0;
@@ -322,10 +422,8 @@ function LessonsList() {
             {showArchived ? 'Archived Lessons' : 'Lessons'}
           </h1>
           <p className="text-gray-600 mt-1">
-            {showArchived 
-              ? `${pastLessonsCount} past lesson${pastLessonsCount !== 1 ? 's' : ''}`
-              : `${currentLessonsCount} upcoming lesson${currentLessonsCount !== 1 ? 's' : ''}`
-            }
+            {sortedLessons.length} {sortedLessons.length === 1 ? 'lesson' : 'lessons'}
+            {hasActiveFilters && ` (filtered)`}
           </p>
         </div>
         <div className="flex items-center space-x-3">
@@ -357,6 +455,105 @@ function LessonsList() {
         </div>
       </div>
 
+      {/* Search and Filter Bar */}
+      <div className="mb-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="flex-1">
+            <Input
+              placeholder="Search lessons by title, subject, class, or plan..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2"
+          >
+            <Filter className="h-4 w-4" />
+            Filters
+            {hasActiveFilters && (
+              <span className="ml-1 px-1.5 py-0.5 bg-blue-500 text-white text-xs rounded-full">
+                {[filterSubject !== 'all', filterClass !== 'all', filterStatus !== 'all'].filter(Boolean).length}
+              </span>
+            )}
+          </Button>
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              onClick={clearFilters}
+              className="flex items-center gap-2"
+            >
+              <X className="h-4 w-4" />
+              Clear
+            </Button>
+          )}
+        </div>
+
+        {/* Filter Panel */}
+        {showFilters && (
+          <Card className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="filter-subject" className="text-sm font-medium mb-2 block">
+                  Subject
+                </Label>
+                <Select value={filterSubject} onValueChange={setFilterSubject}>
+                  <SelectTrigger id="filter-subject">
+                    <SelectValue placeholder="All subjects" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All subjects</SelectItem>
+                    {subjects?.map((subject) => (
+                      <SelectItem key={subject.id} value={subject.id.toString()}>
+                        {subject.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="filter-class" className="text-sm font-medium mb-2 block">
+                  Class
+                </Label>
+                <Select value={filterClass} onValueChange={setFilterClass}>
+                  <SelectTrigger id="filter-class">
+                    <SelectValue placeholder="All classes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All classes</SelectItem>
+                    {classes?.map((cls) => (
+                      <SelectItem key={cls.id} value={cls.id.toString()}>
+                        {cls.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="filter-status" className="text-sm font-medium mb-2 block">
+                  Status
+                </Label>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger id="filter-status">
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="overdue">Overdue</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </Card>
+        )}
+      </div>
+
       {!sortedLessons || sortedLessons.length === 0 ? (
         <Card>
           <CardContent className="pt-12 pb-12">
@@ -381,35 +578,77 @@ function LessonsList() {
           </CardContent>
         </Card>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gradient-to-r from-gray-50 to-gray-100/50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Lesson
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <button
+                      onClick={() => handleSort('title')}
+                      className="flex items-center gap-1 hover:text-gray-900 transition-colors"
+                    >
+                      Lesson
+                      {sortColumn === 'title' && (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      )}
+                      {sortColumn !== 'title' && <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                    </button>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Subject
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <button
+                      onClick={() => handleSort('subject')}
+                      className="flex items-center gap-1 hover:text-gray-900 transition-colors"
+                    >
+                      Subject
+                      {sortColumn === 'subject' && (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      )}
+                      {sortColumn !== 'subject' && <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                    </button>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Class
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <button
+                      onClick={() => handleSort('class')}
+                      className="flex items-center gap-1 hover:text-gray-900 transition-colors"
+                    >
+                      Class
+                      {sortColumn === 'class' && (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      )}
+                      {sortColumn !== 'class' && <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                    </button>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date & Time
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <button
+                      onClick={() => handleSort('date')}
+                      className="flex items-center gap-1 hover:text-gray-900 transition-colors"
+                    >
+                      Date & Time
+                      {sortColumn === 'date' && (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      )}
+                      {sortColumn !== 'date' && <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                    </button>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Color
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <button
+                      onClick={() => handleSort('status')}
+                      className="flex items-center gap-1 hover:text-gray-900 transition-colors"
+                    >
+                      Status
+                      {sortColumn === 'status' && (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      )}
+                      {sortColumn !== 'status' && <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                    </button>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-100">
                 {sortedLessons.map((lesson) => {
                   const lessonDate = new Date(lesson.date);
                   const isLessonToday = isToday(lesson.date);
@@ -418,124 +657,117 @@ function LessonsList() {
                   return (
                     <tr 
                       key={lesson.id} 
-                      className={`hover:bg-gray-50 ${
-                        isLessonToday ? 'ring-1 ring-blue-500' : ''
-                      } ${isLessonPast ? 'opacity-75' : ''}`}
+                      className={`transition-colors duration-150 ${
+                        isLessonToday 
+                          ? 'bg-blue-50/50 hover:bg-blue-50 border-l-4 border-blue-500' 
+                          : 'hover:bg-gray-50/80'
+                      } ${isLessonPast ? 'opacity-90' : ''}`}
                     >
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-3">
                         <div>
-                          <div className="flex items-center space-x-2 mb-1">
-                            <h3 className="text-sm font-medium text-gray-900">{lesson.title}</h3>
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <h3 className="text-sm font-semibold text-gray-900">{lesson.title}</h3>
                             {isLessonToday && !showArchived && (
-                              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                              <span className="px-2.5 py-0.5 bg-blue-500 text-white text-xs font-semibold rounded-full shadow-sm">
                                 Today
                               </span>
                             )}
                             {isLessonPast && !lesson.planCompleted && !showArchived && (
-                              <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
+                              <span className="px-2.5 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full shadow-sm">
                                 Overdue
                               </span>
                             )}
                             {showArchived && (
-                              <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs font-medium rounded-full">
+                              <span className="px-2.5 py-0.5 bg-gray-400 text-white text-xs font-semibold rounded-full shadow-sm">
                                 Past
                               </span>
                             )}
                           </div>
                           {lesson.lessonPlan && (
-                            <p className="text-xs text-gray-500 max-w-xs truncate">
+                            <p className="text-xs text-gray-600 max-w-xs truncate leading-relaxed">
                               {lesson.lessonPlan}
                             </p>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-3 whitespace-nowrap">
                         <div 
-                          className={`px-2 py-1 rounded-full text-xs font-medium border ${getSubjectColor(lesson.subjectColor, lesson.subjectName)}`}
+                          className={`inline-flex px-3 py-1.5 rounded-lg text-xs font-semibold border-2 shadow-sm ${getSubjectColor(lesson.subjectColor, lesson.subjectName)}`}
                           style={getSubjectStyle(lesson.subjectColor, lesson.subjectName)}
                         >
                           {lesson.subjectName}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center space-x-1">
-                          <Users className="h-3 w-3 text-blue-500" />
+                      <td className="px-6 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-gray-100 rounded-lg">
+                            <Users className="h-3.5 w-3.5 text-gray-600" />
+                          </div>
                           <span 
-                            className={`text-xs ${getClassColor(lesson.classColor, lesson.className)}`}
+                            className={`text-sm font-medium ${getClassColor(lesson.classColor, lesson.className)}`}
                             style={getClassStyle(lesson.classColor)}
                           >
                             {lesson.className}
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-gray-500" />
-                          <span>{formatDate(lesson.date)}</span>
-                        </div>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <Clock className="h-4 w-4 text-gray-500" />
-                          <span className="text-xs text-gray-500">
-                            {lesson.slotStartTime} - {lesson.slotEndTime}
-                          </span>
-                        </div>
-                        {lesson.slotLabel && (
-                          <div className="mt-1">
-                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                              {lesson.slotLabel}
-                            </span>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getWeekColor(lesson.slotWeekNumber)}`}>
-                              {getWeekLabel(lesson.slotWeekNumber)}
+                      <td className="px-6 py-3">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-sm font-medium text-gray-900">{formatDate(lesson.date)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-xs font-medium text-gray-600">
+                              {lesson.slotStartTime} - {lesson.slotEndTime}
                             </span>
                           </div>
-                        )}
+                          {lesson.slotLabel && (
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="inline-flex items-center px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-md">
+                                {lesson.slotLabel}
+                              </span>
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${getWeekColor(lesson.slotWeekNumber)}`}>
+                                {getWeekLabel(lesson.slotWeekNumber)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {lesson.color ? (
-                          <div className="flex items-center space-x-2">
-                            <div 
-                              className="w-4 h-4 rounded-full border-2 border-gray-300"
-                              style={{ backgroundColor: lesson.color }}
-                            />
-                            <span className="text-xs text-gray-600 font-medium">Color assigned</span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-xs">No color</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col items-start space-y-1">
+                      <td className="px-6 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
                           <Button 
                             variant="ghost" 
                             size="sm"
                             onClick={() => handleToggleComplete(lesson.id, lesson.planCompleted)}
-                            className="h-6 w-6 p-0"
+                            className="h-7 w-7 p-0 rounded-lg hover:bg-gray-100 transition-colors"
                             title={lesson.planCompleted ? 'Mark Incomplete' : 'Mark Complete'}
                           >
                             {lesson.planCompleted ? (
-                              <CheckCircle className="h-4 w-4 text-green-500" />
+                              <CheckCircle className="h-5 w-5 text-green-600" />
                             ) : (
-                              <Circle className="h-4 w-4 text-gray-400" />
+                              <Circle className="h-5 w-5 text-gray-400" />
                             )}
                           </Button>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm ${
                             lesson.planCompleted 
-                              ? 'bg-green-100 text-green-800' 
+                              ? 'bg-green-100 text-green-800 border border-green-200' 
                               : isLessonPast 
-                              ? 'bg-red-100 text-red-800' 
-                              : 'bg-yellow-100 text-yellow-800'
+                              ? 'bg-red-100 text-red-800 border border-red-200' 
+                              : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
                           }`}>
                             {lesson.planCompleted ? 'Completed' : isLessonPast ? 'Overdue' : 'Pending'}
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-2">
+                      <td className="px-6 py-3 whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
                           <Button 
                             variant="ghost" 
                             size="sm" 
                             onClick={() => openEditModal(lesson)}
-                            className="h-8 w-8 p-0"
+                            className="h-9 w-9 p-0 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
                             title="Edit Lesson"
                           >
                             <Edit className="h-4 w-4" />
@@ -544,7 +776,7 @@ function LessonsList() {
                             variant="ghost" 
                             size="sm" 
                             onClick={() => handleDeleteLesson(lesson.id, lesson.title)}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            className="h-9 w-9 p-0 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors"
                             title="Delete Lesson"
                           >
                             <Trash2 className="h-4 w-4" />

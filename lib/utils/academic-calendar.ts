@@ -117,11 +117,6 @@ export function getWeekNumberForDate(date: Date, academicYear: AcademicYear, hol
     // So: odd counts are Week 1, even counts are Week 2
     const weekNumber = (teachingWeekCount % 2 === 1) ? 1 : 2;
     
-    // Debug logging in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[Week Calculation] Date: ${dateStr}, Cycle Start: ${academicYear.weekCycleStartDate}, Calendar Weeks Diff: ${calendarWeeksDiff}, Teaching Week Count: ${teachingWeekCount}, Week Number: ${weekNumber}, Skip Holidays: ${academicYear.skipHolidayWeeks}`);
-    }
-    
     return weekNumber;
   } else {
     // When skipHolidayWeeks is disabled, count all calendar weeks including holidays

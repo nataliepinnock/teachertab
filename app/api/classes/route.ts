@@ -63,7 +63,7 @@ export async function PUT(request: Request) {
 
   try {
     const body = await request.json();
-    const { id, name, numberOfStudents, notes, color } = body;
+    const { id, name, numberOfStudents, notes, color, isArchived } = body;
 
     if (!id || !name) {
       return Response.json({ error: 'ID and name are required' }, { status: 400 });
@@ -87,6 +87,7 @@ export async function PUT(request: Request) {
         numberOfStudents: numberOfStudents || 0,
         notes: notes || null,
         color: color || null,
+        isArchived: isArchived !== undefined ? (isArchived ? 1 : 0) : existingClass[0].isArchived,
       })
       .where(and(eq(classes.id, id), eq(classes.userId, user.id)))
       .returning();

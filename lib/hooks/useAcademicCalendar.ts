@@ -4,20 +4,36 @@ import { AcademicYear, Holiday } from '@/lib/db/schema';
 import { getWeekNumber, isSchoolDay, getAcademicYearForDate, getWeekNumberForDate as getWeekNumberForDateUtil } from '@/lib/utils/academic-calendar';
 import { useMemo } from 'react';
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = async (url: string) => {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      // Only log unexpected errors (not auth errors which are handled gracefully)
+      // 401 and 403 are expected when user isn't authenticated yet
+      if (res.status !== 401 && res.status !== 403) {
+        console.error(`Error fetching ${url}:`, res.status, res.statusText);
+      }
+      return [];
+    }
+    const data = await res.json();
+    // Ensure we always return an array
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    // Only log unexpected errors (network issues, etc.)
+    // Don't log auth errors as they're handled gracefully
+    console.error(`Error fetching ${url}:`, error);
+    return [];
+  }
+};
 
 export function useAcademicCalendar() {
   const { data: academicYears, error: academicYearsError } = useSWR<AcademicYear[]>('/api/academic-years', fetcher);
   const { data: holidays, error: holidaysError } = useSWR<Holiday[]>('/api/holidays', fetcher);
 
-  // Get the active academic year
-  const activeAcademicYearFromAPI = academicYears?.find(year => year.isActive) || null;
-  
-  // Debug logging (only in development and when data changes)
-  if (process.env.NODE_ENV === 'development' && academicYears !== undefined) {
-    console.log('Academic years:', academicYears);
-    console.log('Active academic year from API:', activeAcademicYearFromAPI);
-  }
+  // Get the active academic year - ensure academicYears is an array
+  const activeAcademicYearFromAPI = Array.isArray(academicYears) 
+    ? academicYears.find(year => year.isActive) || null
+    : null;
   
   // Memoized test academic year if none exists
   const testAcademicYear = useMemo(() => ({
@@ -40,18 +56,19 @@ export function useAcademicCalendar() {
   const getWeekNumberForDate = useCallback((date: Date): number | null => {
     if (!activeAcademicYear) return null;
     // Use the new function that works for any day of the week, passing holidays for skipHolidayWeeks logic
-    return getWeekNumberForDateUtil(date, activeAcademicYear, holidays || []);
+    const holidaysArray = Array.isArray(holidays) ? holidays : [];
+    return getWeekNumberForDateUtil(date, activeAcademicYear, holidaysArray);
   }, [activeAcademicYear, holidays]);
 
   // Helper function to check if a date is a school day
   const isSchoolDayForDate = (date: Date): boolean => {
-    if (!activeAcademicYear || !holidays) return false;
+    if (!activeAcademicYear || !holidays || !Array.isArray(holidays)) return false;
     return isSchoolDay(date, activeAcademicYear, holidays);
   };
 
   // Helper function to get holidays for a specific date range
   const getHolidaysInRange = (startDate: Date, endDate: Date): Holiday[] => {
-    if (!holidays) return [];
+    if (!holidays || !Array.isArray(holidays)) return [];
     
     const startStr = startDate.toISOString().split('T')[0];
     const endStr = endDate.toISOString().split('T')[0];
@@ -76,7 +93,7 @@ export function useAcademicCalendar() {
 
   // Helper function to convert holidays to calendar events format
   const getHolidayEvents = useCallback(() => {
-    if (!holidays || !activeAcademicYear) return [];
+    if (!holidays || !activeAcademicYear || !Array.isArray(holidays)) return [];
     
     return holidays.map(holiday => {
       const startDate = new Date(holiday.startDate + 'T00:00:00');
@@ -102,15 +119,15 @@ export function useAcademicCalendar() {
   }, [holidays, activeAcademicYear]);
 
   return {
-    academicYears,
-    holidays,
+    academicYears: Array.isArray(academicYears) ? academicYears : [],
+    holidays: Array.isArray(holidays) ? holidays : [],
     activeAcademicYear,
     getWeekNumberForDate,
     isSchoolDayForDate,
     getHolidaysInRange,
     getCurrentWeekInfo,
     getHolidayEvents,
-    isLoading: !academicYears || !holidays,
+    isLoading: !academicYears || !holidays || !Array.isArray(academicYears) || !Array.isArray(holidays),
     error: academicYearsError || holidaysError
   };
 }

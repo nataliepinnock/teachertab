@@ -28,7 +28,6 @@ export default function CalendarPage() {
   const [showEventsOnly, setShowEventsOnly] = useState(false);
   
   // Debug logging
-  console.log('Calendar page showEventsOnly state:', showEventsOnly, '(true = Events Only, false = Lessons & Events)');
   
   // Use academic calendar hook for week numbers
   const { getWeekNumberForDate, activeAcademicYear, holidays } = useAcademicCalendar();
@@ -185,6 +184,7 @@ export default function CalendarPage() {
                 currentDate={currentDate}
                 onDateChange={setCurrentDate}
                 onAddEvent={handleAddEvent}
+                cardStyle="solid"
               />
             </div>
           </div>
@@ -198,6 +198,7 @@ export default function CalendarPage() {
                 className="h-full"
                 currentDate={currentDate}
                 onDateChange={setCurrentDate}
+                cardStyle="solid"
               />
             </div>
           </div>
@@ -213,6 +214,7 @@ export default function CalendarPage() {
                 onDateChange={setCurrentDate}
                 onViewChange={handleViewChange}
                 showEventsOnly={showEventsOnly}
+                cardStyle="solid"
               />
             </div>
           </div>
@@ -225,7 +227,7 @@ export default function CalendarPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Calendar Header */}
-      <div className="flex-none border-b-2 border-gray-200 bg-white px-6 py-6 shadow-sm">
+      <div className="flex-none border-b-2 border-gray-200 bg-white px-6 py-3 shadow-sm">
         <div className="flex items-center justify-between">
           {/* Left side: Current Date and Week Number */}
           <div className="flex items-center gap-4">
@@ -293,28 +295,36 @@ export default function CalendarPage() {
             </div>
             
             {/* View Switcher */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  {getViewName()}
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onSelect={() => handleViewChange('day')}>
-                  <View className="mr-2 h-4 w-4" />
-                  <span>Day view</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => handleViewChange('week')}>
-                  <Grid className="mr-2 h-4 w-4" />
-                  <span>Week view</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => handleViewChange('month')}>
-                  <Calendar className="mr-2 h-4 w-4" />
-                  <span>Month view</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {isClient && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    {getViewName()}
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onSelect={() => handleViewChange('day')}>
+                    <View className="mr-2 h-4 w-4" />
+                    <span>Day view</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => handleViewChange('week')}>
+                    <Grid className="mr-2 h-4 w-4" />
+                    <span>Week view</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => handleViewChange('month')}>
+                    <Calendar className="mr-2 h-4 w-4" />
+                    <span>Month view</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {!isClient && (
+              <Button variant="outline" disabled>
+                {getViewName()}
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            )}
 
             {/* Lessons Only Toggle - only show in month view */}
             {currentView === 'month' && (
@@ -327,7 +337,6 @@ export default function CalendarPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      console.log('Setting showEventsOnly to false');
                       setShowEventsOnly(false);
                     }}
                     className={`px-3 py-1.5 text-xs font-medium rounded-l-md transition-colors ${
@@ -341,7 +350,6 @@ export default function CalendarPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      console.log('Setting showEventsOnly to true');
                       setShowEventsOnly(true);
                     }}
                     className={`px-3 py-1.5 text-xs font-medium rounded-r-md transition-colors ${
@@ -360,24 +368,32 @@ export default function CalendarPage() {
             <div className="h-6 w-px bg-gray-300" />
 
             {/* Add Event/Lesson Button */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" className="px-3">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={handleAddEvent}>
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Add Event
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleAddLesson}>
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  Add Lesson
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {isClient && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" className="px-3">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={handleAddEvent}>
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Add Event
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={handleAddLesson}>
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    Add Lesson
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {!isClient && (
+              <Button size="sm" className="px-3" disabled>
+                <Plus className="h-4 w-4 mr-1" />
+                Add
+              </Button>
+            )}
           </div>
         </div>
       </div>

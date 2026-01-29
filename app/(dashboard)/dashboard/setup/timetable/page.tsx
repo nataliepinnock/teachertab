@@ -15,7 +15,22 @@ import React from 'react';
 import Link from 'next/link';
 import { TimetableSlotModal as MultiDayTimetableSlotModal } from '@/components/timetable-slot-modal';
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    // If it's a 401, throw an error so SWR can catch it
+    if (res.status === 401) {
+      const error = new Error('Unauthorized - Please sign in again');
+      (error as any).status = 401;
+      throw error;
+    }
+    // For other errors, return empty array for array endpoints
+    return [];
+  }
+  const data = await res.json();
+  // Ensure we always return an array for array endpoints
+  return Array.isArray(data) ? data : [];
+};
 
 // Class Assignment Modal
 function ClassAssignmentModal({ open, onClose, onSave, slot, initialData }: {
@@ -173,12 +188,13 @@ function ClassAssignmentModal({ open, onClose, onSave, slot, initialData }: {
 }
 
 // Timetable Grid Component
-function TimetableGrid({ slots, onEditSlot, onDeleteSlot, onAssignClass, onAssignActivity, timetableActivities, mutateActivities }: {
+function TimetableGrid({ slots, onEditSlot, onDeleteSlot, onAssignClass, onAssignActivity, onEditActivity, timetableActivities, mutateActivities }: {
   slots: TimetableSlot[];
   onEditSlot: (slot: TimetableSlot) => void;
   onDeleteSlot: (id: number) => void;
   onAssignClass: (slot: TimetableSlot) => void;
   onAssignActivity: (slot: TimetableSlot) => void;
+  onEditActivity?: (activity: any) => void;
   timetableActivities?: any[];
   mutateActivities?: () => void;
 }) {
@@ -474,7 +490,16 @@ function TimetableGrid({ slots, onEditSlot, onDeleteSlot, onAssignClass, onAssig
                           {(() => {
                             const activity = getTimetableActivity(slot.id);
                             return activity ? (
-                              <div className="space-y-1">
+                              <div 
+                                className="space-y-1 cursor-pointer hover:bg-gray-50 rounded p-1 -m-1 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (onEditActivity) {
+                                    onEditActivity(activity);
+                                  }
+                                }}
+                                title="Click to edit or delete"
+                              >
                                 <div className="flex items-center text-xs">
                                   <Briefcase className="h-3 w-3 mr-1 text-purple-500" />
                                   <span 
@@ -577,27 +602,36 @@ export default function TimetableSetupPage() {
   };
 
   const handleSaveSlot = async (data: { dayOfWeek: string; weekNumber: number; startTime: string; endTime: string; label: string }) => {
-    try {
-      if (modalMode === 'edit' && selectedSlot) {
-        await fetch('/api/timetable-slots', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: selectedSlot.id,
-            ...data,
-          }),
-        });
-      } else {
-        await fetch('/api/timetable-slots', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
+    if (modalMode === 'edit' && selectedSlot) {
+      const response = await fetch('/api/timetable-slots', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedSlot.id,
+          ...data,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update timetable slot');
       }
-      setModalOpen(false);
+      
       mutate();
-    } catch (error) {
-      console.error('Error saving timetable slot:', error);
+    } else {
+      const response = await fetch('/api/timetable-slots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        // Conflicts are now handled in the modal with warnings
+        throw new Error(errorData.error || 'Failed to create timetable slot');
+      }
+      
+      mutate();
     }
   };
 
@@ -664,32 +698,85 @@ export default function TimetableSetupPage() {
     setActivityModalOpen(true);
   };
 
+  const handleEditActivity = (activity: any) => {
+    // Find the slot for this activity
+    const slot = timetableSlots?.find(s => s.id === activity.timetableSlotId);
+    setSelectedSlotForActivity(slot || null);
+    setActivityModalMode('edit');
+    setSelectedActivity(activity);
+    setActivityModalOpen(true);
+  };
+
   const handleSaveActivity = async (data: any) => {
     try {
-      if (!selectedSlotForActivity) return;
+      if (!selectedSlotForActivity && !selectedActivity) return;
 
-      const response = await fetch('/api/timetable-activities', {
-        method: 'POST',
+      const isEditing = activityModalMode === 'edit' && selectedActivity?.id;
+      const url = isEditing ? '/api/timetable-activities' : '/api/timetable-activities';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      // Prepare the request body
+      const requestBody: any = {
+        ...data,
+      };
+
+      if (isEditing) {
+        // For editing, include the ID
+        requestBody.id = selectedActivity.id;
+        // Don't override timetableSlotId if it's already in data (from modal)
+        if (!requestBody.timetableSlotId) {
+          requestBody.timetableSlotId = selectedActivity.timetableSlotId;
+        }
+        // Don't send userId for updates - API gets it from session
+      } else {
+        // For creating, include timetableSlotId
+        requestBody.timetableSlotId = selectedSlotForActivity?.id || selectedActivity?.timetableSlotId;
+        // Don't send userId for creates - API gets it from session
+      }
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...data,
-          userId: 1, // TODO: Get from auth context
-          timetableSlotId: selectedSlotForActivity.id,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create activity');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Failed to ${isEditing ? 'update' : 'create'} activity`;
+        throw new Error(errorMessage);
       }
 
       // Refresh data
       mutateTimetableActivities();
       setActivityModalOpen(false);
+      setSelectedActivity(null);
+      setSelectedSlotForActivity(null);
     } catch (error) {
-      console.error('Error creating activity:', error);
-      alert('Error creating activity. Please try again.');
+      console.error('Error saving activity:', error);
+      alert(`Error ${activityModalMode === 'edit' ? 'updating' : 'creating'} activity. Please try again.`);
+    }
+  };
+
+  const handleDeleteActivity = async (id: number) => {
+    try {
+      const response = await fetch(`/api/timetable-activities?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete activity');
+      }
+
+      // Refresh data
+      mutateTimetableActivities();
+      setActivityModalOpen(false);
+      setSelectedActivity(null);
+      setSelectedSlotForActivity(null);
+    } catch (error) {
+      console.error('Error deleting activity:', error);
+      throw error; // Re-throw so modal can handle it
     }
   };
 
@@ -805,13 +892,52 @@ export default function TimetableSetupPage() {
         {/* Timetable Grid */}
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <div className="h-[600px]">
-            {timetableSlots && Array.isArray(timetableSlots) && timetableSlots.length > 0 ? (
+            {error ? (
+              <div className="flex items-center justify-center h-full border-2 border-dashed border-red-300 rounded-lg bg-red-50">
+                <div className="text-center">
+                  <div className="mx-auto w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-6">
+                    <Calendar className="h-10 w-10 text-red-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-red-900 mb-3">
+                    {(error as any)?.status === 401 ? 'Session Expired' : 'Error Loading Timetable Slots'}
+                  </h3>
+                  <p className="text-red-600 mb-6 max-w-md mx-auto">
+                    {(error as any)?.status === 401 
+                      ? 'Your session has expired. Please sign in again to continue.'
+                      : error.message || 'There was an error loading your timetable slots. Please refresh the page or try again later.'}
+                  </p>
+                  {(error as any)?.status === 401 ? (
+                    <Button 
+                      onClick={() => window.location.href = '/sign-in'} 
+                      size="lg" 
+                      className="h-11 px-6"
+                    >
+                      Sign In
+                    </Button>
+                  ) : (
+                    <Button onClick={() => mutate()} size="lg" className="h-11 px-6">
+                      Retry
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ) : isLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="mx-auto w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6 animate-pulse">
+                    <Calendar className="h-10 w-10 text-gray-400" />
+                  </div>
+                  <p className="text-gray-600">Loading timetable slots...</p>
+                </div>
+              </div>
+            ) : timetableSlots && Array.isArray(timetableSlots) && timetableSlots.length > 0 ? (
               <TimetableGrid
                 slots={timetableSlots}
                 onEditSlot={handleEditSlot}
                 onDeleteSlot={handleDeleteSlot}
                 onAssignClass={handleAssignClass}
                 onAssignActivity={handleAssignActivity}
+                onEditActivity={handleEditActivity}
                 timetableActivities={timetableActivities}
                 mutateActivities={mutateTimetableActivities}
               />
@@ -871,8 +997,13 @@ export default function TimetableSetupPage() {
       {/* Activity Assignment Modal */}
       <TimetableActivityModal
         open={activityModalOpen}
-        onClose={() => setActivityModalOpen(false)}
+        onClose={() => {
+          setActivityModalOpen(false);
+          setSelectedActivity(null);
+          setSelectedSlotForActivity(null);
+        }}
         onSave={handleSaveActivity}
+        onDelete={handleDeleteActivity}
         mode={activityModalMode}
         initialData={selectedActivity}
         slotData={selectedSlotForActivity ? {

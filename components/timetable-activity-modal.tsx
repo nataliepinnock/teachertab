@@ -8,12 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar, Clock, MapPin, FileText, Users, Briefcase, Coffee, MoreHorizontal } from 'lucide-react';
+import { Calendar, Clock, MapPin, FileText, Users, Briefcase, Coffee, MoreHorizontal, Trash2, AlertTriangle } from 'lucide-react';
+import useSWR from 'swr';
 
 interface TimetableActivityModalProps {
   open: boolean;
   onClose: () => void;
   onSave: (data: any) => Promise<void>;
+  onDelete?: (id: number) => Promise<void>;
   mode: 'add' | 'edit' | 'view';
   initialData?: any;
   slotData?: {
@@ -37,6 +39,7 @@ export function TimetableActivityModal({
   open, 
   onClose, 
   onSave, 
+  onDelete,
   mode, 
   initialData, 
   slotData 
@@ -53,6 +56,25 @@ export function TimetableActivityModal({
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch existing activities to check for conflicts
+  const { data: existingActivities } = useSWR(
+    mode === 'add' ? '/api/timetable-activities' : null,
+    async (url) => {
+      const res = await fetch(url);
+      if (!res.ok) return [];
+      return res.json();
+    }
+  );
+
+  // Get the timetable slot ID from initialData (when adding from calendar) or from slotData context
+  const timetableSlotId = initialData?.timetableSlotId;
+
+  // Check if there's already an activity for this slot (when adding)
+  const hasExistingActivity = mode === 'add' && timetableSlotId && existingActivities?.some(
+    (activity: any) => activity.timetableSlotId === timetableSlotId
+  );
 
   // Populate form when editing
   useEffect(() => {
@@ -60,10 +82,10 @@ export function TimetableActivityModal({
       setFormData({
         activityType: initialData.activityType || '',
         title: initialData.title || '',
-        description: initialData.description || '',
+        description: initialData.description || initialData.notes || '',
         location: initialData.location || '',
         color: initialData.color || '#3B82F6',
-        notes: initialData.notes || '',
+        notes: initialData.notes || initialData.description || '',
         startDate: initialData.startDate ? new Date(initialData.startDate).toISOString().split('T')[0] : '',
         endDate: initialData.endDate ? new Date(initialData.endDate).toISOString().split('T')[0] : '',
       });
@@ -84,29 +106,62 @@ export function TimetableActivityModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
     if (!formData.activityType || !formData.title) {
-      alert('Please fill in all required fields');
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    // Check for existing activity when adding
+    if (mode === 'add' && hasExistingActivity) {
+      setError('This timetable slot already has an activity assigned. Please edit or delete the existing activity first.');
       return;
     }
 
     setIsLoading(true);
     try {
-      // Filter out empty date values
-      const { startDate, endDate, ...otherData } = formData;
-      const processedData = {
-        ...otherData,
-        dayOfWeek: slotData?.dayOfWeek || initialData?.dayOfWeek,
-        weekNumber: slotData?.weekNumber || initialData?.weekNumber || 1,
-        ...(startDate && { startDate }),
-        ...(endDate && { endDate }),
+      // Capitalize the title - ensure first letter of each word is capitalized
+      const capitalizeTitle = (str: string) => {
+        return str
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ');
       };
+      
+      // Prepare data, filtering out empty strings for optional fields
+      const processedData: any = {
+        activityType: formData.activityType,
+        title: capitalizeTitle(formData.title.trim()),
+        // Only include optional fields if they have values
+        // Use description field for notes (the textarea is labeled "Notes" but uses description)
+        ...(formData.description && { description: formData.description, notes: formData.description }),
+        ...(formData.location && { location: formData.location }),
+        ...(formData.color && { color: formData.color }),
+        ...(formData.startDate && { startDate: formData.startDate }),
+        ...(formData.endDate && { endDate: formData.endDate }),
+      };
+
+      // Include timetable slot info (required for API validation)
+      if (initialData?.timetableSlotId) {
+        processedData.timetableSlotId = initialData.timetableSlotId;
+      }
+      
+      // Include dayOfWeek and weekNumber (required fields)
+      if (slotData?.dayOfWeek || initialData?.dayOfWeek) {
+        processedData.dayOfWeek = slotData?.dayOfWeek || initialData?.dayOfWeek;
+      }
+      if (slotData?.weekNumber !== undefined || initialData?.weekNumber !== undefined) {
+        processedData.weekNumber = slotData?.weekNumber || initialData?.weekNumber || 1;
+      }
       
       await onSave(processedData);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving activity:', error);
-      alert('Error saving activity. Please try again.');
+      // Extract error message from error object
+      const errorMessage = error?.message || error?.error || 'Error saving activity. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -125,6 +180,29 @@ export function TimetableActivityModal({
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Warning for existing activity */}
+          {hasExistingActivity && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-800">Activity Already Exists</p>
+                <p className="text-xs text-amber-700 mt-1">
+                  This timetable slot already has an activity assigned. You can edit or delete the existing activity, but cannot add another one to the same slot.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Error message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-800">Error</p>
+                <p className="text-xs text-red-700 mt-1">{error}</p>
+              </div>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="activityType" className="text-sm font-medium">
               Activity Type *
@@ -231,15 +309,44 @@ export function TimetableActivityModal({
 
           
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              {mode === 'view' ? 'Close' : 'Cancel'}
-            </Button>
-            {mode !== 'view' && (
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Saving...' : mode === 'add' ? 'Add Activity' : 'Save Changes'}
+          <DialogFooter className="gap-2">
+            <div className="flex gap-2">
+              {mode === 'edit' && onDelete && initialData?.id && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={async () => {
+                    if (confirm('Are you sure you want to delete this activity?')) {
+                      setIsLoading(true);
+                      try {
+                        await onDelete(initialData.id);
+                        onClose();
+                      } catch (error) {
+                        console.error('Error deleting activity:', error);
+                        alert('Error deleting activity. Please try again.');
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }
+                  }}
+                  disabled={isLoading}
+                  className="flex items-center gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+                {mode === 'view' ? 'Close' : 'Cancel'}
               </Button>
-            )}
+              {mode !== 'view' && (
+                <Button type="submit" disabled={isLoading || hasExistingActivity}>
+                  {isLoading ? 'Saving...' : mode === 'add' ? 'Add Activity' : 'Save Changes'}
+                </Button>
+              )}
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>

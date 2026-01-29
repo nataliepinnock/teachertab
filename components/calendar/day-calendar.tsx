@@ -5,6 +5,7 @@ import useSWR, { mutate } from 'swr';
 import { Event, Lesson, Class, Subject, User } from '@/lib/db/schema';
 import { useAcademicCalendar } from '@/lib/hooks/useAcademicCalendar';
 import { isWeekFullyCoveredByHolidays } from '@/lib/utils/academic-calendar';
+import { getCardStyle, getCardClassName, getBorderColorWithOpacity } from '@/lib/utils/card-styles';
 import { Button } from '@/components/ui/button';
 
 // Function to lighten a hex color
@@ -23,11 +24,85 @@ function lightenColor(color: string, amount: number = 0.7): string {
   
   return `#${lightenedR.toString(16).padStart(2, '0')}${lightenedG.toString(16).padStart(2, '0')}${lightenedB.toString(16).padStart(2, '0')}`;
 }
+
+// Function to calculate relative luminance (brightness) of a color
+function getLuminance(color: string): number {
+  if (!color || !color.startsWith('#')) return 0.5; // Default to medium brightness
+  
+  const hex = color.slice(1);
+  const r = parseInt(hex.slice(0, 2), 16) / 255;
+  const g = parseInt(hex.slice(2, 4), 16) / 255;
+  const b = parseInt(hex.slice(4, 6), 16) / 255;
+  
+  // Apply gamma correction
+  const [rLinear, gLinear, bLinear] = [r, g, b].map(val => {
+    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+  });
+  
+  // Calculate relative luminance
+  return 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
+}
+
+// Function to darken a hex color
+function darkenColor(color: string, amount: number = 0.3): string {
+  if (!color || !color.startsWith('#')) return color;
+  
+  const hex = color.slice(1);
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  
+  // Darken by reducing RGB values
+  const darkenedR = Math.round(r * (1 - amount));
+  const darkenedG = Math.round(g * (1 - amount));
+  const darkenedB = Math.round(b * (1 - amount));
+  
+  return `#${darkenedR.toString(16).padStart(2, '0')}${darkenedG.toString(16).padStart(2, '0')}${darkenedB.toString(16).padStart(2, '0')}`;
+}
+
+// Function to calculate contrast ratio between two colors (WCAG standard)
+function getContrastRatio(color1: string, color2: string): number {
+  const lum1 = getLuminance(color1);
+  const lum2 = getLuminance(color2);
+  const lighter = Math.max(lum1, lum2);
+  const darker = Math.min(lum1, lum2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+// Function to get high-contrast text color that meets WCAG AA standards (4.5:1 minimum)
+function getContrastTextColor(backgroundColor: string, originalColor?: string): string {
+  // Test both white and dark text options
+  const whiteContrast = getContrastRatio(backgroundColor, '#FFFFFF');
+  const darkGrayContrast = getContrastRatio(backgroundColor, '#1F2937');
+  
+  // WCAG AA requires 4.5:1 contrast ratio for normal text
+  const wcagAA = 4.5;
+  
+  // Check which option meets WCAG AA and has better contrast
+  const whiteMeetsAA = whiteContrast >= wcagAA;
+  const darkMeetsAA = darkGrayContrast >= wcagAA;
+  
+  if (whiteMeetsAA && darkMeetsAA) {
+    // Both meet standards, choose the one with better contrast
+    return whiteContrast > darkGrayContrast ? '#FFFFFF' : '#1F2937';
+  } else if (whiteMeetsAA) {
+    // Only white meets standards
+    return '#FFFFFF';
+  } else if (darkMeetsAA) {
+    // Only dark meets standards
+    return '#1F2937';
+  } else {
+    // Neither meets standards, but choose the better one
+    // Prefer dark text as it's generally more readable
+    return darkGrayContrast > whiteContrast ? '#1F2937' : '#FFFFFF';
+  }
+}
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, Clock, MapPin, BookOpen, Users, X, Edit, ChevronLeft, ChevronRight, Plus, Trash2, Repeat } from 'lucide-react';
+import { Calendar, Clock, MapPin, BookOpen, Users, X, Edit, ChevronLeft, ChevronRight, Plus, Trash2, Repeat, Briefcase } from 'lucide-react';
 import { format } from 'date-fns';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { LessonModal } from '@/components/lesson-modal';
+import { TimetableActivityModal } from '@/components/timetable-activity-modal';
 import { EventModal } from '@/components/event-modal';
 
 interface DayCalendarProps {
@@ -35,6 +110,7 @@ interface DayCalendarProps {
   currentDate: Date;
   onDateChange: (date: Date) => void;
   onAddEvent?: () => void;
+  cardStyle?: string;
 }
 
 interface CalendarEvent {
@@ -43,7 +119,7 @@ interface CalendarEvent {
   startTime: Date;
   endTime: Date;
   color: string;
-  type: 'lesson' | 'event' | 'holiday';
+  type: 'lesson' | 'event' | 'holiday' | 'activity';
   class?: string;
   subject?: string;
   location?: string;
@@ -59,6 +135,8 @@ interface CalendarEvent {
   planCompleted?: boolean; // Whether the lesson plan is completed
   isRecurring?: boolean; // Whether this is a recurring event
   recurrenceType?: string; // Type of recurrence
+  activityId?: number; // For timetable activities
+  activityType?: string; // 'meeting', 'duty', 'planning', etc.
 }
 
 // Type for lessons with timetable slot data
@@ -134,7 +212,7 @@ function MiniMonthCalendar({ selectedDate, onDateChange }: { selectedDate: Date,
           <button
             key={i}
             onClick={() => onDateChange(date)}
-            className={`py-1.5 ${!isCurrentMonth ? 'text-gray-400' : ''} ${isSelected(date) ? 'bg-indigo-600 text-white rounded-full' : ''} ${!isSelected(date) && isToday(date) ? 'text-indigo-600' : ''}`}
+            className={`py-1.5 ${!isCurrentMonth ? 'text-gray-400' : ''} ${isSelected(date) ? 'bg-blue-600 text-white rounded-full' : ''} ${!isSelected(date) && isToday(date) ? 'text-blue-600' : ''}`}
           >
             {date.getDate()}
           </button>
@@ -144,10 +222,11 @@ function MiniMonthCalendar({ selectedDate, onDateChange }: { selectedDate: Date,
   );
 }
 
-export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }: DayCalendarProps) {
+export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, cardStyle = 'solid' }: DayCalendarProps) {
   const [editingLesson, setEditingLesson] = useState<CalendarEvent | null>(null);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [editingHoliday, setEditingHoliday] = useState<CalendarEvent | null>(null);
+  const [editingActivity, setEditingActivity] = useState<any | null>(null);
   const [viewingEvent, setViewingEvent] = useState<CalendarEvent | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   
@@ -159,6 +238,7 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
   const { data: user } = useSWR<User>('/api/user', fetcher);
   const { data: timetableEntries } = useSWR<any[]>('/api/timetable', fetcher);
   const { data: timetableSlots } = useSWR<any[]>('/api/timetable-slots', fetcher);
+  const { data: timetableActivities } = useSWR<any[]>('/api/timetable-activities', fetcher);
   
 
   // Academic calendar hook for holidays
@@ -320,6 +400,103 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
       String(currentDate.getDate()).padStart(2, '0');
     const timedEvents: CalendarEvent[] = [];
     const allDayEvents: CalendarEvent[] = [];
+    
+    // Get day of week and week number for activity matching
+    const dayOfWeek = new Intl.DateTimeFormat('en-GB', { weekday: 'long' }).format(currentDate);
+    const weekNumber = getWeekNumberForDate(currentDate);
+    
+    console.log('Day Calendar - Processing activities:', {
+      hasActivities: !!timetableActivities,
+      activitiesCount: timetableActivities?.length || 0,
+      hasSlots: !!timetableSlots,
+      slotsCount: timetableSlots?.length || 0,
+      currentDate: currentDate.toISOString().split('T')[0],
+      dayOfWeek,
+      weekNumber
+    });
+    
+    // First, add all activities for this day/week (before processing timetable entries)
+    const slotsWithActivities = new Set<number>();
+    if (timetableActivities && timetableSlots) {
+      timetableActivities.forEach(activity => {
+        // Normalize dayOfWeek for comparison - handle both full names and abbreviations
+        const activityDayOfWeek = (activity.dayOfWeek || '').toLowerCase().trim();
+        const currentDayOfWeekLower = (dayOfWeek || '').toLowerCase().trim();
+        
+        // Normalize weekNumber for comparison
+        const activityWeekNumber = activity.weekNumber != null 
+          ? (typeof activity.weekNumber === 'string' ? parseInt(activity.weekNumber) : activity.weekNumber)
+          : 1;
+        // If weekNumber is null (outside academic year), don't match - activities should only show within academic year
+        const currentWeekNumberNum = weekNumber != null 
+          ? (typeof weekNumber === 'string' ? parseInt(weekNumber) : weekNumber)
+          : null;
+        
+        // Activities must match the exact week number they're assigned to (both must be non-null)
+        const weekMatches = currentWeekNumberNum !== null && activityWeekNumber === currentWeekNumberNum;
+        
+        console.log('Day Calendar - Checking activity match:', {
+          activityId: activity.id,
+          activityDayOfWeek,
+          currentDayOfWeekLower,
+          dayMatches: activityDayOfWeek === currentDayOfWeekLower,
+          activityWeekNumber,
+          currentWeekNumberNum,
+          weekMatches,
+          hasSlotId: !!activity.timetableSlotId
+        });
+        
+        // Match if dayOfWeek matches and weekNumber matches exactly
+        if (activity.timetableSlotId && 
+            activityDayOfWeek === currentDayOfWeekLower && 
+            weekMatches) {
+          slotsWithActivities.add(activity.timetableSlotId);
+          
+          const slot = timetableSlots.find(s => s.id === activity.timetableSlotId);
+          if (slot) {
+            const [startHour, startMinute] = slot.startTime.split(':').map(Number);
+            const [endHour, endMinute] = slot.endTime.split(':').map(Number);
+            
+            const startTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), startHour, startMinute);
+            const endTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), endHour, endMinute);
+            
+            console.log('Day Calendar - Adding activity event:', {
+              id: `activity-${activity.id}`,
+              title: activity.title,
+              startTime: startTime.toISOString(),
+              endTime: endTime.toISOString()
+            });
+            
+            timedEvents.push({
+              id: `activity-${activity.id}`,
+              title: activity.title || 'Untitled Activity',
+              type: 'activity',
+              startTime: startTime,
+              endTime: endTime,
+              color: (activity.color && activity.color.trim()) || '#8B5CF6',
+              location: activity.location || undefined,
+              description: activity.description || activity.notes || undefined,
+              allDay: false,
+              activityId: activity.id,
+              activityType: activity.activityType,
+              timetableSlotId: activity.timetableSlotId,
+            });
+          } else {
+            console.log('Day Calendar - Slot not found for activity:', {
+              activityId: activity.id,
+              slotId: activity.timetableSlotId
+            });
+          }
+        }
+      });
+    } else {
+      console.log('Day Calendar - Activities or slots not available:', {
+        hasActivities: !!timetableActivities,
+        hasSlots: !!timetableSlots
+      });
+    }
+    
+    console.log('Day Calendar - Timed events count after activities:', timedEvents.length);
 
     // Add events for the current date
     const dayEvents = events.filter(event => {
@@ -467,79 +644,70 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
       allDayEvents.push(holidayData);
     });
 
-    // Generate unfinished lessons from timetable entries
+    // Generate unfinished lessons from timetable entries (but skip slots that have activities)
     if (timetableEntries && timetableSlots) {
       // If skipHolidayWeeks is enabled, check if the week is fully covered by holidays
       if (activeAcademicYear?.skipHolidayWeeks === 1 && academicHolidays) {
         if (isWeekFullyCoveredByHolidays(currentDate, academicHolidays)) {
           // Skip generating unfinished lessons for this day - it's in a fully covered holiday week
         } else {
-          const dayOfWeek = currentDate.toLocaleDateString('en-GB', { weekday: 'long' });
-          const weekNumber = getWeekNumberForDate(currentDate);
-          
           // Find timetable entries for this day and week
           const entriesForDay = timetableEntries.filter(entry => 
             entry.dayOfWeek === dayOfWeek && 
             entry.weekNumber === weekNumber
           );
 
-      console.log('🔍 Day Calendar Timetable Debug:', {
-        dayOfWeek: dayOfWeek,
-        weekNumber: weekNumber,
-        totalTimetableEntries: timetableEntries.length,
-        entriesForDay: entriesForDay.length,
-        entriesForDayData: entriesForDay.map(e => ({
-          id: e.id,
-          dayOfWeek: e.dayOfWeek,
-          weekNumber: e.weekNumber,
-          timetableSlotId: e.timetableSlotId,
-          classId: e.classId,
-          subjectId: e.subjectId
-        }))
-      });
-
-      
-      // Track which slots already have lessons
-      const lessonsBySlot = new Set(lessons.map(l => l.timetableSlotId).filter(id => id));
-      
-      entriesForDay.forEach(entry => {
-        // Check if there's already a lesson for this slot
-        if (!lessonsBySlot.has(entry.timetableSlotId)) {
-          // Create an unfinished lesson event
-          const slot = timetableSlots.find(s => s.id === entry.timetableSlotId);
-          if (!slot) return;
+          // Track which slots already have lessons
+          const lessonsBySlot = new Set(lessons.map(l => l.timetableSlotId).filter(id => id));
           
-          const classInfo = classes.find(c => c.id === entry.classId);
-          const subjectInfo = subjects.find(s => s.id === entry.subjectId);
-          
-          const [startHour, startMinute] = slot.startTime.split(':').map(Number);
-          const [endHour, endMinute] = slot.endTime.split(':').map(Number);
-          
-          const startTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), startHour, startMinute);
-          const endTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), endHour, endMinute);
-          
-          // Create title based on teacher type
-          const title = user?.teacherType === 'primary' 
-            ? `${subjectInfo?.name || 'Subject'} - ${classInfo?.name || 'Class'}`
-            : `${classInfo?.name || 'Class'} - ${subjectInfo?.name || 'Subject'}`;
-          
-          timedEvents.push({
-            id: `unfinished-lesson-${dateStr}-${entry.timetableSlotId}`,
-            title: title,
-            type: 'lesson',
-            startTime: startTime,
-            endTime: endTime,
-            color: subjectInfo?.color || classInfo?.color || '#D1D5DB',
-            class: classInfo?.name || undefined,
-            subject: subjectInfo?.name || undefined,
-            location: entry.room || undefined,
-            allDay: false,
-            lessonIds: [], // Empty array indicates this is an unfinished lesson
-            isUnfinished: true, // Flag to indicate this is an unfinished lesson
-            timetableSlotId: entry.timetableSlotId,
+          entriesForDay.forEach(entry => {
+            // Check if there's already a lesson for this slot
+            if (!lessonsBySlot.has(entry.timetableSlotId)) {
+              // Skip if this slot has an activity (activities are already added above)
+              if (slotsWithActivities.has(entry.timetableSlotId)) {
+                return;
+              }
+              
+              const slot = timetableSlots.find(s => s.id === entry.timetableSlotId);
+              if (!slot) return;
+              
+              // If there's a class or subject assigned, create an unfinished lesson
+              if (entry.classId || entry.subjectId) {
+                const classInfo = classes.find(c => c.id === entry.classId);
+                const subjectInfo = subjects.find(s => s.id === entry.subjectId);
+                
+                const [startHour, startMinute] = slot.startTime.split(':').map(Number);
+                const [endHour, endMinute] = slot.endTime.split(':').map(Number);
+                
+                const startTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), startHour, startMinute);
+                const endTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), endHour, endMinute);
+                
+                // Create title based on teacher type
+                const title = user?.teacherType === 'primary' 
+                  ? `${subjectInfo?.name || 'Subject'} - ${classInfo?.name || 'Class'}`
+                  : `${classInfo?.name || 'Class'} - ${subjectInfo?.name || 'Subject'}`;
+                
+                timedEvents.push({
+                  id: `unfinished-lesson-${dateStr}-${entry.timetableSlotId}`,
+                  title: title,
+                  type: 'lesson',
+                  startTime: startTime,
+                  endTime: endTime,
+                  color: subjectInfo?.color || classInfo?.color || '#D1D5DB',
+                  class: classInfo?.name || undefined,
+                  subject: subjectInfo?.name || undefined,
+                  location: entry.room || undefined,
+                  allDay: false,
+                  lessonIds: [], // Empty array indicates this is an unfinished lesson
+                  isUnfinished: true, // Flag to indicate this is an unfinished lesson
+                  timetableSlotId: entry.timetableSlotId,
+                });
+              }
+              // If entry has no classId/subjectId:
+              // - If there's an activity, it's already shown above (added first)
+              // - If there's no activity, don't create anything (slot is hidden)
+            }
           });
-        }
-      });
         }
       }
     }
@@ -549,7 +717,7 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
       timedEvents: timedEvents.sort((a, b) => a.startTime.getTime() - b.startTime.getTime()),
       allDayEvents: allDayEvents.sort((a, b) => a.title.localeCompare(b.title))
     };
-  }, [events, lessons, classes, subjects, currentDate, holidayEvents, timetableEntries, timetableSlots, user, getWeekNumberForDate, activeAcademicYear, academicHolidays]);
+  }, [events, lessons, classes, subjects, currentDate, holidayEvents, timetableEntries, timetableSlots, timetableActivities, user, getWeekNumberForDate, activeAcademicYear, academicHolidays]);
   
   if (!events || !lessons || !classes || !subjects || !user) {
     return <div>Loading...</div>;
@@ -570,13 +738,27 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
                   <div
                     key={event.id}
                     className={`flex items-center rounded-lg text-xs p-2 text-left border-2 group cursor-pointer`}
+                    className={`${event.isUnfinished ? 'border-dashed' : 'border-solid'}`}
                     style={{
                       backgroundColor: event.isUnfinished
-                        ? lightenColor(event.color || '#FCD34D', 0.98)
-                        : (event.color ? lightenColor(event.color, 0.8) : '#F3F4F6'),
+                        ? lightenColor(event.color || '#FCD34D', 0.7) // Much lighter background for unplanned
+                        : (event.color 
+                            ? (event.type === 'lesson' && event.planCompleted 
+                                ? lightenColor(event.color, 0.2) // Muted color for completed lessons (vibrant)
+                                : lightenColor(event.color, 0.4)) // Normal color for incomplete (old pale version)
+                            : '#F3F4F6'),
                       borderColor: event.isUnfinished 
-                        ? `${event.color || '#FCD34D'}50`
-                        : (event.color ? `${event.color}CC` : '#374151')
+                        ? darkenColor(event.color || '#FCD34D', 0.2) // Darker border for unplanned (more visible)
+                        : (event.color 
+                            ? (event.type === 'lesson' && event.planCompleted 
+                                ? `${event.color}CC` // Slightly transparent border for completed
+                                : `${event.color}AA`) // More transparent border for incomplete
+                            : '#374151'),
+                      borderStyle: event.isUnfinished ? 'dashed' : 'solid',
+                      opacity: event.isUnfinished ? 0.6 : 1, // More faded for unplanned
+                      color: event.isUnfinished 
+                        ? '#1F2937' // Dark gray for better readability on light backgrounds
+                        : undefined // Use default text color for planned lessons
                     }}
                     onClick={() => {
                       if (event.type === 'lesson') {
@@ -590,22 +772,34 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
                       }
                     }}
                   >
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <p className="font-bold text-xs truncate" style={{ color: event.color && event.color !== '#6B7280' ? `${event.color}E6` : '#111827' }}>
-                        {event.type === 'lesson' && event.isUnfinished 
-                          ? `${user?.teacherType === 'primary' ? (event.subject || '') : (event.class || '')}${user?.teacherType === 'primary' ? (event.class ? ` - ${event.class}` : '') : (event.subject ? ` - ${event.subject}` : '')}` || `Untitled ${event.type}`
-                          : (event.title || `Untitled ${event.type}`)
-                        }
-                      </p>
-                      {event.isRecurring && (
-                        <Repeat className="h-3 w-3 flex-shrink-0 opacity-60" style={{ color: event.color && event.color !== '#6B7280' ? `${event.color}E6` : '#111827' }} />
-                      )}
-                    </div>
-                    {event.location && (
-                      <span className="ml-2 text-xs" style={{ color: event.color ? `${event.color}CC` : '#374151' }}>
-                        • {event.location}
-                      </span>
-                    )}
+                    {(() => {
+                      const bgColor = event.isUnfinished
+                        ? lightenColor(event.color || '#FCD34D', 0.25)
+                        : (event.color ? lightenColor(event.color, event.planCompleted ? 0.2 : 0.4) : '#F3F4F6');
+                      const textColor = event.isUnfinished 
+                        ? '#1F2937' // Grey text for unplanned lessons
+                        : getContrastTextColor(bgColor, event.color || '#FCD34D');
+                      return (
+                        <>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <p className="font-bold text-xs truncate" style={{ color: textColor }}>
+                              {event.type === 'lesson' && event.isUnfinished 
+                                ? `${user?.teacherType === 'primary' ? (event.subject || '') : (event.class || '')}${user?.teacherType === 'primary' ? (event.class ? ` - ${event.class}` : '') : (event.subject ? ` - ${event.subject}` : '')}` || `Untitled ${event.type}`
+                                : (event.title || `Untitled ${event.type}`)
+                              }
+                            </p>
+                            {event.isRecurring && (
+                              <Repeat className="h-3 w-3 flex-shrink-0 opacity-60" style={{ color: textColor }} />
+                            )}
+                          </div>
+                          {event.location && (
+                            <span className="ml-2 text-xs" style={{ color: textColor }}>
+                              • {event.location}
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 ))}
               </div>
@@ -784,19 +978,45 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
                       }}
                     >
                       <div 
-                        className={`group flex flex-col text-xs transition-colors border-2 rounded-md z-10 overflow-hidden px-2 w-full cursor-pointer`}
+                        className={`${getCardClassName(getCardStyle(cardStyle))} w-full ${event.isUnfinished ? 'border-dashed' : 'border-solid'}`}
                         style={{
-                          backgroundColor: event.isUnfinished
-                            ? lightenColor(event.color || '#FCD34D', 0.98)
-                            : (event.color ? lightenColor(event.color, 0.8) : '#F3F4F6'),
-                          borderColor: event.isUnfinished 
-                            ? `${event.color || '#FCD34D'}50`
-                            : (event.color ? `${event.color}CC` : '#374151'),
+                          backgroundColor: (() => {
+                            const styleConfig = getCardStyle(cardStyle);
+                            return event.isUnfinished
+                              ? lightenColor(event.color || '#FCD34D', 0.7) // Much lighter background for unplanned
+                              : (event.color 
+                                  ? (event.type === 'lesson' && event.planCompleted 
+                                      ? lightenColor(event.color, styleConfig.backgroundOpacity - 0.1) // Muted color for completed lessons (vibrant)
+                                      : lightenColor(event.color, styleConfig.backgroundOpacity + 0.35)) // Normal color for incomplete (old pale version)
+                                  : '#F3F4F6');
+                          })(),
+                          borderColor: (() => {
+                            const styleConfig = getCardStyle(cardStyle);
+                            return event.isUnfinished
+                              ? darkenColor(event.color || '#FCD34D', 0.2) // Darker border for unplanned (more visible)
+                              : (getBorderColorWithOpacity(
+                                  event.color || '#FCD34D',
+                                  false,
+                                  event.type === 'lesson' && event.planCompleted || false,
+                                  styleConfig
+                                ) || (event.color ? `${event.color}AA` : '#374151'));
+                          })(),
+                          borderStyle: event.isUnfinished ? 'dashed' : 'solid',
+                          opacity: event.isUnfinished ? 0.6 : 1, // More faded for unplanned
+                          color: event.isUnfinished 
+                            ? '#1F2937' // Dark gray for better readability on light backgrounds
+                            : undefined, // Use default text color for planned lessons
                           height: '100%',
                           marginTop: '-3px'
                         }}
                         onClick={() => {
-                          if (event.type === 'lesson') {
+                          if (event.type === 'activity') {
+                            // Find the activity data
+                            const activity = timetableActivities?.find(a => a.id === event.activityId);
+                            if (activity) {
+                              setEditingActivity(activity);
+                            }
+                          } else if (event.type === 'lesson') {
                             setEditingLesson(event);
                           } else if (event.type === 'event') {
                             setEditingEvent(event);
@@ -811,39 +1031,67 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
                         <div className="flex-1 min-w-0 py-0.5">
                           <div className="flex items-center justify-between">
                             <div className="flex-1 flex-shrink-0 min-w-0 flex items-center gap-1">
-                              <div 
-                                className="text-xs font-bold truncate flex-1 flex-shrink-0 min-w-0"
-                                style={{ color: event.color && event.color !== '#6B7280' ? `${event.color}E6` : '#111827' }}
-                              >
-                                {event.type === 'lesson' && event.isUnfinished 
-                                  ? `${user?.teacherType === 'primary' ? (event.subject || '') : (event.class || '')}${user?.teacherType === 'primary' ? (event.class ? ` - ${event.class}` : '') : (event.subject ? ` - ${event.subject}` : '')}` || `Untitled ${event.type}`
-                                  : (event.title || `Untitled ${event.type}`)
-                                }
-                              </div>
+                              {(() => {
+                                const textColor = event.isUnfinished 
+                                  ? '#1F2937' // Grey text for unplanned lessons
+                                  : getContrastTextColor(
+                                      event.isUnfinished
+                                        ? (event.color || '#FCD34D')
+                                        : (event.color || '#F3F4F6'),
+                                      event.color || '#FCD34D'
+                                    );
+                                return (
+                                  <>
+                                    <div 
+                                      className="text-xs font-bold truncate flex-1 flex-shrink-0 min-w-0"
+                                      style={{ color: textColor }}
+                                    >
+                                      {event.type === 'lesson' && event.isUnfinished 
+                                        ? `${user?.teacherType === 'primary' ? (event.subject || '') : (event.class || '')}${user?.teacherType === 'primary' ? (event.class ? ` - ${event.class}` : '') : (event.subject ? ` - ${event.subject}` : '')}` || `Untitled ${event.type}`
+                                        : (event.title || `Untitled ${event.type}`)
+                                      }
+                                    </div>
+                                  </>
+                                );
+                              })()}
                             </div>
                           </div>
       
               
                           {/* Show class/subject info */}
                           <div className="space-y-1">
-                            {event.type === 'lesson' && event.class && (
-                              <div className="flex items-center text-xs">
-                                <Users className="h-3 w-3 mr-1" style={{ color: event.color ? `${event.color}CC` : '#374151' }} />
-                                <span 
-                                  className="font-medium"
-                                  style={{ color: event.color ? `${event.color}CC` : '#374151' }}
-                                >
-                                  {event.class}
-                                </span>
-                </div>
-              )}
-                      {event.location && (
-                              <div className="flex items-center text-xs">
-                                <MapPin className="h-3 w-3 mr-1" style={{ color: event.color ? `${event.color}CC` : '#374151' }} />
-                                <span style={{ color: event.color ? `${event.color}CC` : '#374151' }}>{event.location}</span>
-                </div>
-              )}
-              </div>
+                            {(() => {
+                                const textColor = event.isUnfinished 
+                                  ? '#1F2937' // Grey text for unplanned lessons
+                                  : getContrastTextColor(
+                                      event.isUnfinished
+                                        ? (event.color || '#FCD34D')
+                                        : (event.color || '#F3F4F6'),
+                                      event.color || '#FCD34D'
+                                    );
+                              return (
+                                <>
+                                  {event.type === 'lesson' && event.class && (
+                                    <div className="flex items-center text-xs">
+                                      <Users className="h-3 w-3 mr-1" style={{ color: textColor }} />
+                                      <span 
+                                        className="font-medium"
+                                        style={{ color: textColor }}
+                                      >
+                                        {event.class}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {event.location && (
+                                    <div className="flex items-center text-xs">
+                                      <MapPin className="h-3 w-3 mr-1" style={{ color: textColor }} />
+                                      <span style={{ color: textColor }}>{event.location}</span>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
         </div>
               </div>
                     </li>
@@ -855,12 +1103,6 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
                 </div>
               </div>
 
-      {/* Mini Calendar */}
-        <div className="w-80 border-l border-gray-200 flex-shrink-0">
-        <div className="p-4">
-          <MiniMonthCalendar selectedDate={currentDate} onDateChange={onDateChange} />
-              </div>
-                </div>
               </div>
 
       {/* Lesson Modal */}
@@ -875,6 +1117,7 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
         <LessonModal
           isOpen={true}
           mode={editingLesson.isUnfinished ? "add" : "edit"}
+          isUnfinished={editingLesson.isUnfinished}
           onClose={() => setEditingLesson(null)}
           onDelete={!editingLesson.isUnfinished ? async (data) => {
             try {
@@ -899,10 +1142,12 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
             }
           } : undefined}
           onSave={async (data) => {
+            console.log('🔍 Day Calendar - onSave called with data:', data);
             try {
               // For editing, we need to delete the old lessons and create new ones
               // Skip deletion for unfinished lessons (they don't have existing lessons to delete)
               if (!editingLesson.isUnfinished && editingLesson.lessonIds && editingLesson.lessonIds.length > 0) {
+                console.log('🔍 Day Calendar - Deleting existing lessons:', editingLesson.lessonIds);
                 // Delete existing lessons
                 const deletePromises = editingLesson.lessonIds.map(async (lessonId) => {
                   const response = await fetch(`/api/lessons?id=${lessonId}`, {
@@ -913,61 +1158,75 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
                   }
                 });
                 await Promise.all(deletePromises);
+                console.log('🔍 Day Calendar - Successfully deleted existing lessons');
               }
 
               // Create new lessons with the updated data
-              const { timetableSlotIds, ...baseLessonData } = data;
+              const { timetableSlotIds, planCompleted, ...baseLessonData } = data;
+              console.log('🔍 Day Calendar - Creating new lessons with data:', {
+                timetableSlotIds,
+                baseLessonData,
+                planCompleted,
+                planCompletedType: typeof planCompleted,
+                fullData: data
+              });
               
-              if (timetableSlotIds && timetableSlotIds.length > 0) {
-                const lessonPromises = timetableSlotIds.map(async (slotId: string) => {
-                  const lessonData = {
-                    ...baseLessonData,
-                    timetableSlotId: slotId,
-                  };
-                  
-                  const response = await fetch('/api/lessons', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(lessonData),
-                  });
-                  
-                  if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Failed to create lesson for slot ${slotId}: ${errorText}`);
-                  }
-                  
-                  return response.json();
-                });
-                await Promise.all(lessonPromises);
+              if (!timetableSlotIds || timetableSlotIds.length === 0) {
+                console.error('🔍 Day Calendar - No timetableSlotIds provided!');
+                alert('Error: No timetable slots selected. Please select at least one slot.');
+                return;
               }
+              
+              const lessonPromises = timetableSlotIds.map(async (slotId: string) => {
+                // Ensure planCompleted is properly converted to 0 or 1
+                const planCompletedValue = planCompleted === true || planCompleted === 1 ? 1 : 0;
+                const lessonData = {
+                  ...baseLessonData,
+                  timetableSlotId: slotId,
+                  planCompleted: planCompletedValue,
+                };
+                
+                console.log('🔍 Day Calendar - Creating lesson for slot:', slotId, 'with data:', lessonData);
+                
+                const response = await fetch('/api/lessons', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(lessonData),
+                });
+                
+                if (!response.ok) {
+                  const errorText = await response.text();
+                  console.error('🔍 Day Calendar - Error creating lesson for slot:', slotId, 'Response:', response.status, errorText);
+                  console.error('🔍 Day Calendar - Request data that failed:', JSON.stringify(lessonData, null, 2));
+                  throw new Error(`Failed to create lesson for slot ${slotId}: ${errorText}`);
+                }
+                const result = await response.json();
+                console.log('🔍 Day Calendar - Successfully created lesson:', result);
+                return result;
+              });
+              
+              const results = await Promise.all(lessonPromises);
+              console.log('🔍 Day Calendar - All lessons created successfully:', results);
 
               // Refresh data
               await mutateLessons();
               setEditingLesson(null);
+              console.log('🔍 Day Calendar - Data refreshed and modal closed');
             } catch (error) {
-              console.error('Error updating lesson:', error);
-              alert('Error updating lesson. Please try again.');
+              console.error('🔍 Day Calendar - Error in onSave:', error);
+              if (error instanceof Error) {
+                alert(`Error saving lesson: ${error.message}`);
+              } else {
+                alert('Error updating lesson. Please check the console for details.');
+              }
+              throw error; // Re-throw to let the modal handle it
             }
           }}
           initialData={(() => {
             const lessonIds = editingLesson.lessonIds;
-            
-            if (!lessons || lessons.length === 0) {
-              console.log('🔍 No lessons data available yet');
-              return {
-                title: editingLesson.title,
-                timetableSlotIds: [],
-                classId: undefined,
-                subjectId: undefined,
-                date: editingLesson.startTime.toISOString().split('T')[0],
-                lessonPlan: editingLesson.description || '',
-                color: editingLesson.color || '#6B7280',
-              };
-            }
-
-            const matchingLessons = lessons.filter(lesson => lessonIds?.includes(lesson.id));
+            const matchingLessons = lessons?.filter(lesson => lessonIds?.includes(lesson.id)) || [];
             const firstLesson = matchingLessons[0];
 
             // Try to get timetable slot IDs from lessons data
@@ -975,10 +1234,17 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
             let timetableSlotIds: string[] = [];
             if (editingLesson.isUnfinished && editingLesson.timetableSlotId) {
               timetableSlotIds = [editingLesson.timetableSlotId.toString()];
-            } else if (lessonIds && matchingLessons.length > 0) {
-              timetableSlotIds = matchingLessons
-                .map(lesson => lesson.timetableSlotId?.toString() || '')
-                .filter(id => id);
+            } else if (lessonIds && lessonIds.length > 0 && matchingLessons.length > 0) {
+              // For regular lessons, get all unique timetable slot IDs from matching lessons
+              console.log('🔍 Day Calendar - Extracting timetableSlotIds from matchingLessons:', {
+                matchingLessons: matchingLessons.map(l => ({ id: l.id, timetableSlotId: l.timetableSlotId })),
+                firstLessonTimetableSlotId: firstLesson?.timetableSlotId
+              });
+              const slotIds = matchingLessons
+                .map(lesson => lesson.timetableSlotId?.toString())
+                .filter((id): id is string => Boolean(id));
+              timetableSlotIds = [...new Set(slotIds)]; // Remove duplicates
+              console.log('🔍 Day Calendar - Extracted timetableSlotIds:', timetableSlotIds);
             }
 
             // For unfinished lessons, we need to map class and subject names to IDs
@@ -1000,13 +1266,15 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
             }
 
             const initialData = {
-              title: editingLesson.title,
+              // For unfinished lessons, don't populate title from timetable - let user enter their own
+              title: editingLesson.isUnfinished ? '' : (firstLesson?.title || editingLesson.title || ''),
               timetableSlotIds: timetableSlotIds,
               classId: classId,
               subjectId: subjectId,
               date: firstLesson?.date || editingLesson.startTime.toISOString().split('T')[0],
-              lessonPlan: editingLesson.description || '',
-              color: editingLesson.color || '#6B7280',
+              lessonPlan: firstLesson?.lessonPlan || editingLesson.description || '',
+              color: firstLesson?.color || editingLesson.color || '#6B7280',
+              planCompleted: firstLesson?.planCompleted || editingLesson.planCompleted || false,
             };
             
             console.log('🔍 Day Calendar Lesson Edit Debug:', {
@@ -1014,6 +1282,7 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
               lessonIds: lessonIds,
               matchingLessons: matchingLessons,
               firstLesson: firstLesson,
+              timetableSlotIds: timetableSlotIds,
               classes: classes,
               subjects: subjects,
               initialData: initialData
@@ -1179,7 +1448,9 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">
-                  {viewingEvent.type === 'lesson' && viewingEvent.isUnfinished 
+                  {viewingEvent.type === 'activity'
+                    ? (viewingEvent.title || 'Untitled Activity')
+                    : viewingEvent.type === 'lesson' && viewingEvent.isUnfinished 
                     ? `${user?.teacherType === 'primary' ? viewingEvent.subject : viewingEvent.class} - ${user?.teacherType === 'primary' ? viewingEvent.class : viewingEvent.subject}` || `Untitled ${viewingEvent.type}`
                     : (viewingEvent.title || `Untitled ${viewingEvent.type}`)
                   }
@@ -1197,9 +1468,10 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
                 <div className="flex items-center">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                     {viewingEvent.type === 'lesson' && <BookOpen className="h-3 w-3 mr-1" />}
+                    {viewingEvent.type === 'activity' && <Briefcase className="h-3 w-3 mr-1" />}
                     {viewingEvent.type === 'event' && <Calendar className="h-3 w-3 mr-1" />}
                     {viewingEvent.type === 'holiday' && <Calendar className="h-3 w-3 mr-1" />}
-                    {viewingEvent.type}
+                    {viewingEvent.type === 'activity' ? (viewingEvent.activityType || 'activity') : viewingEvent.type}
                   </span>
                 </div>
 
@@ -1210,6 +1482,14 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
                   <div className="flex items-center text-sm text-gray-600">
                     <MapPin className="h-4 w-4 mr-2" />
                     {viewingEvent.location}
+                  </div>
+                )}
+
+                {/* Activity Type for activities */}
+                {viewingEvent.type === 'activity' && viewingEvent.activityType && (
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Briefcase className="h-4 w-4 mr-2" />
+                    <span className="capitalize">{viewingEvent.activityType.replace('_', ' ')}</span>
                   </div>
                 )}
 
@@ -1236,7 +1516,13 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
                 <Button
                   variant="outline"
                   onClick={() => {
-                    if (viewingEvent.type === 'lesson') {
+                    if (viewingEvent.type === 'activity') {
+                      const activity = timetableActivities?.find(a => a.id === viewingEvent.activityId);
+                      if (activity) {
+                        setEditingActivity(activity);
+                        setViewingEvent(null);
+                      }
+                    } else if (viewingEvent.type === 'lesson') {
                       setEditingLesson(viewingEvent);
                       setViewingEvent(null);
                     } else if (viewingEvent.type === 'event') {
@@ -1273,6 +1559,86 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent }
             </div>
           </div>
         </div>
+      )}
+
+      {/* Activity Modal */}
+      {editingActivity && (
+        <TimetableActivityModal
+          open={true}
+          onClose={() => setEditingActivity(null)}
+          onSave={async (data: any) => {
+            try {
+              const isEditing = editingActivity.id;
+              const url = '/api/timetable-activities';
+              const method = isEditing ? 'PUT' : 'POST';
+
+              // Prepare the request body
+              const requestBody: any = {
+                ...data,
+              };
+
+              if (isEditing) {
+                // For editing, include the ID and ensure timetableSlotId is included
+                requestBody.id = editingActivity.id;
+                // Don't override timetableSlotId if it's already in data (from modal)
+                if (!requestBody.timetableSlotId) {
+                  requestBody.timetableSlotId = editingActivity.timetableSlotId;
+                }
+                // Don't send userId for updates - API gets it from session
+              } else {
+                // For creating, include timetableSlotId and ensure required fields
+                requestBody.timetableSlotId = editingActivity.timetableSlotId;
+                // Don't send userId for creates - API gets it from session
+              }
+
+              const response = await fetch(url, {
+                method,
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody),
+              });
+
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.error || `Failed to ${isEditing ? 'update' : 'create'} activity`;
+                throw new Error(errorMessage);
+              }
+
+              mutateTimetableActivities();
+              setEditingActivity(null);
+            } catch (error) {
+              console.error('Error saving activity:', error);
+              alert(`Error ${editingActivity.id ? 'updating' : 'creating'} activity. Please try again.`);
+            }
+          }}
+          onDelete={async (id: number) => {
+            try {
+              const response = await fetch(`/api/timetable-activities?id=${id}`, {
+                method: 'DELETE',
+              });
+
+              if (!response.ok) {
+                throw new Error('Failed to delete activity');
+              }
+
+              mutateTimetableActivities();
+              setEditingActivity(null);
+            } catch (error) {
+              console.error('Error deleting activity:', error);
+              throw error;
+            }
+          }}
+          mode={editingActivity.id ? 'edit' : 'add'}
+          initialData={editingActivity}
+          slotData={timetableSlots?.find(s => s.id === editingActivity.timetableSlotId) ? {
+            dayOfWeek: editingActivity.dayOfWeek,
+            weekNumber: editingActivity.weekNumber,
+            startTime: timetableSlots.find(s => s.id === editingActivity.timetableSlotId)?.startTime || '',
+            endTime: timetableSlots.find(s => s.id === editingActivity.timetableSlotId)?.endTime || '',
+            label: timetableSlots.find(s => s.id === editingActivity.timetableSlotId)?.label || '',
+          } : undefined}
+        />
       )}
     </div>
   );

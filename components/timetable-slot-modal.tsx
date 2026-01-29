@@ -1,12 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TimetableSlot } from '@/lib/db/schema';
-import { Trash2 } from 'lucide-react';
+import { Trash2, AlertTriangle } from 'lucide-react';
+import useSWR from 'swr';
+
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    return [];
+  }
+  const data = await res.json();
+  // Ensure we always return an array
+  return Array.isArray(data) ? data : [];
+};
 
 interface TimetableSlotModalProps {
   isOpen: boolean;
@@ -46,6 +57,39 @@ export function TimetableSlotModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const isEditing = !!slot;
+
+  // Fetch existing timetable slots to check for conflicts
+  const { data: existingSlots } = useSWR<TimetableSlot[]>('/api/timetable-slots', fetcher);
+
+  // Check for conflicts
+  const conflicts = useMemo(() => {
+    // Ensure existingSlots is an array before proceeding
+    if (!existingSlots || !Array.isArray(existingSlots) || isEditing || !formData.startTime || !formData.endTime) {
+      return [];
+    }
+
+    const conflictList: Array<{ day: string; week: number }> = [];
+    
+    for (const day of selectedDays) {
+      for (const week of selectedWeeks) {
+        const weekNumber = parseInt(week);
+        // Check if a slot with the same day, week, startTime, and endTime already exists
+        const hasConflict = existingSlots.some(existingSlot => 
+          existingSlot.dayOfWeek === day &&
+          existingSlot.weekNumber === weekNumber &&
+          existingSlot.startTime === formData.startTime &&
+          existingSlot.endTime === formData.endTime &&
+          (slot ? existingSlot.id !== slot.id : true) // Exclude current slot when editing
+        );
+
+        if (hasConflict) {
+          conflictList.push({ day, week: weekNumber });
+        }
+      }
+    }
+
+    return conflictList;
+  }, [existingSlots, selectedDays, selectedWeeks, formData.startTime, formData.endTime, isEditing, slot]);
 
   useEffect(() => {
     if (slot) {
@@ -117,24 +161,43 @@ export function TimetableSlotModal({
       if (isEditing) {
         // When editing, only update the current slot
         await onSave(formData);
+        onClose();
       } else {
         // When creating, create slots for all selected days and weeks
-        const slotPromises = [];
+        // Skip conflicting slots (they're already shown in the warning)
+        let hasSuccess = false;
         for (const day of selectedDays) {
           for (const week of selectedWeeks) {
+            const weekNumber = parseInt(week);
+            
+            // Skip if this slot conflicts
+            const isConflict = conflicts.some(c => c.day === day && c.week === weekNumber);
+            if (isConflict) {
+              continue;
+            }
+
             const slotData = {
               ...formData,
               dayOfWeek: day,
-              weekNumber: parseInt(week),
+              weekNumber: weekNumber,
             };
-            slotPromises.push(onSave(slotData));
+            try {
+              await onSave(slotData);
+              hasSuccess = true;
+            } catch (error) {
+              // Handle any unexpected errors
+              console.error(`Error creating slot for ${day} Week ${week}:`, error);
+            }
           }
         }
-        
-        // Wait for all slots to be created
-        await Promise.all(slotPromises);
+        // Close modal if at least one slot was created successfully
+        if (hasSuccess) {
+          onClose();
+        } else if (conflicts.length === getTotalSlotsToCreate()) {
+          // All slots conflict - show error
+          setErrors({ submit: 'All selected slots conflict with existing slots. Please modify your selection.' });
+        }
       }
-      onClose();
     } catch (error) {
       console.error('Error saving slot:', error);
       setErrors({ submit: 'Failed to save slot. Please try again.' });
@@ -291,6 +354,29 @@ export function TimetableSlotModal({
                   {selectedDays.length} day{selectedDays.length !== 1 ? 's' : ''} × {selectedWeeks.length} week{selectedWeeks.length !== 1 ? 's' : ''} = {getTotalSlotsToCreate()} slot{getTotalSlotsToCreate() > 1 ? 's' : ''}
                 </span>
               </p>
+            </div>
+          )}
+
+          {conflicts.length > 0 && (
+            <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-900 mb-1">
+                    Warning: {conflicts.length} slot{conflicts.length > 1 ? 's' : ''} conflict{conflicts.length > 1 ? '' : 's'} with existing slots
+                  </p>
+                  <ul className="text-sm text-amber-800 list-disc list-inside space-y-0.5">
+                    {conflicts.map((conflict, index) => (
+                      <li key={index}>
+                        {conflict.day} Week {conflict.week} at {formData.startTime}-{formData.endTime}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-sm text-amber-700 mt-2">
+                    Conflicting slots will not be created.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 

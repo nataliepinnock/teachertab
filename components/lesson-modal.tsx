@@ -21,9 +21,10 @@ interface LessonModalProps {
   onDelete?: (lesson: any) => Promise<void>;
   mode: 'add' | 'edit';
   initialData?: any;
+  isUnfinished?: boolean; // Indicates if this is an unfinished lesson from timetable
 }
 
-export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialData }: LessonModalProps) {
+export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialData, isUnfinished }: LessonModalProps) {
   const [formData, setFormData] = useState({
     title: '',
     classId: '',
@@ -32,6 +33,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
     date: '',
     lessonPlan: '',
     color: '#000000', // Added color field
+    planCompleted: false, // Track completion status
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -42,6 +44,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
   const { data: timetableSlots } = useSWR<any[]>('/api/timetable-slots', fetcher);
   const { data: timetableEntries } = useSWR<any[]>('/api/timetable', fetcher);
   const { data: userData } = useSWR<any>('/api/user', fetcher);
+  const { data: lessons } = useSWR<any[]>('/api/lessons', fetcher);
   
   // Academic calendar hook for week number calculation
   const { getWeekNumberForDate } = useAcademicCalendar();
@@ -49,19 +52,43 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
   // Reset form when modal opens/closes or initialData changes
   useEffect(() => {
     if (isOpen) {
-      if (initialData && mode === 'edit') {
+      // If initialData exists (whether in edit or add mode), use it to populate the form
+      const hasInitialData = initialData && (
+        initialData.title || 
+        initialData.classId || 
+        initialData.subjectId || 
+        initialData.date || 
+        (initialData.timetableSlotIds && initialData.timetableSlotIds.length > 0) ||
+        mode === 'edit' // Always use initialData in edit mode
+      );
+      
+      if (hasInitialData) {
+        console.log('🔍 Lesson Modal - Populating form with initialData:', initialData);
+        // Ensure timetableSlotIds is an array of strings
+        const slotIds = initialData.timetableSlotIds 
+          ? (Array.isArray(initialData.timetableSlotIds) 
+              ? initialData.timetableSlotIds.map(id => id.toString()).filter(id => id)
+              : [initialData.timetableSlotIds.toString()].filter(id => id))
+          : [];
+        
+        console.log('🔍 Lesson Modal - Processed slotIds:', slotIds);
+        
         const newFormData = {
           title: initialData.title || '',
           classId: initialData.classId?.toString() || '',
           subjectId: initialData.subjectId?.toString() || '',
-          timetableSlotIds: initialData.timetableSlotIds || [],
+          timetableSlotIds: slotIds,
           date: initialData.date || '',
           lessonPlan: initialData.lessonPlan || '',
           color: initialData.color || '#000000',
+          planCompleted: initialData.planCompleted !== undefined ? initialData.planCompleted : false,
         };
+        console.log('🔍 Lesson Modal - Setting formData:', newFormData);
         setFormData(newFormData);
+        setErrors({}); // Clear errors when setting new form data
       } else {
-        // For add mode, auto-select if only one option available
+        console.log('🔍 Lesson Modal - No initialData, using default form');
+        // For add mode with no initialData, auto-select if only one option available
         const autoSelectedClassId = (classes && classes.length === 1) ? classes[0].id.toString() : '';
         const autoSelectedSubjectId = (subjects && subjects.length === 1) ? subjects[0].id.toString() : '';
         
@@ -73,11 +100,31 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
           date: '',
           lessonPlan: '',
           color: '#000000', // Default color for new lessons
+          planCompleted: false,
         });
+        setErrors({});
       }
-      setErrors({});
     }
   }, [isOpen, initialData, mode, classes, subjects]);
+  
+  // Separate effect to ensure timetableSlotIds are set if they exist in initialData
+  useEffect(() => {
+    if (isOpen && initialData?.timetableSlotIds && initialData.timetableSlotIds.length > 0) {
+      const slotIds = Array.isArray(initialData.timetableSlotIds) 
+        ? initialData.timetableSlotIds.map(id => id.toString())
+        : [initialData.timetableSlotIds.toString()];
+      
+      // Only update if formData doesn't have the slot IDs
+      if (formData.timetableSlotIds.length === 0 || 
+          !formData.timetableSlotIds.every(id => slotIds.includes(id.toString()))) {
+        console.log('🔍 Lesson Modal - Updating timetableSlotIds from initialData:', slotIds);
+        setFormData(prev => ({
+          ...prev,
+          timetableSlotIds: slotIds
+        }));
+      }
+    }
+  }, [isOpen, initialData?.timetableSlotIds]);
 
   // Clear timetable slots when date changes (but not in edit mode)
   useEffect(() => {
@@ -151,7 +198,11 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
     if (!formData.subjectId) {
       newErrors.subjectId = 'Subject is required';
     }
-    if (!formData.timetableSlotIds || formData.timetableSlotIds.length === 0) {
+    // Only validate timetableSlotIds if they're not already provided in initialData (read-only mode)
+    // If initialData has timetableSlotIds, they're pre-filled and read-only, so skip validation
+    const hasPreFilledSlots = (initialData?.timetableSlotIds && initialData.timetableSlotIds.length > 0) ||
+                               (formData.timetableSlotIds && formData.timetableSlotIds.length > 0);
+    if (!hasPreFilledSlots) {
       newErrors.timetableSlotIds = 'At least one timetable slot is required';
     }
 
@@ -160,13 +211,22 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    if (e && 'preventDefault' in e) {
+      e.preventDefault();
+    }
     
-    if (!validateForm()) {
+    const isValid = validateForm();
+    console.log('🔍 Lesson Modal - Form validation result:', isValid, 'Errors:', errors);
+    
+    if (!isValid) {
+      console.error('🔍 Lesson Modal - Form validation failed, not submitting');
       return;
     }
 
-    console.log('Submitting lesson form with data:', formData);
+    console.log('🔍 Lesson Modal - Submitting lesson form with data:', {
+      formData,
+      isUnfinished
+    });
     console.log('Available classes:', classes);
     console.log('Available subjects:', subjects);
     console.log('Available timetable slots:', timetableSlots);
@@ -187,7 +247,47 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
 
     setIsLoading(true);
     try {
-      await onSave(formData);
+      // Use planCompleted from formData (checkbox value)
+      const finalPlanCompleted = formData.planCompleted || false;
+      
+      // Ensure timetableSlotIds are included - use initialData as fallback if formData doesn't have them
+      const finalTimetableSlotIds = formData.timetableSlotIds && formData.timetableSlotIds.length > 0
+        ? formData.timetableSlotIds
+        : (initialData?.timetableSlotIds 
+            ? (Array.isArray(initialData.timetableSlotIds) 
+                ? initialData.timetableSlotIds.map(id => id.toString()).filter(id => id)
+                : [initialData.timetableSlotIds.toString()].filter(id => id))
+            : []);
+      
+      const dataToSave = { 
+        ...formData, 
+        timetableSlotIds: finalTimetableSlotIds,
+        planCompleted: finalPlanCompleted 
+      };
+      
+      console.log('🔍 Lesson Modal - Calling onSave with data:', {
+        ...dataToSave,
+        timetableSlotIds: dataToSave.timetableSlotIds,
+        timetableSlotIdsLength: dataToSave.timetableSlotIds?.length,
+        hasTimetableSlotIds: !!dataToSave.timetableSlotIds && dataToSave.timetableSlotIds.length > 0,
+        formDataTimetableSlotIds: formData.timetableSlotIds,
+        initialDataTimetableSlotIds: initialData?.timetableSlotIds
+      });
+      
+      // Double-check that timetableSlotIds are present for unfinished lessons
+      if (isUnfinished && (!dataToSave.timetableSlotIds || dataToSave.timetableSlotIds.length === 0)) {
+        console.error('🔍 Lesson Modal - ERROR: timetableSlotIds missing for unfinished lesson!', {
+          formData,
+          initialData,
+          dataToSave,
+          finalTimetableSlotIds
+        });
+        alert('Error: Timetable slot information is missing. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+      
+      await onSave(dataToSave);
       onClose();
     } catch (error) {
       console.error('Error saving lesson:', error);
@@ -264,7 +364,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>
-            {mode === 'add' ? 'Add New Lesson' : 'Edit Lesson'}
+            {isUnfinished ? 'Complete Lesson Plan' : (mode === 'add' ? 'Add New Lesson' : 'Edit Lesson')}
           </DialogTitle>
         </DialogHeader>
         
@@ -278,77 +378,355 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
             </div>
           )}
           
-          {/* Step 1: Date Selection */}
+          {/* Date - show as text if read-only, otherwise as form field */}
           <div>
-            <Label htmlFor="date">Date *</Label>
-            <Input
-              id="date"
-              type="date"
-              value={formData.date}
-              onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-              className={errors.date ? 'border-red-500' : ''}
-              required
-            />
-            {errors.date && <p className="text-sm text-red-500 mt-1">{errors.date}</p>}
-            <p className="text-xs text-gray-500 mt-1">Select the date for this lesson to see available time slots</p>
+            <Label>{initialData?.date ? 'Date' : 'Date *'}</Label>
+            {initialData?.date ? (
+              <div className="py-2">
+                <p className="text-sm text-gray-900">
+                  {new Date(initialData.date).toLocaleDateString('en-GB', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
+              </div>
+            ) : (
+              <>
+                <Input
+                  id="date"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                  className={errors.date ? 'border-red-500' : ''}
+                  required
+                />
+                {errors.date && <p className="text-sm text-red-500 mt-1">{errors.date}</p>}
+                <p className="text-xs text-gray-500 mt-1">Select the date for this lesson to see available time slots</p>
+              </>
+            )}
           </div>
 
-          {/* Step 2: Timetable Slot Selection */}
+          {/* Time Slots - show as text if read-only, otherwise as form field */}
           <div>
-            <Label>Time Slots *</Label>
-            <div className="space-y-2 max-h-24 overflow-y-auto border rounded-md p-3">
-              {!formData.date ? (
-                <p className="text-sm text-gray-500">Select a date first</p>
-              ) : getAvailableTimetableSlots().length === 0 ? (
-                <p className="text-sm text-orange-600">
-                  No timetable slots configured for this day of the week and week number. 
-                  {getWeekNumberForDate(new Date(formData.date)) && ` (Week ${getWeekNumberForDate(new Date(formData.date))})`}
-                </p>
+            <Label>{(initialData?.timetableSlotIds && initialData.timetableSlotIds.length > 0) ? 'Time Slots' : 'Time Slots *'}</Label>
+            {(() => {
+              // Check if read-only (has initialData with timetableSlotIds)
+              const isReadOnly = initialData?.timetableSlotIds && initialData.timetableSlotIds.length > 0;
+              const slotIdsToUse = isReadOnly
+                ? initialData.timetableSlotIds.map(id => id.toString())
+                : formData.timetableSlotIds;
+              
+              // Get all timetable slots to find selected slots
+              const allSlots = timetableSlots || [];
+              
+              // Find selected slots from all slots
+              const selectedSlots = allSlots.filter(slot => {
+                const slotIdStr = slot.id.toString();
+                return slotIdsToUse.some(id => id.toString() === slotIdStr);
+              });
+              
+              // If read-only, show as plain text
+              if (isReadOnly && selectedSlots.length > 0) {
+                return (
+                  <div className="py-2 space-y-1">
+                    {selectedSlots.map((slot) => {
+                      const slotEntry = timetableEntries?.find(entry => 
+                        entry.timetableSlotId === slot.id &&
+                        entry.dayOfWeek === new Date(initialData.date || formData.date).toLocaleDateString('en-GB', { weekday: 'long' })
+                      );
+                      const className = slotEntry && classes 
+                        ? classes.find(c => c.id === slotEntry.classId)?.name 
+                        : null;
+                      
+                      return (
+                        <p key={slot.id} className="text-sm text-gray-900">
+                          <span className="font-medium">W{slot.weekNumber}</span> - {slot.label} ({slot.startTime} - {slot.endTime})
+                          {className && <span className="ml-2 font-medium text-gray-600">- {className}</span>}
+                        </p>
+                      );
+                    })}
+                  </div>
+                );
+              }
+              
+              // Editable time slots section
+              if (!formData.date) {
+                return (
+                  <div className="border rounded-md p-3 bg-gray-50">
+                    <p className="text-sm text-gray-500">Select a date first</p>
+                  </div>
+                );
+              }
+              
+              // If timetableSlots haven't loaded yet but we have slot IDs, show a loading state
+              if (allSlots.length === 0 && slotIdsToUse.length > 0) {
+                return (
+                  <div className="border rounded-md p-3 bg-gray-50">
+                    <p className="text-sm text-gray-500">Loading time slot information...</p>
+                  </div>
+                );
+              }
+              
+              // Show selected slot(s) if they exist (editable)
+              if (selectedSlots.length > 0) {
+                const availableSlots = getAvailableTimetableSlots();
+                const unselectedSlots = availableSlots.filter(slot => 
+                  !formData.timetableSlotIds.includes(slot.id.toString())
+                );
+                
+                return (
+                  <div className="space-y-2">
+                    <div className="border rounded-md p-3 bg-white">
+                      <p className="text-xs text-gray-600 mb-2 font-medium">Selected slots:</p>
+                      {selectedSlots.map((slot) => {
+                        const slotEntry = timetableEntries?.find(entry => 
+                          entry.timetableSlotId === slot.id &&
+                          entry.dayOfWeek === new Date(formData.date).toLocaleDateString('en-GB', { weekday: 'long' })
+                        );
+                        const className = slotEntry && classes 
+                          ? classes.find(c => c.id === slotEntry.classId)?.name 
+                          : null;
+                        
+                        return (
+                          <div key={slot.id} className="flex items-center justify-between py-1">
+                            <span className="text-sm text-gray-900">
+                              <span className="font-medium">W{slot.weekNumber}</span> - {slot.label} ({slot.startTime} - {slot.endTime})
+                              {className && <span className="ml-2 font-medium text-gray-600">- {className}</span>}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  timetableSlotIds: prev.timetableSlotIds.filter(id => id !== slot.id.toString())
+                                }));
+                              }}
+                              className="text-red-600 hover:text-red-700 text-sm"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {unselectedSlots.length > 0 && (
+                      <Select
+                        value=""
+                        onValueChange={(value) => {
+                          if (value && !formData.timetableSlotIds.includes(value)) {
+                            setFormData(prev => ({
+                              ...prev,
+                              timetableSlotIds: [...prev.timetableSlotIds, value]
+                            }));
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Add another time slot" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {unselectedSlots.map((slot) => {
+                            const slotEntry = timetableEntries?.find(entry => 
+                              entry.timetableSlotId === slot.id &&
+                              entry.dayOfWeek === new Date(formData.date).toLocaleDateString('en-GB', { weekday: 'long' })
+                            );
+                            const className = slotEntry && classes 
+                              ? classes.find(c => c.id === slotEntry.classId)?.name 
+                              : null;
+                            const subjectName = slotEntry && subjects
+                              ? subjects.find(s => s.id === slotEntry.subjectId)?.name
+                              : null;
+                            
+                            return (
+                              <SelectItem key={slot.id} value={slot.id.toString()}>
+                                <span>
+                                  <span className="font-medium">W{slot.weekNumber}</span> - {slot.label} ({slot.startTime} - {slot.endTime})
+                                  {className && <span className="ml-2 text-gray-600">- {className}</span>}
+                                  {subjectName && <span className="ml-2 text-gray-500">({subjectName})</span>}
+                                </span>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                );
+              }
+              
+              // If no slot selected, show slot picker
+              const availableSlots = getAvailableTimetableSlots();
+              
+              if (availableSlots.length === 0) {
+                return (
+                  <div className="border rounded-md p-3 bg-gray-50">
+                    <p className="text-sm text-gray-500">No timetable slots available for this date. Please create timetable slots first or select a different date.</p>
+                  </div>
+                );
+              }
+              
+              return (
+                <div className="space-y-2">
+                  <Select
+                    value=""
+                    onValueChange={(value) => {
+                      if (value && !formData.timetableSlotIds.includes(value)) {
+                        setFormData(prev => ({
+                          ...prev,
+                          timetableSlotIds: [...prev.timetableSlotIds, value]
+                        }));
+                      }
+                    }}
+                  >
+                    <SelectTrigger className={errors.timetableSlotIds ? 'border-red-500' : ''}>
+                      <SelectValue placeholder="Select a time slot from your timetable" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableSlots.map((slot) => {
+                        const slotEntry = timetableEntries?.find(entry => 
+                          entry.timetableSlotId === slot.id &&
+                          entry.dayOfWeek === new Date(formData.date).toLocaleDateString('en-GB', { weekday: 'long' })
+                        );
+                        const className = slotEntry && classes 
+                          ? classes.find(c => c.id === slotEntry.classId)?.name 
+                          : null;
+                        const subjectName = slotEntry && subjects
+                          ? subjects.find(s => s.id === slotEntry.subjectId)?.name
+                          : null;
+                        
+                        const isSelected = formData.timetableSlotIds.includes(slot.id.toString());
+                        
+                        return (
+                          <SelectItem 
+                            key={slot.id} 
+                            value={slot.id.toString()}
+                            disabled={isSelected}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span>
+                                <span className="font-medium">W{slot.weekNumber}</span> - {slot.label} ({slot.startTime} - {slot.endTime})
+                                {className && <span className="ml-2 text-gray-600">- {className}</span>}
+                                {subjectName && <span className="ml-2 text-gray-500">({subjectName})</span>}
+                              </span>
+                              {isSelected && <span className="ml-2 text-xs text-green-600">✓ Selected</span>}
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  {formData.timetableSlotIds.length > 0 && (
+                    <div className="border rounded-md p-3 bg-white mt-2">
+                      <p className="text-xs text-gray-600 mb-2 font-medium">Selected slots:</p>
+                      {formData.timetableSlotIds.map((slotId) => {
+                        const slot = availableSlots.find(s => s.id.toString() === slotId);
+                        if (!slot) return null;
+                        const slotEntry = timetableEntries?.find(entry => 
+                          entry.timetableSlotId === slot.id &&
+                          entry.dayOfWeek === new Date(formData.date).toLocaleDateString('en-GB', { weekday: 'long' })
+                        );
+                        const className = slotEntry && classes 
+                          ? classes.find(c => c.id === slotEntry.classId)?.name 
+                          : null;
+                        
+                        return (
+                          <div key={slotId} className="flex items-center justify-between py-1">
+                            <span className="text-sm text-gray-900">
+                              <span className="font-medium">W{slot.weekNumber}</span> - {slot.label} ({slot.startTime} - {slot.endTime})
+                              {className && <span className="ml-2 font-medium text-gray-600">- {className}</span>}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  timetableSlotIds: prev.timetableSlotIds.filter(id => id !== slotId)
+                                }));
+                              }}
+                              className="text-red-600 hover:text-red-700 text-sm"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+            {errors.timetableSlotIds && <p className="text-sm text-red-500 mt-1">{errors.timetableSlotIds}</p>}
+          </div>
+
+          {/* Class and Subject - show as text if read-only, otherwise as form fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>{initialData?.classId ? 'Class' : 'Class *'}</Label>
+              {initialData?.classId ? (
+                <div className="py-2">
+                  <p className="text-sm text-gray-900">
+                    {classes?.find(c => c.id.toString() === initialData.classId?.toString())?.name || 'Unknown'}
+                  </p>
+                </div>
               ) : (
-                getAvailableTimetableSlots().map((slot) => {
-                  const isChecked = formData.timetableSlotIds.includes(slot.id.toString());
-                  
-                  // Find the timetable entry for this slot on the selected day
-                  const slotEntry = timetableEntries?.find(entry => 
-                    entry.timetableSlotId === slot.id &&
-                    entry.dayOfWeek === new Date(formData.date).toLocaleDateString('en-GB', { weekday: 'long' })
-                  );
-                  
-                  // Get class name if available
-                  const className = slotEntry && classes 
-                    ? classes.find(c => c.id === slotEntry.classId)?.name 
-                    : null;
-                  
-                  return (
-                  <label key={slot.id} className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setFormData(prev => ({
-                            ...prev,
-                            timetableSlotIds: [...prev.timetableSlotIds, slot.id.toString()]
-                          }));
-                        } else {
-                          setFormData(prev => ({
-                            ...prev,
-                            timetableSlotIds: prev.timetableSlotIds.filter(id => id !== slot.id.toString())
-                          }));
-                        }
-                      }}
-                      className="rounded border-gray-300"
-                    />
-                    <span className="text-sm">
-                      <span className="font-medium">W{slot.weekNumber}</span> - {slot.label} ({slot.startTime} - {slot.endTime})
-                      {className && <span className="ml-2 text-gray-600 font-medium">- {className}</span>}
-                    </span>
-                  </label>
-                  );
-                })
+                <>
+                  <Select
+                    value={formData.classId}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, classId: value }))}
+                  >
+                    <SelectTrigger className={errors.classId ? 'border-red-500' : ''}>
+                      <SelectValue placeholder="Select a class" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {classes?.map((cls) => (
+                        <SelectItem key={cls.id} value={cls.id.toString()}>
+                          {cls.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.classId && <p className="text-sm text-red-500 mt-1">{errors.classId}</p>}
+                  {(!classes || classes.length === 0) && (
+                    <p className="text-sm text-orange-600 mt-1">No classes available. Create a class first.</p>
+                  )}
+                </>
               )}
             </div>
-            {errors.timetableSlotIds && <p className="text-sm text-red-500 mt-1">{errors.timetableSlotIds}</p>}
+
+            <div>
+              <Label>{initialData?.subjectId ? 'Subject' : 'Subject *'}</Label>
+              {initialData?.subjectId ? (
+                <div className="py-2">
+                  <p className="text-sm text-gray-900">
+                    {subjects?.find(s => s.id.toString() === initialData.subjectId?.toString())?.name || 'Unknown'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <Select
+                    value={formData.subjectId}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, subjectId: value }))}
+                  >
+                    <SelectTrigger className={errors.subjectId ? 'border-red-500' : ''}>
+                      <SelectValue placeholder="Select a subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjects?.map((subject) => (
+                        <SelectItem key={subject.id} value={subject.id.toString()}>
+                          {subject.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.subjectId && <p className="text-sm text-red-500 mt-1">{errors.subjectId}</p>}
+                  {(!subjects || subjects.length === 0) && (
+                    <p className="text-sm text-orange-600 mt-1">No subjects available. Create a subject first.</p>
+                  )}
+                </>
+              )}
+            </div>
           </div>
 
           <div>
@@ -364,56 +742,6 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
             {errors.title && <p className="text-sm text-red-500 mt-1">{errors.title}</p>}
           </div>
 
-          {/* Step 3: Class and Subject (auto-populated from timetable) */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="class">Class *</Label>
-              <Select
-                value={formData.classId}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, classId: value }))}
-              >
-                <SelectTrigger className={errors.classId ? 'border-red-500' : ''}>
-                  <SelectValue placeholder="Select a class" />
-                </SelectTrigger>
-                <SelectContent>
-                  {classes?.map((cls) => (
-                    <SelectItem key={cls.id} value={cls.id.toString()}>
-                      {cls.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.classId && <p className="text-sm text-red-500 mt-1">{errors.classId}</p>}
-              {(!classes || classes.length === 0) && (
-                <p className="text-sm text-orange-600 mt-1">No classes available. Create a class first.</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="subject">Subject *</Label>
-              <Select
-                value={formData.subjectId}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, subjectId: value }))}
-              >
-                <SelectTrigger className={errors.subjectId ? 'border-red-500' : ''}>
-                  <SelectValue placeholder="Select a subject" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subjects?.map((subject) => (
-                    <SelectItem key={subject.id} value={subject.id.toString()}>
-                      {subject.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.subjectId && <p className="text-sm text-red-500 mt-1">{errors.subjectId}</p>}
-              {(!subjects || subjects.length === 0) && (
-                <p className="text-sm text-orange-600 mt-1">No subjects available. Create a subject first.</p>
-              )}
-            </div>
-          </div>
-
-
           <div>
             <Label htmlFor="lessonPlan">Lesson Plan</Label>
             <Textarea
@@ -423,6 +751,20 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
               onChange={(e) => setFormData(prev => ({ ...prev, lessonPlan: e.target.value }))}
               rows={4}
             />
+          </div>
+
+          {/* Mark plan as completed checkbox - always available */}
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="planCompleted"
+              checked={formData.planCompleted || false}
+              onChange={(e) => setFormData(prev => ({ ...prev, planCompleted: e.target.checked }))}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <Label htmlFor="planCompleted" className="!mb-0 cursor-pointer">
+              Mark plan as completed
+            </Label>
           </div>
 
           <div>
@@ -455,7 +797,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading} form="lesson-form">
-                {isLoading ? 'Saving...' : mode === 'add' ? 'Create Lesson' : 'Update Lesson'}
+                {isLoading ? 'Saving...' : (isUnfinished ? 'Save Plan' : (mode === 'add' ? 'Create Lesson' : 'Update Lesson'))}
               </Button>
             </div>
           </div>

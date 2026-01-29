@@ -2,9 +2,11 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Calendar, Clock, CheckCircle, Circle, Tag, Filter, ArrowUpDown, Edit, Trash2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Plus, Calendar, Clock, CheckCircle, Circle, Tag, Filter, ArrowUpDown, Edit, Trash2, List, Grid, X } from 'lucide-react';
 import useSWR from 'swr';
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { TaskModal } from '@/components/task-modal';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -30,6 +32,23 @@ function TasksList() {
   const [sortBy, setSortBy] = useState<'dueDate' | 'priority' | 'title'>('dueDate');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'detailed' | 'simple'>(() => {
+    // Load from localStorage on initial render
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('tasks-view-mode');
+      return (saved === 'simple' || saved === 'detailed') ? saved : 'detailed';
+    }
+    return 'detailed';
+  });
+  const [isSimpleAddOpen, setIsSimpleAddOpen] = useState(false);
+  const [simpleTaskTitle, setSimpleTaskTitle] = useState('');
+
+  // Persist view mode to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tasks-view-mode', viewMode);
+    }
+  }, [viewMode]);
 
   const handleSaveTask = async (taskData: any) => {
     try {
@@ -108,7 +127,11 @@ function TasksList() {
 
   const openAddModal = () => {
     setEditingTask(null);
-    setIsModalOpen(true);
+    if (viewMode === 'simple') {
+      setIsSimpleAddOpen(true);
+    } else {
+      setIsModalOpen(true);
+    }
   };
 
   const openEditModal = (task: any) => {
@@ -119,6 +142,40 @@ function TasksList() {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingTask(null);
+  };
+
+  const handleSimpleAddTask = async () => {
+    if (!simpleTaskTitle.trim()) return;
+
+    try {
+      const taskData = {
+        title: simpleTaskTitle,
+        description: '',
+        dueDate: null,
+        priority: 'medium',
+        tags: '',
+        color: '#000000',
+      };
+
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(taskData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create task');
+      }
+
+      setSimpleTaskTitle('');
+      setIsSimpleAddOpen(false);
+      await mutate();
+    } catch (error) {
+      console.error('Error adding simple task:', error);
+      alert('Failed to add task. Please try again.');
+    }
   };
 
   if (tasksError) {
@@ -226,56 +283,227 @@ function TasksList() {
             {totalCount} total • {completedCount} completed • {pendingCount} pending
           </p>
         </div>
-        <Button onClick={openAddModal}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Task
-        </Button>
-      </div>
-
-      {/* Filters and Sorting */}
-      <div className="flex items-center space-x-4 mb-6">
-        <div className="flex items-center space-x-2">
-          <Filter className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-700">Filter:</span>
-          <Button
-            variant={filter === 'all' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter('all')}
-          >
-            All ({totalCount})
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            <Button
+              variant={viewMode === 'detailed' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('detailed')}
+              className="h-8"
+            >
+              <Grid className="h-4 w-4 mr-1" />
+              Detailed
+            </Button>
+            <Button
+              variant={viewMode === 'simple' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('simple')}
+              className="h-8"
+            >
+              <List className="h-4 w-4 mr-1" />
+              Simple
+            </Button>
+          </div>
+          <Button onClick={openAddModal}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Task
           </Button>
-          <Button
-            variant={filter === 'pending' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter('pending')}
-          >
-            Pending ({pendingCount})
-          </Button>
-          <Button
-            variant={filter === 'completed' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter('completed')}
-          >
-            Completed ({completedCount})
-          </Button>
-        </div>
-
-        <div className="flex items-center space-x-2 ml-auto">
-          <ArrowUpDown className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-700">Sort by:</span>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'dueDate' | 'priority' | 'title')}
-            className="text-sm border border-gray-300 rounded-md px-2 py-1"
-          >
-            <option value="dueDate">Due Date</option>
-            <option value="priority">Priority</option>
-            <option value="title">Title</option>
-          </select>
         </div>
       </div>
 
-      {!sortedTasks || sortedTasks.length === 0 ? (
+      {/* Filters and Sorting - Only show in detailed view */}
+      {viewMode === 'detailed' && (
+        <div className="flex items-center space-x-4 mb-6">
+          <div className="flex items-center space-x-2">
+            <Filter className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Filter:</span>
+            <Button
+              variant={filter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('all')}
+            >
+              All ({totalCount})
+            </Button>
+            <Button
+              variant={filter === 'pending' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('pending')}
+            >
+              Pending ({pendingCount})
+            </Button>
+            <Button
+              variant={filter === 'completed' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('completed')}
+            >
+              Completed ({completedCount})
+            </Button>
+          </div>
+
+          <div className="flex items-center space-x-2 ml-auto">
+            <ArrowUpDown className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Sort by:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'dueDate' | 'priority' | 'title')}
+              className="text-sm border border-gray-300 rounded-md px-2 py-1"
+            >
+              <option value="dueDate">Due Date</option>
+              <option value="priority">Priority</option>
+              <option value="title">Title</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {viewMode === 'simple' ? (
+        // Simple To-Do List View
+        <div className="space-y-4">
+          {/* Simple Add Task Form */}
+          {isSimpleAddOpen && (
+            <Card className="p-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-900">Add Task</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setIsSimpleAddOpen(false);
+                      setSimpleTaskTitle('');
+                      setSimpleTaskDueDate('');
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div>
+                  <Input
+                    placeholder="Task title..."
+                    value={simpleTaskTitle}
+                    onChange={(e) => setSimpleTaskTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSimpleAddTask();
+                      }
+                    }}
+                    className="mb-2"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <Button onClick={handleSimpleAddTask} size="sm" disabled={!simpleTaskTitle.trim()}>
+                      Add
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsSimpleAddOpen(false);
+                        setSimpleTaskTitle('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Simple Task List */}
+          {!isSimpleAddOpen && (
+            <Button
+              variant="outline"
+              onClick={() => setIsSimpleAddOpen(true)}
+              className="w-full mb-4"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Task
+            </Button>
+          )}
+
+          {!sortedTasks || sortedTasks.length === 0 ? (
+            <Card>
+              <CardContent className="pt-12 pb-12">
+                <div className="text-center">
+                  <CheckCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No tasks yet</h3>
+                  <p className="text-gray-500 mb-6">Add your first task to get started.</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {sortedTasks.map((task) => {
+                const taskDate = new Date(task.dueDate);
+                const isTaskOverdue = isOverdue(task.dueDate);
+                const isTaskToday = isToday(task.dueDate);
+                
+                return (
+                  <Card
+                    key={task.id}
+                    className={`p-4 hover:shadow-md transition-shadow ${
+                      task.completed ? 'opacity-60' : ''
+                    } ${isTaskOverdue && !task.completed ? 'border-red-200 bg-red-50/50' : ''}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleToggleComplete(task.id, task.completed)}
+                        className="h-6 w-6 p-0 mt-0.5 flex-shrink-0"
+                        title={task.completed ? 'Mark Incomplete' : 'Mark Complete'}
+                      >
+                        {task.completed ? (
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <Circle className="h-5 w-5 text-gray-400" />
+                        )}
+                      </Button>
+                      <div className="flex-1 min-w-0">
+                        <h3
+                          className={`text-sm font-medium ${
+                            task.completed
+                              ? 'line-through text-gray-500'
+                              : 'text-gray-900'
+                          }`}
+                        >
+                          {task.title}
+                        </h3>
+                        {task.description && !task.completed && (
+                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                            {task.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditModal(task)}
+                          className="h-8 w-8 p-0"
+                          title="Edit Task"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteTask(task.id, task.title)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          title="Delete Task"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : !sortedTasks || sortedTasks.length === 0 ? (
         <Card>
           <CardContent className="pt-12 pb-12">
             <div className="text-center">

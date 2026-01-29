@@ -5,6 +5,7 @@ import useSWR, { mutate } from 'swr';
 import { Event, Lesson, Class, Subject, User } from '@/lib/db/schema';
 import { useAcademicCalendar } from '@/lib/hooks/useAcademicCalendar';
 import { isWeekFullyCoveredByHolidays } from '@/lib/utils/academic-calendar';
+import { getCardStyle, getCardClassName, getBorderColorWithOpacity } from '@/lib/utils/card-styles';
 
 // Function to lighten a hex color
 function lightenColor(color: string, amount: number = 0.7): string {
@@ -21,11 +22,85 @@ function lightenColor(color: string, amount: number = 0.7): string {
   
   return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
 }
+
+// Function to calculate relative luminance (brightness) of a color
+function getLuminance(color: string): number {
+  if (!color || !color.startsWith('#')) return 0.5; // Default to medium brightness
+  
+  const hex = color.slice(1);
+  const r = parseInt(hex.slice(0, 2), 16) / 255;
+  const g = parseInt(hex.slice(2, 4), 16) / 255;
+  const b = parseInt(hex.slice(4, 6), 16) / 255;
+  
+  // Apply gamma correction
+  const [rLinear, gLinear, bLinear] = [r, g, b].map(val => {
+    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+  });
+  
+  // Calculate relative luminance
+  return 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
+}
+
+// Function to darken a hex color
+function darkenColor(color: string, amount: number = 0.3): string {
+  if (!color || !color.startsWith('#')) return color;
+  
+  const hex = color.slice(1);
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  
+  // Darken by reducing RGB values
+  const darkenedR = Math.round(r * (1 - amount));
+  const darkenedG = Math.round(g * (1 - amount));
+  const darkenedB = Math.round(b * (1 - amount));
+  
+  return `#${darkenedR.toString(16).padStart(2, '0')}${darkenedG.toString(16).padStart(2, '0')}${darkenedB.toString(16).padStart(2, '0')}`;
+}
+
+// Function to calculate contrast ratio between two colors (WCAG standard)
+function getContrastRatio(color1: string, color2: string): number {
+  const lum1 = getLuminance(color1);
+  const lum2 = getLuminance(color2);
+  const lighter = Math.max(lum1, lum2);
+  const darker = Math.min(lum1, lum2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+// Function to get high-contrast text color that meets WCAG AA standards (4.5:1 minimum)
+function getContrastTextColor(backgroundColor: string, originalColor?: string): string {
+  // Test both white and dark text options
+  const whiteContrast = getContrastRatio(backgroundColor, '#FFFFFF');
+  const darkGrayContrast = getContrastRatio(backgroundColor, '#1F2937');
+  
+  // WCAG AA requires 4.5:1 contrast ratio for normal text
+  const wcagAA = 4.5;
+  
+  // Check which option meets WCAG AA and has better contrast
+  const whiteMeetsAA = whiteContrast >= wcagAA;
+  const darkMeetsAA = darkGrayContrast >= wcagAA;
+  
+  if (whiteMeetsAA && darkMeetsAA) {
+    // Both meet standards, choose the one with better contrast
+    return whiteContrast > darkGrayContrast ? '#FFFFFF' : '#1F2937';
+  } else if (whiteMeetsAA) {
+    // Only white meets standards
+    return '#FFFFFF';
+  } else if (darkMeetsAA) {
+    // Only dark meets standards
+    return '#1F2937';
+  } else {
+    // Neither meets standards, but choose the better one
+    // Prefer dark text as it's generally more readable
+    return darkGrayContrast > whiteContrast ? '#1F2937' : '#FFFFFF';
+  }
+}
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Clock, MapPin, BookOpen, Users, X, Edit, Trash2, Plus, Repeat } from 'lucide-react';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { LessonModal } from '@/components/lesson-modal';
+import { TimetableActivityModal } from '@/components/timetable-activity-modal';
 
 // NOTE: A lot of this is duplicated from WeekCalendar.
 // In a real application, you'd want to abstract the shared logic.
@@ -75,7 +150,7 @@ const fetcher = async (url: string) => {
 interface CalendarEvent {
   id: string;
   title: string;
-  type: 'lesson' | 'event' | 'holiday';
+  type: 'lesson' | 'event' | 'holiday' | 'activity';
   startTime: Date;
   endTime: Date;
   location?: string;
@@ -93,6 +168,8 @@ interface CalendarEvent {
   planCompleted?: boolean; // Whether the lesson plan is completed
   isRecurring?: boolean; // Whether this is a recurring event
   recurrenceType?: string; // Type of recurrence
+  activityId?: number; // For timetable activities
+  activityType?: string; // 'meeting', 'duty', 'planning', etc.
 }
 
 function EventModal({ event, onClose }: { event: CalendarEvent; onClose: () => void }) {
@@ -181,24 +258,18 @@ interface MonthCalendarProps {
   onDateChange?: (date: Date) => void;
   onViewChange?: (view: 'day' | 'week' | 'month') => void;
   showEventsOnly?: boolean;
+  cardStyle?: string;
 }
 
-export function MonthCalendar({ onAddEvent, className = '', currentDate: externalCurrentDate, onDateChange, onViewChange, showEventsOnly = false }: MonthCalendarProps) {
+export function MonthCalendar({ onAddEvent, className = '', currentDate: externalCurrentDate, onDateChange, onViewChange, showEventsOnly = false, cardStyle = 'solid' }: MonthCalendarProps) {
   const [currentDate, setCurrentDate] = useState(externalCurrentDate || new Date());
-  
-  // Debug logging
-  console.log('MonthCalendar showEventsOnly prop:', showEventsOnly, '(true = Events Only, false = Lessons & Events)');
-  
-  // Watch for prop changes
-  useEffect(() => {
-    console.log('MonthCalendar showEventsOnly prop changed to:', showEventsOnly, '(true = Events Only, false = Lessons & Events)');
-  }, [showEventsOnly]);
   
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [editingLesson, setEditingLesson] = useState<CalendarEvent | null>(null);
   const [editingHoliday, setEditingHoliday] = useState<CalendarEvent | null>(null);
+  const [editingActivity, setEditingActivity] = useState<any | null>(null);
   const [viewingEvent, setViewingEvent] = useState<CalendarEvent | null>(null);
 
   const { data: events, error: eventsError } = useSWR<Event[]>('/api/events', fetcher);
@@ -208,6 +279,7 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
   const { data: user, error: userError } = useSWR<User>('/api/user', fetcher);
   const { data: timetableEntries } = useSWR<any[]>('/api/timetable', fetcher);
   const { data: timetableSlots } = useSWR<any[]>('/api/timetable-slots', fetcher);
+  const { data: timetableActivities, mutate: mutateTimetableActivities } = useSWR<any[]>('/api/timetable-activities', fetcher);
   
   // Academic calendar hook for week number calculation
   const { getWeekNumberForDate, activeAcademicYear, getHolidayEvents, holidays } = useAcademicCalendar();
@@ -357,15 +429,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
     const visibleEnd = new Date(year, month + 1, endOffset);
     visibleEnd.setHours(23, 59, 59, 999);
 
-    // Debug logging only in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Month calendar - Month view range:', { 
-        monthStart: monthStart.toDateString(), 
-        monthEnd: monthEnd.toDateString(),
-        totalLessons: lessons.length,
-        totalEvents: events.length
-      });
-    }
 
     lessons.forEach((lesson, index) => {
       const lClassInfo = classes.find(c => c.id === lesson.classId);
@@ -384,16 +447,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
           }
           
           const lessonColor = lesson.color || lSubjectInfo.color || '#4F46E5';
-          // Debug logging only in development
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`Month calendar - Creating lesson ${index + 1}:`, {
-              id: lesson.id,
-              title: lesson.title,
-              date: lesson.date,
-              color: lessonColor
-            });
-          }
-          
           initialEvents.push({
             id: `lesson-${lesson.id}`,
             title: lesson.title,
@@ -461,7 +514,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
           if (currentDateNormalized >= visibleStart && currentDateNormalized <= visibleEnd) {
             // Debug logging only in development
             if (process.env.NODE_ENV === 'development') {
-              console.log(`Creating individual event for day:`, currentDate.toDateString());
             }
             
             // Create a new event for this specific day
@@ -519,19 +571,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
     const processedHolidayEvents: CalendarEvent[] = [];
     
     rawHolidayEvents.forEach((holiday, index) => {
-      // Debug logging only in development
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`Holiday ${index + 1}:`, {
-          id: holiday.id,
-          title: holiday.title,
-          startTime: holiday.startTime,
-          endTime: holiday.endTime,
-          isMultiDay: holiday.isMultiDay,
-          startDateStr: holiday.startDateStr,
-          endDateStr: holiday.endDateStr
-        });
-      }
-      
       // Handle different date formats - some holidays might have string dates, others Date objects
       let holidayStartDate: Date;
       let holidayEndDate: Date;
@@ -565,7 +604,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
           if (currentDateNormalized >= visibleStart && currentDateNormalized <= visibleEnd) {
             // Debug logging only in development
             if (process.env.NODE_ENV === 'development') {
-              console.log(`Creating individual holiday event for day:`, currentDate.toDateString());
             }
             
             // Create a new event for this specific day
@@ -606,16 +644,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
           currentDate.setDate(currentDate.getDate() + 1);
         }
       } else {
-        // Debug logging only in development
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`Holiday ${holiday.id} is NOT in month range:`, {
-            startDate: startDate.toDateString(),
-            endDate: endDate.toDateString(),
-            monthStart: monthStart.toDateString(),
-            monthEnd: monthEnd.toDateString(),
-            isInRange: startDate <= monthEnd && endDate >= monthStart
-          });
-        }
       }
     });
     
@@ -635,7 +663,67 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
         }
       });
       
-      // Generate unfinished lessons for each day in the month
+      // First, add all activities for each day/week (before processing timetable entries)
+      const slotsWithActivities = new Set<number>();
+      if (timetableActivities && timetableSlots) {
+        for (let day = 1; day <= monthEnd.getDate(); day++) {
+          const date = new Date(year, month, day);
+          date.setHours(12, 0, 0, 0);
+          const dateStr = date.toISOString().split('T')[0];
+          const dayOfWeek = new Intl.DateTimeFormat('en-GB', { weekday: 'long' }).format(date);
+          const weekNumber = getWeekNumberForDate(date);
+          
+          timetableActivities.forEach(activity => {
+            // Normalize dayOfWeek for comparison
+            const activityDayOfWeek = (activity.dayOfWeek || '').toLowerCase().trim();
+            const currentDayOfWeekLower = (dayOfWeek || '').toLowerCase().trim();
+            
+            // Normalize weekNumber for comparison
+            const activityWeekNumber = activity.weekNumber != null 
+              ? (typeof activity.weekNumber === 'string' ? parseInt(activity.weekNumber) : activity.weekNumber)
+              : 1;
+            // If weekNumber is null (outside academic year), don't match - activities should only show within academic year
+            const currentWeekNumberNum = weekNumber != null 
+              ? (typeof weekNumber === 'string' ? parseInt(weekNumber) : weekNumber)
+              : null;
+            
+            // Match if dayOfWeek matches and weekNumber matches exactly (both must be non-null)
+            // Activities must match the exact week number they're assigned to
+            if (activity.timetableSlotId && 
+                activityDayOfWeek === currentDayOfWeekLower && 
+                currentWeekNumberNum !== null &&
+                activityWeekNumber === currentWeekNumberNum) {
+              slotsWithActivities.add(activity.timetableSlotId);
+              
+              const slot = timetableSlots.find(s => s.id === activity.timetableSlotId);
+              if (slot) {
+                const [startHour, startMinute] = slot.startTime.split(':').map(Number);
+                const [endHour, endMinute] = slot.endTime.split(':').map(Number);
+                
+                const startTime = new Date(year, month, day, startHour, startMinute);
+                const endTime = new Date(year, month, day, endHour, endMinute);
+                
+                initialEvents.push({
+                  id: `activity-${activity.id}-${dateStr}`,
+                  title: activity.title || 'Untitled Activity',
+                  type: 'activity',
+                  startTime: startTime,
+                  endTime: endTime,
+                  color: (activity.color && activity.color.trim()) || '#8B5CF6',
+                  location: activity.location || undefined,
+                  description: activity.description || activity.notes || undefined,
+                  allDay: false,
+                  activityId: activity.id,
+                  activityType: activity.activityType,
+                  timetableSlotId: activity.timetableSlotId,
+                });
+              }
+            }
+          });
+        }
+      }
+
+      // Generate unfinished lessons for each day in the month (but skip slots that have activities)
       for (let day = 1; day <= monthEnd.getDate(); day++) {
         const date = new Date(year, month, day);
         date.setHours(12, 0, 0, 0);
@@ -649,7 +737,7 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
           }
         }
         
-        const dayOfWeek = date.toLocaleDateString('en-GB', { weekday: 'long' });
+        const dayOfWeek = new Intl.DateTimeFormat('en-GB', { weekday: 'long' }).format(date);
         const weekNumber = getWeekNumberForDate(date);
         
         // Find timetable entries for this day and week
@@ -664,41 +752,51 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
           const hasLesson = lessonsBySlotAndDate.has(key);
           
           if (!hasLesson) {
-            // Create an unfinished lesson event
+            // Skip if this slot has an activity (activities are already added above)
+            if (slotsWithActivities.has(entry.timetableSlotId)) {
+              return;
+            }
+            
             const slot = timetableSlots.find(s => s.id === entry.timetableSlotId);
             if (!slot) return;
             
-            const classInfo = classes.find(c => c.id === entry.classId);
-            const subjectInfo = subjects.find(s => s.id === entry.subjectId);
-            
-            const [startHour, startMinute] = slot.startTime.split(':').map(Number);
-            const [endHour, endMinute] = slot.endTime.split(':').map(Number);
-            
-            const startTime = new Date(year, month, day, startHour, startMinute);
-            const endTime = new Date(year, month, day, endHour, endMinute);
-            
-            // Create title based on teacher type
-            const title = user?.teacherType === 'primary' 
-              ? `${subjectInfo?.name || 'Subject'} - ${classInfo?.name || 'Class'}`
-              : `${classInfo?.name || 'Class'} - ${subjectInfo?.name || 'Subject'}`;
-            
-            initialEvents.push({
-              id: `unfinished-lesson-${dateStr}-${entry.timetableSlotId}`,
-              title: title,
-              type: 'lesson',
-              startTime: startTime,
-              endTime: endTime,
-              location: entry.room || undefined,
-              description: undefined,
-              class: classInfo?.name || undefined,
-              subject: subjectInfo?.name || undefined,
-              color: subjectInfo?.color || classInfo?.color || '#D1D5DB',
-              allDay: false,
-              classId: entry.classId || undefined,
-              subjectId: entry.subjectId || undefined,
-              isUnfinished: true, // Flag to indicate this is an unfinished lesson
-              timetableSlotId: entry.timetableSlotId,
-            });
+            // Only create unfinished lesson if there's a class or subject assigned
+            if (entry.classId || entry.subjectId) {
+              const classInfo = classes.find(c => c.id === entry.classId);
+              const subjectInfo = subjects.find(s => s.id === entry.subjectId);
+              
+              const [startHour, startMinute] = slot.startTime.split(':').map(Number);
+              const [endHour, endMinute] = slot.endTime.split(':').map(Number);
+              
+              const startTime = new Date(year, month, day, startHour, startMinute);
+              const endTime = new Date(year, month, day, endHour, endMinute);
+              
+              // Create title based on teacher type
+              const title = user?.teacherType === 'primary' 
+                ? `${subjectInfo?.name || 'Subject'} - ${classInfo?.name || 'Class'}`
+                : `${classInfo?.name || 'Class'} - ${subjectInfo?.name || 'Subject'}`;
+              
+              initialEvents.push({
+                id: `unfinished-lesson-${dateStr}-${entry.timetableSlotId}`,
+                title: title,
+                type: 'lesson',
+                startTime: startTime,
+                endTime: endTime,
+                location: entry.room || undefined,
+                description: undefined,
+                class: classInfo?.name || undefined,
+                subject: subjectInfo?.name || undefined,
+                color: subjectInfo?.color || classInfo?.color || '#D1D5DB',
+                allDay: false,
+                classId: entry.classId || undefined,
+                subjectId: entry.subjectId || undefined,
+                isUnfinished: true, // Flag to indicate this is an unfinished lesson
+                timetableSlotId: entry.timetableSlotId,
+              });
+            }
+            // If entry has no classId/subjectId:
+            // - If there's an activity, it's already shown above (added first)
+            // - If there's no activity, don't create anything (slot is hidden)
           }
         });
       }
@@ -707,13 +805,9 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
     // Combine all events including processed holidays
     const allEvents = [...initialEvents, ...processedHolidayEvents];
 
-    // Debug logging only in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Month calendar - Total events created:', allEvents.length, '(including', processedHolidayEvents.length, 'processed holidays)');
-    }
     setCalendarEvents(allEvents);
 
-  }, [events, lessons, classes, subjects, currentDate, getHolidayEvents, timetableEntries, timetableSlots, user, getWeekNumberForDate, activeAcademicYear, holidays]);
+  }, [events, lessons, classes, subjects, currentDate, getHolidayEvents, timetableEntries, timetableSlots, timetableActivities, user, getWeekNumberForDate, activeAcademicYear, holidays]);
 
   const monthGrid = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -767,11 +861,13 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
     return <div>Error loading data</div>;
   }
 
+  const numRows = Math.ceil(monthGrid.length / 7);
+  
   return (
     <div className={`flex h-full flex-col ${className}`}>
-      <div className="flex-1 overflow-hidden shadow-lg rounded-xl border-2 border-gray-200">
-        <div className="h-full overflow-y-auto">
-          <div className="grid grid-cols-7 gap-px border-b border-gray-300 bg-gray-200 text-center text-xs font-semibold leading-6 text-gray-700">
+      <div className="flex-1 overflow-hidden shadow-lg rounded-xl border-2 border-gray-200 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="sticky top-0 z-10 grid grid-cols-7 gap-px border-b border-gray-300 bg-gray-200 text-center text-xs font-semibold leading-6 text-gray-700 flex-shrink-0">
             <div className="bg-white py-2">Mon</div>
             <div className="bg-white py-2">Tue</div>
             <div className="bg-white py-2">Wed</div>
@@ -781,7 +877,8 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
             <div className="bg-white py-2">Sun</div>
           </div>
           
-          <div className="relative grid grid-cols-7 grid-rows-5 gap-px bg-gray-200">
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+            <div className="flex-1 grid grid-cols-7 gap-px bg-gray-200 min-h-0" style={{ gridTemplateRows: `repeat(${numRows}, 1fr)` }}>
             {monthGrid.map(({ date, isCurrentMonth }, dayIdx) => {
               // Get all events for this day (now all events are single-day)
               let eventsForDay = calendarEvents
@@ -824,7 +921,7 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
               return (
                 <div
                   key={dayIdx}
-                  className={`relative min-h-[10rem] bg-white px-2 py-2 ${
+                  className={`relative h-full bg-white px-2 py-2 flex flex-col ${
                     isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
                   }`}
                 >
@@ -839,7 +936,7 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
                         }
                       }}
                       className={`flex h-6 w-6 items-center justify-center rounded-full font-semibold hover:bg-gray-100 transition-colors ${
-                        isToday(date) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : ''
+                        isToday(date) ? 'bg-blue-600 text-white hover:bg-blue-700' : ''
                       }`}
                     >
                       {date.getDate()}
@@ -860,14 +957,34 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
                       {eventsForDay.slice(0, 3).map(event => (
                         <div
                           key={event.id}
-                          className={`group flex w-full items-start rounded-md p-1 text-left text-xs border-2 min-w-0 cursor-pointer overflow-hidden`}
+                          className={`${getCardClassName(getCardStyle(cardStyle))} items-start min-w-0 ${event.isUnfinished ? 'border-dashed' : 'border-solid'}`}
                           style={{
-                            backgroundColor: event.isUnfinished
-                              ? lightenColor(event.color || '#FCD34D', 0.98)
-                              : (event.color ? lightenColor(event.color, 0.8) : '#F3F4F6'),
-                            borderColor: event.isUnfinished 
-                              ? `${event.color || '#FCD34D'}50`
-                              : (event.color ? `${event.color}CC` : '#374151'),
+                            backgroundColor: (() => {
+                              const styleConfig = getCardStyle(cardStyle);
+                              return event.isUnfinished
+                                ? lightenColor(event.color || '#FCD34D', 0.7) // Much lighter background for unplanned
+                                : (event.color 
+                                    ? (event.type === 'lesson' && event.planCompleted 
+                                        ? lightenColor(event.color, styleConfig.backgroundOpacity - 0.1) // Muted color for completed lessons (vibrant)
+                                        : lightenColor(event.color, styleConfig.backgroundOpacity + 0.35)) // Normal color for incomplete (old pale version)
+                                    : '#F3F4F6');
+                            })(),
+                            borderColor: (() => {
+                              const styleConfig = getCardStyle(cardStyle);
+                            return event.isUnfinished
+                              ? darkenColor(event.color || '#FCD34D', 0.2) // Darker border for unplanned (more visible)
+                              : (getBorderColorWithOpacity(
+                                  event.color || '#FCD34D',
+                                  false,
+                                  event.type === 'lesson' && event.planCompleted || false,
+                                  styleConfig
+                                ) || (event.color ? `${event.color}AA` : '#374151'));
+                          })(),
+                          borderStyle: event.isUnfinished ? 'dashed' : 'solid',
+                          opacity: event.isUnfinished ? 0.6 : 1, // More faded for unplanned
+                          color: event.isUnfinished 
+                            ? '#1F2937' // Dark gray for better readability on light backgrounds
+                            : undefined, // Use default text color for planned lessons
                             minHeight: '1.5rem',
                             maxHeight: '2rem'
                           }}
@@ -878,6 +995,12 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
                               setEditingEvent(event);
                             } else if (event.type === 'holiday') {
                               setEditingHoliday(event);
+                            } else if (event.type === 'activity') {
+                              // Find the activity data
+                              const activity = timetableActivities?.find(a => a.id === event.activityId);
+                              if (activity) {
+                                setEditingActivity(activity);
+                              }
                             } else {
                               setViewingEvent(event);
                             }
@@ -887,7 +1010,12 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
                             <p 
                               className="font-bold text-xs truncate flex-1 min-w-0 leading-tight" 
                               style={{ 
-                                color: event.color && event.color !== '#6B7280' ? `${event.color}E6` : '#111827',
+                                color: event.isUnfinished
+                                  ? '#1F2937' // Grey text for unplanned lessons
+                                  : getContrastTextColor(
+                                      event.color ? lightenColor(event.color, event.planCompleted ? 0.2 : 0.4) : '#F3F4F6',
+                                      event.color || '#FCD34D'
+                                    ),
                                 wordBreak: 'break-word',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
@@ -904,7 +1032,14 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
                               }
                             </p>
                             {event.isRecurring && (
-                              <Repeat className="h-3 w-3 flex-shrink-0 opacity-60" style={{ color: event.color && event.color !== '#6B7280' ? `${event.color}E6` : '#111827' }} />
+                              <Repeat className="h-3 w-3 flex-shrink-0 opacity-60" style={{ 
+                                color: event.isUnfinished
+                                  ? '#1F2937' // Grey text for unplanned lessons
+                                  : getContrastTextColor(
+                                      event.color || '#F3F4F6',
+                                      event.color || '#FCD34D'
+                                    )
+                              }} />
                             )}
                           </div>
                         </div>
@@ -918,6 +1053,7 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
               );
             })}
             
+            </div>
           </div>
         </div>
       </div>
@@ -1264,11 +1400,25 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
             
             if (!lessons || lessons.length === 0) {
               console.log('🔍 Month Calendar - No lessons data available yet');
+              // Try to find class and subject IDs by name if available
+              let classId = '';
+              let subjectId = '';
+              
+              if (editingLesson.class && classes) {
+                const matchingClass = classes.find(c => c.name === editingLesson.class);
+                classId = matchingClass?.id?.toString() || '';
+              }
+              
+              if (editingLesson.subject && subjects) {
+                const matchingSubject = subjects.find(s => s.name === editingLesson.subject);
+                subjectId = matchingSubject?.id?.toString() || '';
+              }
+              
               return {
                 title: editingLesson.title,
                 timetableSlotIds: editingLesson.isUnfinished && editingLesson.timetableSlotId ? [editingLesson.timetableSlotId.toString()] : [],
-                classId: editingLesson.class,
-                subjectId: editingLesson.subject,
+                classId: classId || undefined,
+                subjectId: subjectId || undefined,
                 date: editingLesson.startTime.toISOString().split('T')[0],
                 lessonPlan: editingLesson.description || '',
                 color: editingLesson.color || '#6B7280',
@@ -1315,13 +1465,13 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
             }
 
             const initialData = {
-              title: editingLesson.title,
+              title: firstLesson?.title || editingLesson.title,
               timetableSlotIds: timetableSlotIds,
               classId: classId,
               subjectId: subjectId,
-              date: editingLesson.startTime.toISOString().split('T')[0],
-              lessonPlan: editingLesson.description || '',
-              color: editingLesson.color || '#6B7280',
+              date: firstLesson?.date || editingLesson.startTime.toISOString().split('T')[0],
+              lessonPlan: firstLesson?.lessonPlan || editingLesson.description || '',
+              color: firstLesson?.color || editingLesson.color || '#6B7280',
             };
             
             console.log('🔍 Month Calendar Lesson Edit Debug:', {
@@ -1457,6 +1607,84 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
             </div>
           </div>
         </div>
+      )}
+
+      {/* Activity Modal */}
+      {editingActivity && (
+        <TimetableActivityModal
+          open={true}
+          onClose={() => setEditingActivity(null)}
+          onSave={async (data: any) => {
+            try {
+              const isEditing = editingActivity.id;
+              const url = '/api/timetable-activities';
+              const method = isEditing ? 'PUT' : 'POST';
+
+              // Prepare the request body
+              const requestBody: any = {
+                ...data,
+              };
+
+              if (isEditing) {
+                // For editing, include the ID and ensure timetableSlotId is included
+                requestBody.id = editingActivity.id;
+                // Don't override timetableSlotId if it's already in data (from modal)
+                if (!requestBody.timetableSlotId) {
+                  requestBody.timetableSlotId = editingActivity.timetableSlotId;
+                }
+              } else {
+                // For creating, include timetableSlotId and ensure required fields
+                requestBody.timetableSlotId = editingActivity.timetableSlotId;
+              }
+
+              const response = await fetch(url, {
+                method,
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody),
+              });
+
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.error || `Failed to ${isEditing ? 'update' : 'create'} activity`;
+                throw new Error(errorMessage);
+              }
+
+              mutateTimetableActivities();
+              setEditingActivity(null);
+            } catch (error) {
+              console.error('Error saving activity:', error);
+              alert(`Error ${editingActivity.id ? 'updating' : 'creating'} activity. Please try again.`);
+            }
+          }}
+          onDelete={async (id: number) => {
+            try {
+              const response = await fetch(`/api/timetable-activities?id=${id}`, {
+                method: 'DELETE',
+              });
+
+              if (!response.ok) {
+                throw new Error('Failed to delete activity');
+              }
+
+              mutateTimetableActivities();
+              setEditingActivity(null);
+            } catch (error) {
+              console.error('Error deleting activity:', error);
+              throw error;
+            }
+          }}
+          mode={editingActivity.id ? 'edit' : 'add'}
+          initialData={editingActivity}
+          slotData={timetableSlots?.find(s => s.id === editingActivity.timetableSlotId) ? {
+            dayOfWeek: editingActivity.dayOfWeek,
+            weekNumber: editingActivity.weekNumber,
+            startTime: timetableSlots.find(s => s.id === editingActivity.timetableSlotId)?.startTime || '',
+            endTime: timetableSlots.find(s => s.id === editingActivity.timetableSlotId)?.endTime || '',
+            label: timetableSlots.find(s => s.id === editingActivity.timetableSlotId)?.label || '',
+          } : undefined}
+        />
       )}
     </div>
   );

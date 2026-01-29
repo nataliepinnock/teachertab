@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { use, useState, Suspense } from 'react';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Home, LogOut } from 'lucide-react';
 import {
@@ -112,9 +113,12 @@ function Header() {
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isDashboardPage = pathname?.startsWith('/dashboard');
+  
   return (
     <section className="flex flex-col min-h-screen">
-      <Header />
+      {!isDashboardPage && <Header />}
       {children}
     </section>
   );

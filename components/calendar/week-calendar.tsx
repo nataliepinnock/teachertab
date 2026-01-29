@@ -10,8 +10,10 @@ import { Event, Lesson, Class, Subject, User } from '@/lib/db/schema';
 import { DndContext, useDraggable, useDroppable } from '@dnd-kit/core';
 import { LessonModal } from '@/components/lesson-modal';
 import { EventModal as EventEditModal } from '@/components/event-modal';
+import { TimetableActivityModal } from '@/components/timetable-activity-modal';
 import { useAcademicCalendar } from '@/lib/hooks/useAcademicCalendar';
 import { isWeekFullyCoveredByHolidays } from '@/lib/utils/academic-calendar';
+import { getCardStyle, getCardClassName, getBorderColorWithOpacity } from '@/lib/utils/card-styles';
 
 // Function to lighten a hex color
 function lightenColor(color: string, amount: number = 0.7): string {
@@ -30,6 +32,80 @@ function lightenColor(color: string, amount: number = 0.7): string {
   return `#${lightenedR.toString(16).padStart(2, '0')}${lightenedG.toString(16).padStart(2, '0')}${lightenedB.toString(16).padStart(2, '0')}`;
 }
 
+// Function to calculate relative luminance (brightness) of a color
+function getLuminance(color: string): number {
+  if (!color || !color.startsWith('#')) return 0.5; // Default to medium brightness
+  
+  const hex = color.slice(1);
+  const r = parseInt(hex.slice(0, 2), 16) / 255;
+  const g = parseInt(hex.slice(2, 4), 16) / 255;
+  const b = parseInt(hex.slice(4, 6), 16) / 255;
+  
+  // Apply gamma correction
+  const [rLinear, gLinear, bLinear] = [r, g, b].map(val => {
+    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+  });
+  
+  // Calculate relative luminance
+  return 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
+}
+
+// Function to darken a hex color
+function darkenColor(color: string, amount: number = 0.3): string {
+  if (!color || !color.startsWith('#')) return color;
+  
+  const hex = color.slice(1);
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  
+  // Darken by reducing RGB values
+  const darkenedR = Math.round(r * (1 - amount));
+  const darkenedG = Math.round(g * (1 - amount));
+  const darkenedB = Math.round(b * (1 - amount));
+  
+  return `#${darkenedR.toString(16).padStart(2, '0')}${darkenedG.toString(16).padStart(2, '0')}${darkenedB.toString(16).padStart(2, '0')}`;
+}
+
+// Function to calculate contrast ratio between two colors (WCAG standard)
+function getContrastRatio(color1: string, color2: string): number {
+  const lum1 = getLuminance(color1);
+  const lum2 = getLuminance(color2);
+  const lighter = Math.max(lum1, lum2);
+  const darker = Math.min(lum1, lum2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+// Function to get high-contrast text color that meets WCAG AA standards (4.5:1 minimum)
+function getContrastTextColor(backgroundColor: string, originalColor?: string): string {
+  // Test both white and dark text options
+  const whiteContrast = getContrastRatio(backgroundColor, '#FFFFFF');
+  const darkGrayContrast = getContrastRatio(backgroundColor, '#1F2937');
+  
+  // WCAG AA requires 4.5:1 contrast ratio for normal text
+  const wcagAA = 4.5;
+  
+  // Check which option meets WCAG AA and has better contrast
+  const whiteMeetsAA = whiteContrast >= wcagAA;
+  const darkMeetsAA = darkGrayContrast >= wcagAA;
+  
+  if (whiteMeetsAA && darkMeetsAA) {
+    // Both meet standards, choose the one with better contrast
+    return whiteContrast > darkGrayContrast ? '#FFFFFF' : '#1F2937';
+  } else if (whiteMeetsAA) {
+    // Only white meets standards
+    return '#FFFFFF';
+  } else if (darkMeetsAA) {
+    // Only dark meets standards
+    return '#1F2937';
+  } else {
+    // Neither meets standards, but choose the better one
+    // Prefer dark text as it's generally more readable
+    return darkGrayContrast > whiteContrast ? '#1F2937' : '#FFFFFF';
+  }
+}
+
+
 // Extended lesson type with timetable slot data from API
 interface LessonWithSlot extends Lesson {
   slotStartTime?: string;
@@ -47,10 +123,30 @@ const fetcher = async (url: string) => {
   const res = await fetch(url);
 
   if (!res.ok) {
-    const error: any = new Error('An error occurred while fetching the data.');
-    // Attach extra info to the error object.
-    error.info = await res.json();
+    // Don't throw errors for auth-related status codes (401, 403)
+    // These are expected when user isn't authenticated yet and are handled gracefully
+    if (res.status === 401 || res.status === 403) {
+      // Return empty array for auth errors - they're handled gracefully by the components
+      return [];
+    }
+    
+    const error: any = new Error(`An error occurred while fetching the data: ${res.status} ${res.statusText}`);
     error.status = res.status;
+    
+    // Try to parse error response as JSON, but handle cases where it might not be JSON
+    try {
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const text = await res.text();
+        if (text) {
+          error.info = JSON.parse(text);
+        }
+      }
+    } catch (parseError) {
+      // If parsing fails, just use the status text
+      error.info = { message: res.statusText || 'Unknown error' };
+    }
+    
     throw error;
   }
 
@@ -60,7 +156,7 @@ const fetcher = async (url: string) => {
 interface CalendarEvent {
   id: string;
   title: string;
-  type: 'lesson' | 'event' | 'holiday';
+  type: 'lesson' | 'event' | 'holiday' | 'activity';
   startTime: Date;
   endTime: Date;
   location?: string;
@@ -78,6 +174,8 @@ interface CalendarEvent {
   isUnfinished?: boolean; // Flag for unfinished lessons from timetable entries
   isRecurring?: boolean; // Whether this is a recurring event
   recurrenceType?: string; // Type of recurrence
+  activityId?: number; // For timetable activities
+  activityType?: string; // 'meeting', 'duty', 'planning', etc.
 }
 
 function EventModal({ event, onClose }: { event: CalendarEvent; onClose: () => void }) {
@@ -171,17 +269,21 @@ interface WeekCalendarProps {
   className?: string;
   currentDate?: Date;
   onDateChange?: (date: Date) => void;
+  cardStyle?: string;
 }
 
 function DraggableEvent({ 
   event, 
   user, 
-  onEdit
+  onEdit,
+  cardStyle = 'classic'
 }: { 
   event: CalendarEvent, 
   user: User,
-  onEdit: (event: CalendarEvent) => void
+  onEdit: (event: CalendarEvent) => void,
+  cardStyle?: string
 }) {
+  const styleConfig = getCardStyle(cardStyle);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: event.id,
     data: { event },
@@ -229,18 +331,38 @@ function DraggableEvent({
     }
   };
 
+  // Apply drag listeners only to outer container, not the clickable inner div
+  const dragListeners = listeners || {};
 
   return (
-    <div ref={setNodeRef} style={{...style, height: '100%', minHeight: '100%', width: '100%', overflow: 'hidden'}} {...listeners} {...attributes}>
+    <div 
+      ref={setNodeRef} 
+      style={{...style, height: '100%', minHeight: '100%', width: '100%', overflow: 'hidden'}} 
+      {...attributes}
+    >
       <div 
-        className="group flex flex-col text-xs transition-colors border-2 rounded-md z-10 overflow-hidden px-1.5 py-1 h-full w-full shadow-sm hover:shadow-md cursor-pointer"
+        className={`${getCardClassName(styleConfig)} ${event.isUnfinished ? 'border-dashed' : 'border-solid'}`}
         style={{
           backgroundColor: event.isUnfinished
-            ? lightenColor(event.color || '#FCD34D', 0.98)
-            : (event.color ? lightenColor(event.color, 0.85) : '#F9FAFB'),
-          borderColor: event.isUnfinished 
-            ? `${event.color || '#FCD34D'}50`
-            : (event.color ? `${event.color}CC` : '#374151'),
+            ? lightenColor(event.color || '#FCD34D', 0.7) // Much lighter background for unplanned
+            : (event.color 
+                ? (event.type === 'lesson' && event.planCompleted 
+                    ? lightenColor(event.color, styleConfig.backgroundOpacity - 0.1) // Muted color for completed lessons (vibrant)
+                    : lightenColor(event.color, styleConfig.backgroundOpacity + 0.35)) // Normal color for incomplete (old pale version)
+                : '#F9FAFB'),
+          borderColor: event.isUnfinished
+            ? darkenColor(event.color || '#FCD34D', 0.2) // Darker border for unplanned (more visible)
+            : (getBorderColorWithOpacity(
+                event.color || '#FCD34D',
+                false,
+                event.type === 'lesson' && event.planCompleted || false,
+                styleConfig
+              ) || (event.color ? `${event.color}AA` : '#374151')),
+          borderStyle: event.isUnfinished ? 'dashed' : 'solid',
+          opacity: event.isUnfinished ? 0.6 : 1, // More faded for unplanned
+          color: event.isUnfinished 
+            ? '#1F2937' // Dark gray for better readability on light backgrounds
+            : undefined, // Use default text color for planned lessons
           transform: 'translateZ(0)'
         }}
         onClick={(e) => {
@@ -258,65 +380,117 @@ function DraggableEvent({
                   event.isUnfinished ? (
                     // For unplanned lessons, show class/subject/room
                     <>
-                      <div 
-                        className="text-xs font-semibold truncate"
-                        style={{ color: event.color && event.color !== '#6B7280' ? `${event.color}E6` : '#111827' }}
-                      >
-                        {user.teacherType === 'primary' ? (event.subject || '') : (event.class || '')}
-                      </div>
-                      
-                      {/* Show both class and subject for unplanned lessons */}
-                      <div 
-                        className="text-xs truncate"
-                        style={{ color: event.color ? `${event.color}CC` : '#374151' }}
-                      >
-                        {user.teacherType === 'primary' ? (event.class || '') : (event.subject || '')}
-                      </div>
-                      
-                      {/* Room */}
-                      {event.location && (
-                        <div className="flex items-center text-xs">
-                          <MapPin className="h-3 w-3 mr-1 flex-shrink-0" style={{ color: event.color ? `${event.color}CC` : '#374151' }} />
-                          <span className="truncate" style={{ color: event.color ? `${event.color}CC` : '#374151' }}>{event.location}</span>
-                        </div>
-                      )}
+                      {(() => {
+                        const textColor = '#1F2937'; // Grey text for unplanned lessons
+                        return (
+                          <>
+                            <div 
+                              className="text-xs font-semibold truncate"
+                              style={{ color: textColor }}
+                            >
+                              {user.teacherType === 'primary' ? (event.subject || '') : (event.class || '')}
+                            </div>
+                            
+                            {/* Show both class and subject for unplanned lessons */}
+                            <div 
+                              className="text-xs truncate"
+                              style={{ color: textColor }}
+                            >
+                              {user.teacherType === 'primary' ? (event.class || '') : (event.subject || '')}
+                            </div>
+                            
+                            {/* Room */}
+                            {event.location && (
+                              <div className="flex items-center text-xs">
+                                <MapPin className="h-3 w-3 mr-1 flex-shrink-0" style={{ color: textColor }} />
+                                <span className="truncate" style={{ color: textColor }}>{event.location}</span>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </>
                   ) : (
                     // For planned lessons, show in priority order based on teacher type
                     <>
                       {/* Primary: Subject, Title, Room | Secondary: Class, Title, Room */}
-                      <div 
-                        className="text-xs font-semibold truncate"
-                        style={{ color: event.color && event.color !== '#6B7280' ? `${event.color}E6` : '#111827' }}
-                      >
-                        {user.teacherType === 'primary' ? (event.subject || '') : (event.class || '')}
-                      </div>
-                      
-                      {/* Title (second priority) */}
-                      <div 
-                        className="text-xs truncate"
-                        style={{ color: event.color ? `${event.color}CC` : '#374151' }}
-                      >
-                        {event.title}
-                      </div>
-                      
-                      {/* Room (third priority) */}
-                      {event.location && (
-                        <div className="flex items-center text-xs">
-                          <MapPin className="h-3 w-3 mr-1 flex-shrink-0" style={{ color: event.color ? `${event.color}CC` : '#374151' }} />
-                          <span className="truncate" style={{ color: event.color ? `${event.color}CC` : '#374151' }}>{event.location}</span>
-                        </div>
-                      )}
+                      {(() => {
+                        const bgColor = event.color ? lightenColor(event.color, event.planCompleted ? 0.2 : 0.4) : '#F9FAFB';
+                        const textColor = getContrastTextColor(bgColor, event.color);
+                        return (
+                          <>
+                            <div 
+                              className="text-xs font-semibold truncate"
+                              style={{ color: textColor }}
+                            >
+                              {user.teacherType === 'primary' ? (event.subject || '') : (event.class || '')}
+                            </div>
+                            
+                            {/* Title (second priority) */}
+                            <div 
+                              className="text-xs truncate"
+                              style={{ color: textColor }}
+                            >
+                              {event.title}
+                            </div>
+                            
+                            {/* Room (third priority) */}
+                            {event.location && (
+                              <div className="flex items-center text-xs">
+                                <MapPin className="h-3 w-3 mr-1 flex-shrink-0" style={{ color: textColor }} />
+                                <span className="truncate" style={{ color: textColor }}>{event.location}</span>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </>
                   )
+                ) : event.type === 'activity' ? (
+                  // For activities, show title and activity type
+                  <>
+                      {(() => {
+                        const bgColor = event.color ? lightenColor(event.color, 0.4) : '#F9FAFB';
+                        const textColor = getContrastTextColor(bgColor, event.color);
+                      return (
+                        <>
+                          <div 
+                            className="text-xs font-semibold truncate"
+                            style={{ color: textColor }}
+                          >
+                            {event.title}
+                          </div>
+                          {event.activityType && (
+                            <div 
+                              className="text-xs truncate"
+                              style={{ color: textColor }}
+                            >
+                              {event.activityType}
+                            </div>
+                          )}
+                          {event.location && (
+                            <div className="flex items-center text-xs">
+                              <MapPin className="h-3 w-3 mr-1 flex-shrink-0" style={{ color: textColor }} />
+                              <span className="truncate" style={{ color: textColor }}>{event.location}</span>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </>
                 ) : (
                   // For events, show only title
                   <div 
                     className="text-xs font-semibold truncate"
-                    style={{ color: event.color && event.color !== '#6B7280' ? `${event.color}E6` : '#111827' }}
+                    style={{ 
+                      color: getContrastTextColor(
+                        event.color ? lightenColor(event.color, 0.4) : '#F9FAFB',
+                        event.color
+                      )
+                    }}
                   >
                     {event.title}
-            </div>
+                  </div>
                 )}
           </div>
             </div>
@@ -327,13 +501,14 @@ function DraggableEvent({
   );
 }
 
-export function WeekCalendar({ onAddEvent, className = '', currentDate: externalCurrentDate, onDateChange }: WeekCalendarProps) {
+export function WeekCalendar({ onAddEvent, className = '', currentDate: externalCurrentDate, onDateChange, cardStyle = 'solid' }: WeekCalendarProps) {
   const [currentDate, setCurrentDate] = useState(externalCurrentDate || new Date());
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [editingLesson, setEditingLesson] = useState<CalendarEvent | null>(null);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [editingHoliday, setEditingHoliday] = useState<CalendarEvent | null>(null);
+  const [editingActivity, setEditingActivity] = useState<any | null>(null);
   const [view, setView] = useState<'week' | 'month'>('week');
   
   const container = useRef<HTMLDivElement>(null);
@@ -350,18 +525,21 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
   const { data: user, error: userError } = useSWR<User>('/api/user', fetcher);
   const { data: timetableEntries, error: timetableEntriesError } = useSWR<any[]>('/api/timetable', fetcher);
   const { data: timetableSlots, error: timetableSlotsError } = useSWR<any[]>('/api/timetable-slots', fetcher);
-  
-  // Debug logging for timetable data
-  console.log('Week Calendar - Timetable data status:', {
-    timetableEntries: timetableEntries?.length || 0,
-    timetableSlots: timetableSlots?.length || 0,
-    timetableEntriesError,
-    timetableSlotsError,
-    user: user?.teacherType || 'no user'
-  });
+  const { data: timetableActivities, mutate: mutateTimetableActivities } = useSWR<any[]>('/api/timetable-activities', fetcher);
   
   // Academic calendar hook for week number calculation
   const { getWeekNumberForDate, activeAcademicYear, holidays: academicHolidays } = useAcademicCalendar();
+  
+  // Memoize academicHolidays to prevent unnecessary re-renders
+  const stableAcademicHolidays = useMemo(() => academicHolidays, [academicHolidays]);
+  
+  // Memoize activeAcademicYear to prevent unnecessary re-renders
+  const stableActiveAcademicYear = useMemo(() => activeAcademicYear, [
+    activeAcademicYear?.id,
+    activeAcademicYear?.startDate,
+    activeAcademicYear?.endDate,
+    activeAcademicYear?.isActive
+  ]);
   
   // Delete functions
   const handleDeleteLesson = async (event: CalendarEvent) => {
@@ -533,32 +711,146 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
       date.setDate(start.getDate() + i);
       return date;
     });
-    // Debug logging only in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Week dates:', dates.map(d => d.toDateString()));
-    }
     return dates;
   }, [currentDate]);
 
+  // Create a stable string representation of weekDates for dependency tracking
+  const weekDatesKey = useMemo(() => {
+    return weekDates.map(d => d.toISOString().split('T')[0]).join(',');
+  }, [weekDates]);
+
+  // Use ref to track previous events to prevent unnecessary updates
+  const previousEventsRef = useRef<string>('');
+  
   // This effect will initialize and update the calendar events state
   // when the data from SWR changes.
   useEffect(() => {
-    if (!events || !lessons || !classes || !subjects || !holidays) {
-      setCalendarEvents([]);
-      return;
-    }
-
+    // Initialize empty array - we'll build events from available data
     const initialEvents: CalendarEvent[] = [];
     
-    // Group lessons by title, class, subject, and date
-    const lessonGroups = new Map<string, any[]>();
+    // Process activities FIRST - they don't depend on events/lessons/classes/subjects
+    // This ensures activities show even if other data is still loading
+    const slotsWithActivities = new Set<number>();
+    console.log('Week Calendar - Processing activities (FIRST):', {
+      hasActivities: !!timetableActivities,
+      activitiesCount: timetableActivities?.length || 0,
+      hasSlots: !!timetableSlots,
+      slotsCount: timetableSlots?.length || 0,
+      weekDates: weekDates.map(d => d.toISOString().split('T')[0])
+    });
     
-    lessons.forEach(lesson => {
+    if (timetableActivities && timetableSlots) {
+      weekDates.forEach(date => {
+        const dayOfWeek = new Intl.DateTimeFormat('en-GB', { weekday: 'long' }).format(date);
+        const weekNumber = getWeekNumberForDate(date);
+        
+        timetableActivities.forEach(activity => {
+          // Normalize dayOfWeek for comparison
+          const activityDayOfWeek = (activity.dayOfWeek || '').toLowerCase().trim();
+          const currentDayOfWeekLower = (dayOfWeek || '').toLowerCase().trim();
+          
+          // Normalize weekNumber for comparison
+          const activityWeekNumber = activity.weekNumber != null 
+            ? (typeof activity.weekNumber === 'string' ? parseInt(activity.weekNumber) : activity.weekNumber)
+            : 1;
+          // If weekNumber is null (outside academic year), don't match - activities should only show within academic year
+          const currentWeekNumberNum = weekNumber != null 
+            ? (typeof weekNumber === 'string' ? parseInt(weekNumber) : weekNumber)
+            : null;
+          
+          // Debug: Log the raw values before comparison
+          const rawActivityDayOfWeek = activity.dayOfWeek;
+          const rawCurrentDayOfWeek = dayOfWeek;
+          
+          const dayMatches = activityDayOfWeek === currentDayOfWeekLower;
+          // Activities must match the exact week number they're assigned to (both must be non-null)
+          const weekMatches = currentWeekNumberNum !== null && activityWeekNumber === currentWeekNumberNum;
+          const hasSlotId = !!activity.timetableSlotId;
+          
+          const shouldMatch = hasSlotId && dayMatches && weekMatches;
+          
+          console.log('Week Calendar - Checking activity match:', {
+            activityId: activity.id,
+            activityTitle: activity.title,
+            rawActivityDayOfWeek,
+            rawCurrentDayOfWeek,
+            activityDayOfWeek,
+            currentDayOfWeekLower,
+            dayMatches,
+            activityWeekNumber,
+            currentWeekNumberNum,
+            weekMatches,
+            hasSlotId,
+            date: date.toISOString().split('T')[0],
+            slotId: activity.timetableSlotId,
+            shouldMatch,
+            reason: !hasSlotId ? 'no slotId' : !dayMatches ? 'day mismatch' : !weekMatches ? 'week mismatch' : 'MATCH!'
+          });
+          
+          // Match if dayOfWeek matches and weekNumber matches
+          if (shouldMatch) {
+            slotsWithActivities.add(activity.timetableSlotId);
+            
+            const slot = timetableSlots.find(s => s.id === activity.timetableSlotId);
+            if (slot) {
+              const dateStr = date.toISOString().split('T')[0];
+              const [startHour, startMinute] = slot.startTime.split(':').map(Number);
+              const [endHour, endMinute] = slot.endTime.split(':').map(Number);
+              
+              const startTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), startHour, startMinute);
+              const endTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), endHour, endMinute);
+              
+              console.log('Week Calendar - ✓ Adding activity event:', {
+                id: `activity-${activity.id}-${dateStr}`,
+                title: activity.title,
+                date: dateStr,
+                startTime: startTime.toISOString(),
+                endTime: endTime.toISOString()
+              });
+              
+              initialEvents.push({
+                id: `activity-${activity.id}-${dateStr}`,
+                title: activity.title || 'Untitled Activity',
+                type: 'activity' as const,
+                startTime: startTime,
+                endTime: endTime,
+                color: (activity.color && activity.color.trim()) || '#8B5CF6',
+                location: activity.location || undefined,
+                description: activity.description || activity.notes || undefined,
+                allDay: false,
+                activityId: activity.id,
+                activityType: activity.activityType,
+                timetableSlotId: activity.timetableSlotId,
+              });
+            } else {
+              console.log('Week Calendar - ✗ Slot not found for activity:', {
+                activityId: activity.id,
+                slotId: activity.timetableSlotId
+              });
+            }
+          }
+        });
+      });
+    } else {
+      console.log('Week Calendar - Activities or slots not available:', {
+        hasActivities: !!timetableActivities,
+        hasSlots: !!timetableSlots
+      });
+    }
+    
+    console.log('Week Calendar - Activities processed. Total events so far:', initialEvents.length);
+    
+    // Process lessons only if data is available
+    if (lessons && classes && subjects) {
+      // Group lessons by title, class, subject, and date
+      const lessonGroups = new Map<string, any[]>();
+      
+      lessons.forEach(lesson => {
       const lessonDate = new Date(lesson.date);
       if (lessonDate >= weekDates[0] && lessonDate <= weekDates[6]) {
         // If skipHolidayWeeks is enabled, check if the week is fully covered by holidays
-        if (activeAcademicYear?.skipHolidayWeeks === 1 && academicHolidays) {
-          if (isWeekFullyCoveredByHolidays(lessonDate, academicHolidays)) {
+        if (stableActiveAcademicYear?.skipHolidayWeeks === 1 && stableAcademicHolidays) {
+          if (isWeekFullyCoveredByHolidays(lessonDate, stableAcademicHolidays)) {
             // Skip this lesson - it's in a fully covered holiday week
             return;
           }
@@ -636,9 +928,12 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
         lessonIds: groupLessons.map(l => l.id),
         planCompleted: Boolean(firstLesson.planCompleted),
       });
-    });
+      });
+    }
 
-    events.forEach(event => {
+    // Process events only if data is available
+    if (events) {
+      events.forEach(event => {
       const eventDate = new Date(event.startTime);
       // Normalize dates to start of day for comparison
       const eventDateNormalized = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
@@ -667,10 +962,12 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
           endDateStr,
         });
       }
-    });
+      });
+    }
 
-    // Process holidays
-    holidays.forEach(holiday => {
+    // Process holidays only if data is available
+    if (holidays) {
+      holidays.forEach(holiday => {
       const holidayStartDate = new Date(holiday.startDate);
       const holidayEndDate = new Date(holiday.endDate);
       
@@ -701,9 +998,10 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
           endDateStr,
         });
       }
-    });
+      });
+    }
 
-    // Generate unfinished lessons from timetable entries
+    // Generate unfinished lessons from timetable entries (only if data is available)
     console.log('Timetable data check:', { 
       timetableEntries: timetableEntries?.length || 0, 
       timetableSlots: timetableSlots?.length || 0,
@@ -712,8 +1010,18 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
       timetableSlotsError: timetableSlotsError
     });
     
-    if (timetableEntriesError || timetableSlotsError) {
-      console.error('Timetable data errors:', { timetableEntriesError, timetableSlotsError });
+    // Only log errors if they actually exist and have meaningful content
+    // Simplified approach: only log if we have actual Error instances or error messages
+    if (timetableEntriesError instanceof Error) {
+      console.error('Timetable entries error:', timetableEntriesError);
+    } else if (timetableEntriesError?.message && typeof timetableEntriesError.message === 'string' && timetableEntriesError.message.trim().length > 0) {
+      console.error('Timetable entries error:', timetableEntriesError);
+    }
+    
+    if (timetableSlotsError instanceof Error) {
+      console.error('Timetable slots error:', timetableSlotsError);
+    } else if (timetableSlotsError?.message && typeof timetableSlotsError.message === 'string' && timetableSlotsError.message.trim().length > 0) {
+      console.error('Timetable slots error:', timetableSlotsError);
     }
     
     if (!timetableEntries || timetableEntries.length === 0) {
@@ -724,20 +1032,22 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
       console.log('No timetable slots found - user needs to create timetable slots first');
     }
 
-    // Generate unfinished lessons from timetable entries
+    // Activities are already processed above, slotsWithActivities is already defined
+
+    // Generate unfinished lessons from timetable entries (but skip slots that have activities)
     if (timetableEntries && timetableSlots) {
       weekDates.forEach(date => {
         const dateStr = date.toISOString().split('T')[0];
         
         // If skipHolidayWeeks is enabled, check if the week is fully covered by holidays
-        if (activeAcademicYear?.skipHolidayWeeks === 1 && academicHolidays) {
-          if (isWeekFullyCoveredByHolidays(date, academicHolidays)) {
+        if (stableActiveAcademicYear?.skipHolidayWeeks === 1 && stableAcademicHolidays) {
+          if (isWeekFullyCoveredByHolidays(date, stableAcademicHolidays)) {
             // Skip generating unfinished lessons for this day - it's in a fully covered holiday week
             return;
           }
         }
         
-        const dayOfWeek = date.toLocaleDateString('en-GB', { weekday: 'long' });
+        const dayOfWeek = new Intl.DateTimeFormat('en-GB', { weekday: 'long' }).format(date);
         const weekNumber = getWeekNumberForDate(date);
         
         // Find timetable entries for this day and week
@@ -748,7 +1058,7 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
         
         // Track which slots already have lessons
         const lessonsBySlotAndDate = new Set(
-          lessons
+          (lessons || [])
             .filter(lesson => lesson.timetableSlotId && lesson.date === dateStr)
             .map(lesson => `${dateStr}-${lesson.timetableSlotId}`)
         );
@@ -759,59 +1069,96 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
           const hasLesson = lessonsBySlotAndDate.has(key);
           
           if (!hasLesson) {
-            // Create an unfinished lesson event
+            // Skip if this slot has an activity (activities are already added above)
+            if (slotsWithActivities.has(entry.timetableSlotId)) {
+              return;
+            }
+            
             const slot = timetableSlots.find(s => s.id === entry.timetableSlotId);
             if (!slot) return;
             
-            const classInfo = classes.find(c => c.id === entry.classId);
-            const subjectInfo = subjects.find(s => s.id === entry.subjectId);
-            
-            const [startHour, startMinute] = slot.startTime.split(':').map(Number);
-            const [endHour, endMinute] = slot.endTime.split(':').map(Number);
-            
-            const startTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), startHour, startMinute);
-            const endTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), endHour, endMinute);
-            
-            // Create title based on teacher type
-            const title = user?.teacherType === 'primary' 
-              ? `${subjectInfo?.name || 'Subject'} - ${classInfo?.name || 'Class'}`
-              : `${classInfo?.name || 'Class'} - ${subjectInfo?.name || 'Subject'}`;
-            
-            const unfinishedLesson = {
-              id: `unfinished-lesson-${dateStr}-${entry.timetableSlotId}`,
-              title: title,
-              type: 'lesson' as const,
-              startTime: startTime,
-              endTime: endTime,
-              location: entry.room || undefined,
-              description: undefined,
-              class: classInfo?.name || undefined,
-              subject: subjectInfo?.name || undefined,
-              color: subjectInfo?.color || classInfo?.color || '#D1D5DB',
-              allDay: false,
-              lessonIds: [], // Empty array indicates this is an unfinished lesson
-              isUnfinished: true, // Flag to indicate this is an unfinished lesson
-              timetableSlotId: entry.timetableSlotId,
-            };
-            initialEvents.push(unfinishedLesson);
+            // Only create unfinished lesson if there's a class or subject assigned
+            if (entry.classId || entry.subjectId) {
+              const classInfo = classes?.find(c => c.id === entry.classId);
+              const subjectInfo = subjects?.find(s => s.id === entry.subjectId);
+              
+              const [startHour, startMinute] = slot.startTime.split(':').map(Number);
+              const [endHour, endMinute] = slot.endTime.split(':').map(Number);
+              
+              const startTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), startHour, startMinute);
+              const endTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), endHour, endMinute);
+              
+              // Create title based on teacher type
+              const title = user?.teacherType === 'primary' 
+                ? `${subjectInfo?.name || 'Subject'} - ${classInfo?.name || 'Class'}`
+                : `${classInfo?.name || 'Class'} - ${subjectInfo?.name || 'Subject'}`;
+              
+              const unfinishedLesson = {
+                id: `unfinished-lesson-${dateStr}-${entry.timetableSlotId}`,
+                title: title,
+                type: 'lesson' as const,
+                startTime: startTime,
+                endTime: endTime,
+                location: entry.room || undefined,
+                description: undefined,
+                class: classInfo?.name || undefined,
+                subject: subjectInfo?.name || undefined,
+                color: subjectInfo?.color || classInfo?.color || '#D1D5DB',
+                allDay: false,
+                lessonIds: [], // Empty array indicates this is an unfinished lesson
+                isUnfinished: true, // Flag to indicate this is an unfinished lesson
+                timetableSlotId: entry.timetableSlotId,
+              };
+              initialEvents.push(unfinishedLesson);
+            }
+            // If entry has no classId/subjectId:
+            // - If there's an activity, it's already shown above (added first)
+            // - If there's no activity, don't create anything (slot is hidden)
           }
         });
       });
     }
 
+    // Debug logging
+    const activityEvents = initialEvents.filter(e => e.type === 'activity');
+    console.log('Week Calendar - Final event summary:', {
+      totalEvents: initialEvents.length,
+      activityEvents: activityEvents.length,
+      activities: activityEvents.map(e => ({
+        id: e.id,
+        title: e.title,
+        startTime: e.startTime.toISOString(),
+        endTime: e.endTime.toISOString(),
+        dayOfWeek: new Intl.DateTimeFormat('en-GB', { weekday: 'long' }).format(e.startTime)
+      })),
+      eventTypes: initialEvents.map(e => e.type)
+    });
+    
     // Debug logging only in development
     if (process.env.NODE_ENV === 'development') {
       console.log('Calendar events created:', initialEvents);
     }
-    setCalendarEvents(initialEvents);
+    
+    // Create a stable string representation of events to compare
+    const eventsKey = JSON.stringify(initialEvents.map(e => ({
+      id: e.id,
+      type: e.type,
+      startTime: e.startTime.toISOString(),
+      endTime: e.endTime.toISOString()
+    })));
+    
+    // Only update state if events actually changed
+    if (previousEventsRef.current !== eventsKey) {
+      previousEventsRef.current = eventsKey;
+      setCalendarEvents(initialEvents);
+    }
 
-  }, [events, lessons, classes, subjects, holidays, weekDates, timetableEntries, timetableSlots, user, getWeekNumberForDate, activeAcademicYear, academicHolidays]);
+  }, [events, lessons, classes, subjects, holidays, weekDatesKey, timetableEntries, timetableSlots, timetableActivities, user, stableActiveAcademicYear, stableAcademicHolidays]);
 
   const allDayEvents = useMemo(() => {
     const allDay = calendarEvents.filter(event => event.allDay);
     // Debug logging only in development
     if (process.env.NODE_ENV === 'development') {
-      console.log('All-day events:', allDay);
     }
     return allDay;
   }, [calendarEvents]);
@@ -954,11 +1301,11 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                 {weekDates.map((date, index) => (
                   <button key={index} type="button" className="flex flex-col items-center pt-2 pb-3">
                     {date.toLocaleDateString('en-GB', { weekday: 'short' }).charAt(0)}{' '}
-                    <span className={`mt-1 flex h-8 w-8 items-center justify-center font-semibold ${
-                      date.toDateString() === new Date().toDateString()
-                        ? 'rounded-full bg-indigo-600 text-white'
-                        : 'text-gray-900'
-                    }`}>
+                        <span className={`mt-1 flex h-8 w-8 items-center justify-center font-semibold ${
+                          date.toDateString() === new Date().toDateString()
+                            ? 'rounded-full bg-blue-600 text-white'
+                            : 'text-gray-900'
+                        }`}>
                       {date.getDate()}
                     </span>
                   </button>
@@ -974,7 +1321,7 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                         {date.toLocaleDateString('en-GB', { weekday: 'short' })}{' '}
                         <span className={`ml-1.5 flex h-8 w-8 items-center justify-center font-semibold ${
                           date.toDateString() === new Date().toDateString()
-                            ? 'rounded-full bg-indigo-600 text-white'
+                            ? 'rounded-full bg-blue-600 text-white'
                             : 'text-gray-900'
                         }`}>
                           {date.getDate()}
@@ -1151,10 +1498,10 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                           return (
                             <div
                               key={event.id}
-                              className={`group absolute flex items-center rounded-lg text-xs/5 border-2 pointer-events-auto ${event.type === 'lesson' && !event.planCompleted ? 'opacity-50 grayscale' : ''}`}
+                              className={`group absolute flex items-center rounded-lg text-xs/5 border-2 pointer-events-auto`}
                               style={{
-                                backgroundColor: event.color ? lightenColor(event.color, 0.8) : '#F3F4F6',
-                                borderColor: event.color ? `${event.color}CC` : '#374151',
+                                backgroundColor: event.color || '#6B7280',
+                                borderColor: event.color || '#6B7280',
                                 left: `${leftPercent}%`,
                                 width: `calc(${widthPercent}% - 0.5rem)`,
                                 top: `${stackIndex * 1.4}rem`,
@@ -1166,11 +1513,33 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                               }}
                             >
                               <button
-                                onClick={() => setSelectedEvent(event)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (event.type === 'lesson') {
+                                    setEditingLesson(event);
+                                  } else if (event.type === 'event') {
+                                    setEditingEvent(event);
+                                  } else if (event.type === 'holiday') {
+                                    setEditingHoliday(event);
+                                  } else if (event.type === 'activity') {
+                                    // Find the activity data
+                                    const activity = timetableActivities?.find(a => a.id === event.activityId);
+                                    if (activity) {
+                                      setEditingActivity(activity);
+                                    }
+                                  } else {
+                                    setSelectedEvent(event);
+                                  }
+                                }}
                                 className="flex-1 min-w-0 text-left px-2 py-1"
                               >
                                 <div className="flex items-center gap-1 min-w-0 flex-auto">
-                                  <p className="truncate font-semibold" style={{ color: event.color && event.color !== '#6B7280' ? `${event.color}E6` : '#111827' }}>
+                                  <p className="truncate font-semibold" style={{ 
+                      color: getContrastTextColor(
+                        event.color || '#F3F4F6',
+                        event.color
+                      )
+                                  }}>
                                     {event.title}
                                     {event.isMultiDay && event.startDateStr && event.endDateStr && (
                                       <span className="ml-1 opacity-75 text-xs font-normal">
@@ -1179,7 +1548,12 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                                     )}
                                   </p>
                                   {event.isRecurring && (
-                                    <Repeat className="h-3 w-3 flex-shrink-0 opacity-60" style={{ color: event.color && event.color !== '#6B7280' ? `${event.color}E6` : '#111827' }} />
+                                    <Repeat className="h-3 w-3 flex-shrink-0 opacity-60" style={{ 
+                      color: getContrastTextColor(
+                        event.color || '#F3F4F6',
+                        event.color
+                      )
+                                    }} />
                                   )}
                                 </div>
                               </button>
@@ -1189,8 +1563,8 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                                   variant="ghost"
                                   className="h-4 w-4 p-0 hover:opacity-80"
                                   style={{
-                                    backgroundColor: event.color ? lightenColor(event.color, 0.7) : '#E5E7EB',
-                                    color: event.color ? `${event.color}CC` : '#374151'
+                                    backgroundColor: event.color || '#E5E7EB',
+                                    color: getContrastTextColor(event.color || '#E5E7EB', event.color)
                                   }}
                                   onClick={e => {
                                     e.stopPropagation();
@@ -1211,8 +1585,8 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                                   variant="ghost"
                                   className="h-4 w-4 p-0 hover:opacity-80"
                                   style={{
-                                    backgroundColor: event.color ? lightenColor(event.color, 0.7) : '#E5E7EB',
-                                    color: event.color ? `${event.color}CC` : '#374151'
+                                    backgroundColor: event.color || '#E5E7EB',
+                                    color: getContrastTextColor(event.color || '#E5E7EB', event.color)
                                   }}
                                   onClick={e => {
                                     e.stopPropagation();
@@ -1368,7 +1742,8 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                     >
                       <DraggableEvent 
                         event={event} 
-                        user={user} 
+                        user={user}
+                        cardStyle={cardStyle}
                         onEdit={(event) => {
                           if (event.type === 'lesson') {
                             setEditingLesson(event);
@@ -1376,6 +1751,12 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                             setEditingEvent(event);
                           } else if (event.type === 'holiday') {
                             setEditingHoliday(event);
+                          } else if (event.type === 'activity') {
+                            // Find the activity data
+                            const activity = timetableActivities?.find(a => a.id === event.activityId);
+                            if (activity) {
+                              setEditingActivity(activity);
+                            }
                           }
                         }}
                       />
@@ -1406,7 +1787,8 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
         {editingLesson && lessons && (
           <LessonModal
             isOpen={true}
-            mode={editingLesson.isUnfinished ? "add" : "edit"}
+            mode={editingLesson.isUnfinished && (!editingLesson.lessonIds || editingLesson.lessonIds.length === 0) ? "add" : "edit"}
+            isUnfinished={editingLesson.isUnfinished}
             onClose={() => setEditingLesson(null)}
             onDelete={async (data) => {
               try {
@@ -1431,10 +1813,12 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
               }
             }}
             onSave={async (data) => {
+              console.log('🔍 Week Calendar - onSave called with data:', data);
               try {
                 // For editing, we need to delete the old lessons and create new ones
                 // Skip deletion for unfinished lessons (they don't have existing lessons to delete)
                 if (!editingLesson.isUnfinished && editingLesson.lessonIds && editingLesson.lessonIds.length > 0) {
+                  console.log('🔍 Week Calendar - Deleting existing lessons:', editingLesson.lessonIds);
                   // Delete existing lessons
                 const deletePromises = editingLesson.lessonIds.map(async (lessonId) => {
                   const response = await fetch(`/api/lessons?id=${lessonId}`, {
@@ -1445,49 +1829,70 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                   }
                 });
                   await Promise.all(deletePromises);
+                  console.log('🔍 Week Calendar - Successfully deleted existing lessons');
                 }
 
                 // Create new lessons with the updated data
-                const { timetableSlotIds, ...baseLessonData } = data;
+                const { timetableSlotIds, planCompleted, ...baseLessonData } = data;
                 console.log('🔍 Week Calendar - Creating new lessons with data:', {
                   timetableSlotIds,
                   baseLessonData,
-                  data
+                  planCompleted,
+                  planCompletedType: typeof planCompleted,
+                  fullData: data
                 });
                 
-                if (timetableSlotIds && timetableSlotIds.length > 0) {
-                  const lessonPromises = timetableSlotIds.map(async (slotId: string) => {
-                    const lessonData = {
-                      ...baseLessonData,
-                      timetableSlotId: slotId,
-                    };
-                    
-                    console.log('🔍 Week Calendar - Creating lesson for slot:', slotId, 'with data:', lessonData);
-                    
-                    const response = await fetch('/api/lessons', {
-                      method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                      body: JSON.stringify(lessonData),
-                });
-
-                if (!response.ok) {
-                      const errorText = await response.text();
-                      console.error('🔍 Week Calendar - Error creating lesson for slot:', slotId, 'Response:', response.status, errorText);
-                      throw new Error(`Failed to create lesson for slot ${slotId}: ${errorText}`);
-                    }
-                    return response.json();
-                  });
-                  await Promise.all(lessonPromises);
+                if (!timetableSlotIds || timetableSlotIds.length === 0) {
+                  console.error('🔍 Week Calendar - No timetableSlotIds provided!');
+                  alert('Error: No timetable slots selected. Please select at least one slot.');
+                  return;
                 }
+                
+                const lessonPromises = timetableSlotIds.map(async (slotId: string) => {
+                  // Ensure planCompleted is properly converted to 0 or 1
+                  const planCompletedValue = planCompleted === true || planCompleted === 1 ? 1 : 0;
+                  const lessonData = {
+                    ...baseLessonData,
+                    timetableSlotId: slotId,
+                    planCompleted: planCompletedValue,
+                  };
+                  
+                  console.log('🔍 Week Calendar - Creating lesson for slot:', slotId, 'with data:', lessonData);
+                  
+                  const response = await fetch('/api/lessons', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(lessonData),
+                  });
+
+                  if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('🔍 Week Calendar - Error creating lesson for slot:', slotId, 'Response:', response.status, errorText);
+                    console.error('🔍 Week Calendar - Request data that failed:', JSON.stringify(lessonData, null, 2));
+                    throw new Error(`Failed to create lesson for slot ${slotId}: ${errorText}`);
+                  }
+                  const result = await response.json();
+                  console.log('🔍 Week Calendar - Successfully created lesson:', result);
+                  return result;
+                });
+                
+                const results = await Promise.all(lessonPromises);
+                console.log('🔍 Week Calendar - All lessons created successfully:', results);
 
                 // Refresh data
-                mutate('/api/lessons');
+                await mutate('/api/lessons');
                 setEditingLesson(null);
+                console.log('🔍 Week Calendar - Data refreshed and modal closed');
               } catch (error) {
-                console.error('Error updating lesson:', error);
-                alert('Error updating lesson. Please try again.');
+                console.error('🔍 Week Calendar - Error in onSave:', error);
+                if (error instanceof Error) {
+                  alert(`Error saving lesson: ${error.message}`);
+                } else {
+                  alert('Error updating lesson. Please check the console for details.');
+                }
+                throw error; // Re-throw to let the modal handle it
               }
             }}
             initialData={(() => {
@@ -1496,12 +1901,16 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
               const firstLesson = matchingLessons[0];
               
               // For unfinished lessons, use the timetableSlotId directly
-              const timetableSlotIds = editingLesson.isUnfinished && editingLesson.timetableSlotId
-                ? [editingLesson.timetableSlotId.toString()]
-                : (lessonIds ? 
-                    matchingLessons
-                      .map(lesson => lesson.timetableSlotId?.toString() || '')
-                      .filter(id => id) : []);
+              let timetableSlotIds: string[] = [];
+              if (editingLesson.isUnfinished && editingLesson.timetableSlotId) {
+                timetableSlotIds = [editingLesson.timetableSlotId.toString()];
+              } else if (lessonIds && lessonIds.length > 0 && matchingLessons.length > 0) {
+                // For regular lessons, get all unique timetable slot IDs from matching lessons
+                const slotIds = matchingLessons
+                  .map(lesson => lesson.timetableSlotId?.toString())
+                  .filter((id): id is string => Boolean(id));
+                timetableSlotIds = [...new Set(slotIds)]; // Remove duplicates
+              }
               
               // For unfinished lessons, we need to map class and subject names to IDs
               let classId = '';
@@ -1522,13 +1931,15 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
               }
               
               const initialData = {
-                title: editingLesson.title,
+                // For unfinished lessons, don't populate title from timetable - let user enter their own
+                title: editingLesson.isUnfinished ? '' : (firstLesson?.title || editingLesson.title || ''),
                 timetableSlotIds: timetableSlotIds,
                 classId: classId,
                 subjectId: subjectId,
-                date: editingLesson.startTime.toISOString().split('T')[0],
-                lessonPlan: editingLesson.description || '',
-                color: editingLesson.color || '#6B7280',
+                date: firstLesson?.date || editingLesson.startTime.toISOString().split('T')[0],
+                lessonPlan: firstLesson?.lessonPlan || editingLesson.description || '',
+                color: firstLesson?.color || editingLesson.color || '#6B7280',
+                planCompleted: firstLesson?.planCompleted || editingLesson.planCompleted || false,
               };
               
               console.log('🔍 Week Calendar Lesson Edit Debug:', {
@@ -1536,6 +1947,7 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                 lessonIds: lessonIds,
                 matchingLessons: matchingLessons,
                 firstLesson: firstLesson,
+                timetableSlotIds: timetableSlotIds,
                 classes: classes,
                 subjects: subjects,
                 initialData: initialData
@@ -1689,6 +2101,84 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
               </div>
             </div>
           </div>
+        )}
+
+        {/* Activity Modal */}
+        {editingActivity && (
+          <TimetableActivityModal
+            open={true}
+            onClose={() => setEditingActivity(null)}
+            onSave={async (data: any) => {
+              try {
+                const isEditing = editingActivity.id;
+                const url = '/api/timetable-activities';
+                const method = isEditing ? 'PUT' : 'POST';
+
+                // Prepare the request body
+                const requestBody: any = {
+                  ...data,
+                };
+
+                if (isEditing) {
+                  // For editing, include the ID and ensure timetableSlotId is included
+                  requestBody.id = editingActivity.id;
+                  // Don't override timetableSlotId if it's already in data (from modal)
+                  if (!requestBody.timetableSlotId) {
+                    requestBody.timetableSlotId = editingActivity.timetableSlotId;
+                  }
+                } else {
+                  // For creating, include timetableSlotId and ensure required fields
+                  requestBody.timetableSlotId = editingActivity.timetableSlotId;
+                }
+
+                const response = await fetch(url, {
+                  method,
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(requestBody),
+                });
+
+                if (!response.ok) {
+                  const errorData = await response.json().catch(() => ({}));
+                  const errorMessage = errorData.error || `Failed to ${isEditing ? 'update' : 'create'} activity`;
+                  throw new Error(errorMessage);
+                }
+
+                mutateTimetableActivities();
+                setEditingActivity(null);
+              } catch (error) {
+                console.error('Error saving activity:', error);
+                alert(`Error ${editingActivity.id ? 'updating' : 'creating'} activity. Please try again.`);
+              }
+            }}
+            onDelete={async (id: number) => {
+              try {
+                const response = await fetch(`/api/timetable-activities?id=${id}`, {
+                  method: 'DELETE',
+                });
+
+                if (!response.ok) {
+                  throw new Error('Failed to delete activity');
+                }
+
+                mutateTimetableActivities();
+                setEditingActivity(null);
+              } catch (error) {
+                console.error('Error deleting activity:', error);
+                throw error;
+              }
+            }}
+            mode={editingActivity.id ? 'edit' : 'add'}
+            initialData={editingActivity}
+            slotData={timetableSlots?.find(s => s.id === editingActivity.timetableSlotId) ? {
+              dayOfWeek: editingActivity.dayOfWeek,
+              weekNumber: editingActivity.weekNumber,
+              startTime: timetableSlots.find(s => s.id === editingActivity.timetableSlotId)?.startTime || '',
+              endTime: timetableSlots.find(s => s.id === editingActivity.timetableSlotId)?.endTime || '',
+              label: timetableSlots.find(s => s.id === editingActivity.timetableSlotId)?.label || '',
+            } : undefined}
+          />
         )}
       </div>
     </DndContext>

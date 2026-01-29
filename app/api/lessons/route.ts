@@ -78,9 +78,9 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { classId, subjectId, timetableSlotId, title, date, lessonPlan, color } = body;
+    const { classId, subjectId, timetableSlotId, title, date, lessonPlan, color, planCompleted } = body;
     
-    console.log('Creating lesson with data:', { classId, subjectId, timetableSlotId, title, date, lessonPlan, color, userId: user.id });
+    console.log('Creating lesson with data:', { classId, subjectId, timetableSlotId, title, date, lessonPlan, color, planCompleted, userId: user.id });
 
     // Validate required fields
     if (!classId || !subjectId || !timetableSlotId || !title || !date) {
@@ -124,6 +124,10 @@ export async function POST(request: Request) {
     }
 
     // Create the new lesson
+    // Handle both boolean and number (0/1) values for planCompleted
+    const planCompletedValue = planCompleted !== undefined && planCompleted !== null 
+      ? (planCompleted === true || planCompleted === 1 ? 1 : 0) 
+      : 0;
     console.log('Inserting lesson with values:', {
       userId: user.id,
       classId: parseInt(classId),
@@ -132,7 +136,7 @@ export async function POST(request: Request) {
       title,
       date: date,
       lessonPlan: lessonPlan || null,
-      planCompleted: 0,
+      planCompleted: planCompletedValue,
       color: color || null,
     });
 
@@ -146,7 +150,7 @@ export async function POST(request: Request) {
         title,
         date: date,
         lessonPlan: lessonPlan || null,
-        planCompleted: 0,
+        planCompleted: planCompletedValue,
         color: color || null,
       })
       .returning();
