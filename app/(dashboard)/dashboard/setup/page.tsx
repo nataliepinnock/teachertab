@@ -6,6 +6,7 @@ import { Users, BookOpen, Clock, ArrowRight, Settings, CheckCircle, GraduationCa
 import Link from 'next/link';
 import { User } from '@/lib/db/schema';
 import useSWR from 'swr';
+import { getLocalizedTerm } from '@/lib/utils/localization';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -28,6 +29,9 @@ export default function SetupPage() {
   const isSubjectsComplete = subjectsArray.length > 0;
   const isTimetableComplete = timetableSlotsArray.length > 0;
   
+  const timetableLabel = getLocalizedTerm(user?.location, 'timetable');
+  const setUpTimetableLabel = getLocalizedTerm(user?.location, 'setUpTimetable');
+  
   const setupOptions = [
     {
       title: 'Academic Year',
@@ -43,8 +47,8 @@ export default function SetupPage() {
       icon: Users,
       href: '/dashboard/setup/classes',
       isComplete: isClassesComplete,
-      features: user?.teacherType === 'secondary' 
-        ? ['Student counts', 'Class notes', 'Color coding']
+      features: user?.colorPreference === 'class'
+        ? ['Student counts', 'Class notes', 'Color coding', 'Group management']
         : ['Student counts', 'Class notes', 'Group management']
     },
     {
@@ -53,13 +57,13 @@ export default function SetupPage() {
       icon: BookOpen,
       href: '/dashboard/setup/subjects',
       isComplete: isSubjectsComplete,
-      features: user?.teacherType === 'primary'
+      features: user?.colorPreference === 'subject'
         ? ['Color coding', 'Curriculum organization', 'Subject management']
         : ['Curriculum organization', 'Subject management', 'Learning objectives']
     },
     {
-      title: 'Timetable',
-      description: 'Set up your weekly timetable structure and time slots',
+      title: timetableLabel,
+      description: `${setUpTimetableLabel} structure and time slots`,
       icon: Clock,
       href: '/dashboard/setup/timetable',
       isComplete: isTimetableComplete,
@@ -112,7 +116,7 @@ export default function SetupPage() {
               <div className="hidden sm:block text-gray-300 text-lg">→</div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-[#fbae36] rounded-full shadow-sm"></div>
-                <span className="font-medium">3. Build Timetable</span>
+                <span className="font-medium">3. {getLocalizedTerm(user?.location, 'buildTimetable')}</span>
               </div>
             </div>
           </div>

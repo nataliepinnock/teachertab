@@ -105,7 +105,6 @@ function QuickAddButtons() {
             setShowLessonModal(false);
             mutate('/api/lessons');
           } catch (error) {
-            console.error('Error saving lesson:', error);
             throw error;
           }
         }}
@@ -129,7 +128,6 @@ function QuickAddButtons() {
             setShowTaskModal(false);
             mutate('/api/tasks');
           } catch (error) {
-            console.error('Error saving task:', error);
             throw error;
           }
         }}
@@ -213,7 +211,7 @@ function ToDoList() {
 
       await mutate();
     } catch (error) {
-      console.error('Error updating task completion', error);
+      // Error updating task completion
     }
   };
 
@@ -351,7 +349,6 @@ function ToDoList() {
               if (!response.ok) throw new Error('Failed to update task');
               handleTaskSave();
             } catch (error) {
-              console.error('Error updating task:', error);
               throw error;
             }
           }}
@@ -468,7 +465,6 @@ function UpcomingEvents() {
       setEditingEvent(null);
       await mutate();
     } catch (error) {
-      console.error('Error deleting event:', error);
       alert('Failed to delete event. Please try again.');
     }
   };
@@ -681,21 +677,8 @@ function DayCalendarView() {
   // Process events for today
   const todayEvents = useMemo(() => {
     if (!events || !lessons || !classes || !subjects || !Array.isArray(events) || !Array.isArray(lessons) || !Array.isArray(classes) || !Array.isArray(subjects)) {
-      console.log('Daily Schedule - Missing required data:', {
-        events: !!events,
-        lessons: !!lessons,
-        classes: !!classes,
-        subjects: !!subjects,
-        eventsIsArray: Array.isArray(events),
-        lessonsIsArray: Array.isArray(lessons),
-        lessonsLength: lessons?.length
-      });
       return [];
     }
-
-    console.log('Daily Schedule - Processing for date:', dateStr);
-    console.log('Daily Schedule - Total lessons:', lessons.length);
-    console.log('Daily Schedule - Sample lesson:', lessons[0]);
 
     const calendarEvents: CalendarEvent[] = [];
     const slotsWithActivities = new Set<number>();
@@ -892,7 +875,7 @@ function DayCalendarView() {
               const endTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), endHour, endMinute);
               
               // Create title based on teacher type
-              const title = user?.teacherType === 'primary' 
+              const title = (user?.colorPreference === 'subject')
                 ? `${subjectInfo?.name || 'Subject'} - ${classInfo?.name || 'Class'}`
                 : `${classInfo?.name || 'Class'} - ${subjectInfo?.name || 'Subject'}`;
               
@@ -902,7 +885,9 @@ function DayCalendarView() {
                 type: 'lesson',
                 startTime: startTime,
                 endTime: endTime,
-                color: subjectInfo?.color || classInfo?.color || '#D1D5DB',
+                color: (user?.colorPreference === 'subject'
+                  ? (subjectInfo?.color || '#6B7280')
+                  : (classInfo?.color || '#6B7280')),
                 class: classInfo?.name || undefined,
                 subject: subjectInfo?.name || undefined,
                 location: entry.room || undefined,

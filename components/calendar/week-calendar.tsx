@@ -14,6 +14,7 @@ import { TimetableActivityModal } from '@/components/timetable-activity-modal';
 import { useAcademicCalendar } from '@/lib/hooks/useAcademicCalendar';
 import { isWeekFullyCoveredByHolidays } from '@/lib/utils/academic-calendar';
 import { getCardStyle, getCardClassName, getBorderColorWithOpacity } from '@/lib/utils/card-styles';
+import { getLocalizedTerms, getLocalizedHolidayType, getLocalizedTerm } from '@/lib/utils/localization';
 
 // Function to lighten a hex color
 function lightenColor(color: string, amount: number = 0.7): string {
@@ -326,7 +327,6 @@ function DraggableEvent({
       // Refresh data
       mutate('/api/lessons');
     } catch (error) {
-      console.error('Error updating lesson completion status:', error);
       alert('Error updating lesson status. Please try again.');
     }
   };
@@ -388,7 +388,7 @@ function DraggableEvent({
                               className="text-xs font-semibold truncate"
                               style={{ color: textColor }}
                             >
-                              {user.teacherType === 'primary' ? (event.subject || '') : (event.class || '')}
+                              {(user.colorPreference === 'subject') ? (event.subject || '') : (event.class || '')}
                             </div>
                             
                             {/* Show both class and subject for unplanned lessons */}
@@ -396,7 +396,7 @@ function DraggableEvent({
                               className="text-xs truncate"
                               style={{ color: textColor }}
                             >
-                              {user.teacherType === 'primary' ? (event.class || '') : (event.subject || '')}
+                              {(user.colorPreference === 'subject') ? (event.class || '') : (event.subject || '')}
                             </div>
                             
                             {/* Room */}
@@ -423,7 +423,7 @@ function DraggableEvent({
                               className="text-xs font-semibold truncate"
                               style={{ color: textColor }}
                             >
-                              {user.teacherType === 'primary' ? (event.subject || '') : (event.class || '')}
+                              {(user.colorPreference === 'subject') ? (event.subject || '') : (event.class || '')}
                             </div>
                             
                             {/* Title (second priority) */}
@@ -564,7 +564,6 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
       // Refresh data
       mutate('/api/lessons');
     } catch (error) {
-      console.error('Error deleting lessons:', error);
       alert('Error deleting lessons. Please try again.');
     }
   };
@@ -588,7 +587,6 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
       // Refresh data
       mutate('/api/events');
     } catch (error) {
-      console.error('Error deleting event:', error);
       alert('Error deleting event. Please try again.');
     }
   };
@@ -617,7 +615,6 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
       mutate('/api/holidays');
       setEditingHoliday(null);
     } catch (error) {
-      console.error('Error updating holiday:', error);
       alert('Error updating holiday. Please try again.');
     }
   };
@@ -644,7 +641,6 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
       // Refresh holidays data
       mutate('/api/holidays');
     } catch (error) {
-      console.error('Error deleting holiday:', error);
       alert('Error deleting holiday. Please try again.');
     }
   };
@@ -731,13 +727,6 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
     // Process activities FIRST - they don't depend on events/lessons/classes/subjects
     // This ensures activities show even if other data is still loading
     const slotsWithActivities = new Set<number>();
-    console.log('Week Calendar - Processing activities (FIRST):', {
-      hasActivities: !!timetableActivities,
-      activitiesCount: timetableActivities?.length || 0,
-      hasSlots: !!timetableSlots,
-      slotsCount: timetableSlots?.length || 0,
-      weekDates: weekDates.map(d => d.toISOString().split('T')[0])
-    });
     
     if (timetableActivities && timetableSlots) {
       weekDates.forEach(date => {
@@ -769,23 +758,6 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
           
           const shouldMatch = hasSlotId && dayMatches && weekMatches;
           
-          console.log('Week Calendar - Checking activity match:', {
-            activityId: activity.id,
-            activityTitle: activity.title,
-            rawActivityDayOfWeek,
-            rawCurrentDayOfWeek,
-            activityDayOfWeek,
-            currentDayOfWeekLower,
-            dayMatches,
-            activityWeekNumber,
-            currentWeekNumberNum,
-            weekMatches,
-            hasSlotId,
-            date: date.toISOString().split('T')[0],
-            slotId: activity.timetableSlotId,
-            shouldMatch,
-            reason: !hasSlotId ? 'no slotId' : !dayMatches ? 'day mismatch' : !weekMatches ? 'week mismatch' : 'MATCH!'
-          });
           
           // Match if dayOfWeek matches and weekNumber matches
           if (shouldMatch) {
@@ -800,13 +772,6 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
               const startTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), startHour, startMinute);
               const endTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), endHour, endMinute);
               
-              console.log('Week Calendar - ✓ Adding activity event:', {
-                id: `activity-${activity.id}-${dateStr}`,
-                title: activity.title,
-                date: dateStr,
-                startTime: startTime.toISOString(),
-                endTime: endTime.toISOString()
-              });
               
               initialEvents.push({
                 id: `activity-${activity.id}-${dateStr}`,
@@ -822,23 +787,11 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                 activityType: activity.activityType,
                 timetableSlotId: activity.timetableSlotId,
               });
-            } else {
-              console.log('Week Calendar - ✗ Slot not found for activity:', {
-                activityId: activity.id,
-                slotId: activity.timetableSlotId
-              });
             }
           }
         });
       });
-    } else {
-      console.log('Week Calendar - Activities or slots not available:', {
-        hasActivities: !!timetableActivities,
-        hasSlots: !!timetableSlots
-      });
     }
-    
-    console.log('Week Calendar - Activities processed. Total events so far:', initialEvents.length);
     
     // Process lessons only if data is available
     if (lessons && classes && subjects) {
@@ -922,7 +875,9 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
         description: firstLesson.lessonPlan || undefined,
         class: lClassInfo?.name || undefined,
         subject: lSubjectInfo?.name || undefined,
-        color: firstLesson.color || lSubjectInfo?.color || lClassInfo?.color || '#6B7280',
+        color: firstLesson.color || (user?.colorPreference === 'subject' 
+          ? (lSubjectInfo?.color || '#6B7280')
+          : (lClassInfo?.color || '#6B7280')),
             allDay: false,
         // Store the individual lesson IDs for reference
         lessonIds: groupLessons.map(l => l.id),
@@ -1002,35 +957,6 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
     }
 
     // Generate unfinished lessons from timetable entries (only if data is available)
-    console.log('Timetable data check:', { 
-      timetableEntries: timetableEntries?.length || 0, 
-      timetableSlots: timetableSlots?.length || 0,
-      user: user?.teacherType || 'no user',
-      timetableEntriesError: timetableEntriesError,
-      timetableSlotsError: timetableSlotsError
-    });
-    
-    // Only log errors if they actually exist and have meaningful content
-    // Simplified approach: only log if we have actual Error instances or error messages
-    if (timetableEntriesError instanceof Error) {
-      console.error('Timetable entries error:', timetableEntriesError);
-    } else if (timetableEntriesError?.message && typeof timetableEntriesError.message === 'string' && timetableEntriesError.message.trim().length > 0) {
-      console.error('Timetable entries error:', timetableEntriesError);
-    }
-    
-    if (timetableSlotsError instanceof Error) {
-      console.error('Timetable slots error:', timetableSlotsError);
-    } else if (timetableSlotsError?.message && typeof timetableSlotsError.message === 'string' && timetableSlotsError.message.trim().length > 0) {
-      console.error('Timetable slots error:', timetableSlotsError);
-    }
-    
-    if (!timetableEntries || timetableEntries.length === 0) {
-      console.log('No timetable entries found - user needs to set up their timetable first');
-    }
-    
-    if (!timetableSlots || timetableSlots.length === 0) {
-      console.log('No timetable slots found - user needs to create timetable slots first');
-    }
 
     // Activities are already processed above, slotsWithActivities is already defined
 
@@ -1089,7 +1015,7 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
               const endTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), endHour, endMinute);
               
               // Create title based on teacher type
-              const title = user?.teacherType === 'primary' 
+              const title = (user?.colorPreference === 'subject')
                 ? `${subjectInfo?.name || 'Subject'} - ${classInfo?.name || 'Class'}`
                 : `${classInfo?.name || 'Class'} - ${subjectInfo?.name || 'Subject'}`;
               
@@ -1103,7 +1029,9 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                 description: undefined,
                 class: classInfo?.name || undefined,
                 subject: subjectInfo?.name || undefined,
-                color: subjectInfo?.color || classInfo?.color || '#D1D5DB',
+                color: (user?.colorPreference === 'subject'
+                  ? (subjectInfo?.color || '#6B7280')
+                  : (classInfo?.color || '#6B7280')),
                 allDay: false,
                 lessonIds: [], // Empty array indicates this is an unfinished lesson
                 isUnfinished: true, // Flag to indicate this is an unfinished lesson
@@ -1121,30 +1049,15 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
 
     // Debug logging
     const activityEvents = initialEvents.filter(e => e.type === 'activity');
-    console.log('Week Calendar - Final event summary:', {
-      totalEvents: initialEvents.length,
-      activityEvents: activityEvents.length,
-      activities: activityEvents.map(e => ({
-        id: e.id,
-        title: e.title,
-        startTime: e.startTime.toISOString(),
-        endTime: e.endTime.toISOString(),
-        dayOfWeek: new Intl.DateTimeFormat('en-GB', { weekday: 'long' }).format(e.startTime)
-      })),
-      eventTypes: initialEvents.map(e => e.type)
-    });
-    
-    // Debug logging only in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Calendar events created:', initialEvents);
-    }
     
     // Create a stable string representation of events to compare
+    // Include color so that color preference changes trigger updates
     const eventsKey = JSON.stringify(initialEvents.map(e => ({
       id: e.id,
       type: e.type,
       startTime: e.startTime.toISOString(),
-      endTime: e.endTime.toISOString()
+      endTime: e.endTime.toISOString(),
+      color: e.color
     })));
     
     // Only update state if events actually changed
@@ -1226,7 +1139,6 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
     );
 
     // TODO: Persist the changes to the database via an API call
-    console.log(`Event ${eventId} moved. New start time: ${newStartTime}`);
     // Example API call:
     // fetch(`/api/lessons/${eventId.split('-')[1]}`, {
     //   method: 'PATCH',
@@ -1808,17 +1720,14 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                   mutate('/api/lessons');
                 }
               } catch (error) {
-                console.error('Error deleting lesson:', error);
                 alert('Error deleting lesson. Please try again.');
               }
             }}
             onSave={async (data) => {
-              console.log('🔍 Week Calendar - onSave called with data:', data);
               try {
                 // For editing, we need to delete the old lessons and create new ones
                 // Skip deletion for unfinished lessons (they don't have existing lessons to delete)
                 if (!editingLesson.isUnfinished && editingLesson.lessonIds && editingLesson.lessonIds.length > 0) {
-                  console.log('🔍 Week Calendar - Deleting existing lessons:', editingLesson.lessonIds);
                   // Delete existing lessons
                 const deletePromises = editingLesson.lessonIds.map(async (lessonId) => {
                   const response = await fetch(`/api/lessons?id=${lessonId}`, {
@@ -1829,22 +1738,13 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                   }
                 });
                   await Promise.all(deletePromises);
-                  console.log('🔍 Week Calendar - Successfully deleted existing lessons');
                 }
 
                 // Create new lessons with the updated data
                 const { timetableSlotIds, planCompleted, ...baseLessonData } = data;
-                console.log('🔍 Week Calendar - Creating new lessons with data:', {
-                  timetableSlotIds,
-                  baseLessonData,
-                  planCompleted,
-                  planCompletedType: typeof planCompleted,
-                  fullData: data
-                });
                 
                 if (!timetableSlotIds || timetableSlotIds.length === 0) {
-                  console.error('🔍 Week Calendar - No timetableSlotIds provided!');
-                  alert('Error: No timetable slots selected. Please select at least one slot.');
+                  alert(`Error: No ${getLocalizedTerm(user?.location, 'timetableSlot').toLowerCase()}s selected. Please select at least one slot.`);
                   return;
                 }
                 
@@ -1857,8 +1757,6 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                     planCompleted: planCompletedValue,
                   };
                   
-                  console.log('🔍 Week Calendar - Creating lesson for slot:', slotId, 'with data:', lessonData);
-                  
                   const response = await fetch('/api/lessons', {
                     method: 'POST',
                     headers: {
@@ -1869,24 +1767,17 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
 
                   if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('🔍 Week Calendar - Error creating lesson for slot:', slotId, 'Response:', response.status, errorText);
-                    console.error('🔍 Week Calendar - Request data that failed:', JSON.stringify(lessonData, null, 2));
                     throw new Error(`Failed to create lesson for slot ${slotId}: ${errorText}`);
                   }
-                  const result = await response.json();
-                  console.log('🔍 Week Calendar - Successfully created lesson:', result);
-                  return result;
+                  return await response.json();
                 });
                 
-                const results = await Promise.all(lessonPromises);
-                console.log('🔍 Week Calendar - All lessons created successfully:', results);
+                await Promise.all(lessonPromises);
 
                 // Refresh data
                 await mutate('/api/lessons');
                 setEditingLesson(null);
-                console.log('🔍 Week Calendar - Data refreshed and modal closed');
               } catch (error) {
-                console.error('🔍 Week Calendar - Error in onSave:', error);
                 if (error instanceof Error) {
                   alert(`Error saving lesson: ${error.message}`);
                 } else {
@@ -1941,17 +1832,6 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                 color: firstLesson?.color || editingLesson.color || '#6B7280',
                 planCompleted: firstLesson?.planCompleted || editingLesson.planCompleted || false,
               };
-              
-              console.log('🔍 Week Calendar Lesson Edit Debug:', {
-                editingLesson: editingLesson,
-                lessonIds: lessonIds,
-                matchingLessons: matchingLessons,
-                firstLesson: firstLesson,
-                timetableSlotIds: timetableSlotIds,
-                classes: classes,
-                subjects: subjects,
-                initialData: initialData
-              });
               
               return initialData;
             })()}
@@ -2065,9 +1945,9 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     >
                       <option value="holiday">Holiday</option>
-                      <option value="half_term">Half Term</option>
-                      <option value="term_break">Term Break</option>
-                      <option value="inset_day">INSET Day</option>
+                      <option value="half_term">{getLocalizedHolidayType(user?.location, 'half_term')}</option>
+                      <option value="term_break">{getLocalizedHolidayType(user?.location, 'term_break')}</option>
+                      <option value="inset_day">{getLocalizedHolidayType(user?.location, 'inset_day')}</option>
                     </select>
                   </div>
 
@@ -2148,7 +2028,6 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                 mutateTimetableActivities();
                 setEditingActivity(null);
               } catch (error) {
-                console.error('Error saving activity:', error);
                 alert(`Error ${editingActivity.id ? 'updating' : 'creating'} activity. Please try again.`);
               }
             }}
@@ -2165,7 +2044,6 @@ export function WeekCalendar({ onAddEvent, className = '', currentDate: external
                 mutateTimetableActivities();
                 setEditingActivity(null);
               } catch (error) {
-                console.error('Error deleting activity:', error);
                 throw error;
               }
             }}

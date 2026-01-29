@@ -5,9 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { TimetableSlot } from '@/lib/db/schema';
+import { TimetableSlot, User } from '@/lib/db/schema';
 import { Trash2, AlertTriangle } from 'lucide-react';
 import useSWR from 'swr';
+import { getLocalizedTerm } from '@/lib/utils/localization';
 
 const fetcher = async (url: string) => {
   const res = await fetch(url);
@@ -44,6 +45,8 @@ export function TimetableSlotModal({
   onSave, 
   onDelete 
 }: TimetableSlotModalProps) {
+  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const timetableSlotLabel = getLocalizedTerm(user?.location, 'timetableSlot');
   const [formData, setFormData] = useState({
     dayOfWeek: 'Monday',
     weekNumber: 1,
@@ -252,7 +255,7 @@ export function TimetableSlotModal({
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-gray-900">
-            {isEditing ? 'Edit Timetable Slot' : 'Add New Timetable Slot'}
+            {isEditing ? `Edit ${timetableSlotLabel}` : `Add New ${timetableSlotLabel}`}
           </DialogTitle>
         </DialogHeader>
         

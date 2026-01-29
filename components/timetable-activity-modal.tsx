@@ -10,6 +10,10 @@ import { ColorPicker } from '@/components/ui/color-picker';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Calendar, Clock, MapPin, FileText, Users, Briefcase, Coffee, MoreHorizontal, Trash2, AlertTriangle } from 'lucide-react';
 import useSWR from 'swr';
+import { getLocalizedTerm } from '@/lib/utils/localization';
+import { User } from '@/lib/db/schema';
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface TimetableActivityModalProps {
   open: boolean;
@@ -44,6 +48,8 @@ export function TimetableActivityModal({
   initialData, 
   slotData 
 }: TimetableActivityModalProps) {
+  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const timetableSlotLabel = getLocalizedTerm(user?.location, 'timetableSlot');
   const [formData, setFormData] = useState({
     activityType: '',
     title: '',
@@ -115,7 +121,7 @@ export function TimetableActivityModal({
 
     // Check for existing activity when adding
     if (mode === 'add' && hasExistingActivity) {
-      setError('This timetable slot already has an activity assigned. Please edit or delete the existing activity first.');
+      setError(`This ${timetableSlotLabel.toLowerCase()} already has an activity assigned. Please edit or delete the existing activity first.`);
       return;
     }
 
@@ -175,7 +181,7 @@ export function TimetableActivityModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {selectedActivityType && <selectedActivityType.icon className="h-5 w-5" style={{ color: selectedActivityType.color }} />}
-            {mode === 'add' ? 'Add Timetable Activity' : mode === 'edit' ? 'Edit Activity' : 'Activity Details'}
+            {mode === 'add' ? `Add ${timetableSlotLabel} Activity` : mode === 'edit' ? 'Edit Activity' : 'Activity Details'}
           </DialogTitle>
         </DialogHeader>
         
@@ -187,7 +193,7 @@ export function TimetableActivityModal({
               <div className="flex-1">
                 <p className="text-sm font-medium text-amber-800">Activity Already Exists</p>
                 <p className="text-xs text-amber-700 mt-1">
-                  This timetable slot already has an activity assigned. You can edit or delete the existing activity, but cannot add another one to the same slot.
+                  This {timetableSlotLabel.toLowerCase()} already has an activity assigned. You can edit or delete the existing activity, but cannot add another one to the same slot.
                 </p>
               </div>
             </div>

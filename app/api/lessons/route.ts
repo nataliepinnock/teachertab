@@ -5,22 +5,12 @@ import { getUser } from '@/lib/db/queries';
 
 export async function GET() {
   const user = await getUser();
-  console.log('Lessons API - User:', user ? `ID: ${user.id}, Name: ${user.name}` : 'No user found');
   
   if (!user) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    // First, let's check if there are any lessons at all for this user
-    const allLessons = await db
-      .select()
-      .from(lessons)
-      .where(eq(lessons.userId, user.id));
-    
-    console.log('Lessons API - Raw lessons count:', allLessons.length);
-    console.log('Lessons API - Raw lessons:', allLessons);
-
     const userLessons = await db
       .select({
         id: lessons.id,
@@ -56,23 +46,16 @@ export async function GET() {
       .where(eq(lessons.userId, user.id))
       .orderBy(lessons.date, lessons.id);
 
-    console.log('Lessons API - Found lessons with joins:', userLessons.length);
-    console.log('Lessons API - Lessons data:', userLessons);
     return Response.json(userLessons);
   } catch (error) {
-    console.error('Error fetching lessons:', error);
     return Response.json({ error: 'Failed to fetch lessons' }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
-  console.log('POST /api/lessons called');
-  
   const user = await getUser();
-  console.log('User authentication result:', user ? `ID: ${user.id}, Name: ${user.name}` : 'No user found');
   
   if (!user) {
-    console.log('User not authenticated, returning 401');
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -97,7 +80,6 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (!userClass) {
-      console.log('Class validation failed:', { classId, userId: user.id });
       return Response.json({ error: 'Class not found or does not belong to user' }, { status: 404 });
     }
 
@@ -108,7 +90,6 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (!userSubject) {
-      console.log('Subject validation failed:', { subjectId, userId: user.id });
       return Response.json({ error: 'Subject not found or does not belong to user' }, { status: 404 });
     }
 
@@ -119,7 +100,6 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (!userTimetableSlot) {
-      console.log('Timetable slot validation failed:', { timetableSlotId, userId: user.id });
       return Response.json({ error: 'Timetable slot not found or does not belong to user' }, { status: 404 });
     }
 
@@ -128,17 +108,6 @@ export async function POST(request: Request) {
     const planCompletedValue = planCompleted !== undefined && planCompleted !== null 
       ? (planCompleted === true || planCompleted === 1 ? 1 : 0) 
       : 0;
-    console.log('Inserting lesson with values:', {
-      userId: user.id,
-      classId: parseInt(classId),
-      subjectId: parseInt(subjectId),
-      timetableSlotId: parseInt(timetableSlotId),
-      title,
-      date: date,
-      lessonPlan: lessonPlan || null,
-      planCompleted: planCompletedValue,
-      color: color || null,
-    });
 
     const [newLesson] = await db
       .insert(lessons)
@@ -155,10 +124,8 @@ export async function POST(request: Request) {
       })
       .returning();
 
-    console.log('Lesson created successfully:', newLesson);
     return Response.json(newLesson, { status: 201 });
   } catch (error) {
-    console.error('Error creating lesson:', error);
     return Response.json({ error: 'Failed to create lesson' }, { status: 500 });
   }
 }
@@ -246,7 +213,6 @@ export async function PATCH(request: Request) {
 
     return Response.json(updatedLesson);
   } catch (error) {
-    console.error('Error updating lesson completion:', error);
     return Response.json({ error: 'Failed to update lesson completion' }, { status: 500 });
   }
 }
@@ -283,7 +249,6 @@ export async function DELETE(request: Request) {
 
     return Response.json({ message: 'Lesson deleted successfully' });
   } catch (error) {
-    console.error('Error deleting lesson:', error);
     return Response.json({ error: 'Failed to delete lesson' }, { status: 500 });
   }
 } 

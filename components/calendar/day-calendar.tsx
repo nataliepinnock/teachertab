@@ -6,6 +6,7 @@ import { Event, Lesson, Class, Subject, User } from '@/lib/db/schema';
 import { useAcademicCalendar } from '@/lib/hooks/useAcademicCalendar';
 import { isWeekFullyCoveredByHolidays } from '@/lib/utils/academic-calendar';
 import { getCardStyle, getCardClassName, getBorderColorWithOpacity } from '@/lib/utils/card-styles';
+import { getLocalizedHolidayType, getLocalizedTerm } from '@/lib/utils/localization';
 import { Button } from '@/components/ui/button';
 
 // Function to lighten a hex color
@@ -269,7 +270,6 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
       // Refresh data
       mutateLessons();
     } catch (error) {
-      console.error('Error deleting lessons:', error);
       alert('Error deleting lessons. Please try again.');
     }
   };
@@ -293,7 +293,6 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
       // Refresh data
       mutateEvents();
     } catch (error) {
-      console.error('Error deleting event:', error);
       alert('Error deleting event. Please try again.');
     }
   };
@@ -322,7 +321,6 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
       mutate('/api/holidays');
       setEditingHoliday(null);
     } catch (error) {
-      console.error('Error updating holiday:', error);
       alert('Error updating holiday. Please try again.');
     }
   };
@@ -349,7 +347,6 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
       // Refresh holidays data
       mutate('/api/holidays');
     } catch (error) {
-      console.error('Error deleting holiday:', error);
       alert('Error deleting holiday. Please try again.');
     }
   };
@@ -405,15 +402,6 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
     const dayOfWeek = new Intl.DateTimeFormat('en-GB', { weekday: 'long' }).format(currentDate);
     const weekNumber = getWeekNumberForDate(currentDate);
     
-    console.log('Day Calendar - Processing activities:', {
-      hasActivities: !!timetableActivities,
-      activitiesCount: timetableActivities?.length || 0,
-      hasSlots: !!timetableSlots,
-      slotsCount: timetableSlots?.length || 0,
-      currentDate: currentDate.toISOString().split('T')[0],
-      dayOfWeek,
-      weekNumber
-    });
     
     // First, add all activities for this day/week (before processing timetable entries)
     const slotsWithActivities = new Set<number>();
@@ -435,16 +423,6 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
         // Activities must match the exact week number they're assigned to (both must be non-null)
         const weekMatches = currentWeekNumberNum !== null && activityWeekNumber === currentWeekNumberNum;
         
-        console.log('Day Calendar - Checking activity match:', {
-          activityId: activity.id,
-          activityDayOfWeek,
-          currentDayOfWeekLower,
-          dayMatches: activityDayOfWeek === currentDayOfWeekLower,
-          activityWeekNumber,
-          currentWeekNumberNum,
-          weekMatches,
-          hasSlotId: !!activity.timetableSlotId
-        });
         
         // Match if dayOfWeek matches and weekNumber matches exactly
         if (activity.timetableSlotId && 
@@ -460,12 +438,6 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
             const startTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), startHour, startMinute);
             const endTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), endHour, endMinute);
             
-            console.log('Day Calendar - Adding activity event:', {
-              id: `activity-${activity.id}`,
-              title: activity.title,
-              startTime: startTime.toISOString(),
-              endTime: endTime.toISOString()
-            });
             
             timedEvents.push({
               id: `activity-${activity.id}`,
@@ -481,22 +453,10 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
               activityType: activity.activityType,
               timetableSlotId: activity.timetableSlotId,
             });
-          } else {
-            console.log('Day Calendar - Slot not found for activity:', {
-              activityId: activity.id,
-              slotId: activity.timetableSlotId
-            });
           }
         }
       });
-    } else {
-      console.log('Day Calendar - Activities or slots not available:', {
-        hasActivities: !!timetableActivities,
-        hasSlots: !!timetableSlots
-      });
     }
-    
-    console.log('Day Calendar - Timed events count after activities:', timedEvents.length);
 
     // Add events for the current date
     const dayEvents = events.filter(event => {
@@ -683,7 +643,7 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
                 const endTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), endHour, endMinute);
                 
                 // Create title based on teacher type
-                const title = user?.teacherType === 'primary' 
+                const title = (user?.colorPreference === 'subject')
                   ? `${subjectInfo?.name || 'Subject'} - ${classInfo?.name || 'Class'}`
                   : `${classInfo?.name || 'Class'} - ${subjectInfo?.name || 'Subject'}`;
                 
@@ -693,7 +653,9 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
                   type: 'lesson',
                   startTime: startTime,
                   endTime: endTime,
-                  color: subjectInfo?.color || classInfo?.color || '#D1D5DB',
+                  color: (user?.colorPreference === 'subject'
+                    ? (subjectInfo?.color || '#6B7280')
+                    : (classInfo?.color || '#6B7280')),
                   class: classInfo?.name || undefined,
                   subject: subjectInfo?.name || undefined,
                   location: entry.room || undefined,
@@ -784,7 +746,7 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <p className="font-bold text-xs truncate" style={{ color: textColor }}>
                               {event.type === 'lesson' && event.isUnfinished 
-                                ? `${user?.teacherType === 'primary' ? (event.subject || '') : (event.class || '')}${user?.teacherType === 'primary' ? (event.class ? ` - ${event.class}` : '') : (event.subject ? ` - ${event.subject}` : '')}` || `Untitled ${event.type}`
+                                ? `${(user?.colorPreference === 'subject') ? (event.subject || '') : (event.class || '')}${(user?.colorPreference === 'subject') ? (event.class ? ` - ${event.class}` : '') : (event.subject ? ` - ${event.subject}` : '')}` || `Untitled ${event.type}`
                                 : (event.title || `Untitled ${event.type}`)
                               }
                             </p>
@@ -1047,7 +1009,7 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
                                       style={{ color: textColor }}
                                     >
                                       {event.type === 'lesson' && event.isUnfinished 
-                                        ? `${user?.teacherType === 'primary' ? (event.subject || '') : (event.class || '')}${user?.teacherType === 'primary' ? (event.class ? ` - ${event.class}` : '') : (event.subject ? ` - ${event.subject}` : '')}` || `Untitled ${event.type}`
+                                        ? `${(user?.colorPreference === 'subject') ? (event.subject || '') : (event.class || '')}${(user?.colorPreference === 'subject') ? (event.class ? ` - ${event.class}` : '') : (event.subject ? ` - ${event.subject}` : '')}` || `Untitled ${event.type}`
                                         : (event.title || `Untitled ${event.type}`)
                                       }
                                     </div>
@@ -1137,17 +1099,14 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
                 mutate('/api/lessons');
               }
             } catch (error) {
-              console.error('Error deleting lesson:', error);
               alert('Error deleting lesson. Please try again.');
             }
           } : undefined}
           onSave={async (data) => {
-            console.log('🔍 Day Calendar - onSave called with data:', data);
             try {
               // For editing, we need to delete the old lessons and create new ones
               // Skip deletion for unfinished lessons (they don't have existing lessons to delete)
               if (!editingLesson.isUnfinished && editingLesson.lessonIds && editingLesson.lessonIds.length > 0) {
-                console.log('🔍 Day Calendar - Deleting existing lessons:', editingLesson.lessonIds);
                 // Delete existing lessons
                 const deletePromises = editingLesson.lessonIds.map(async (lessonId) => {
                   const response = await fetch(`/api/lessons?id=${lessonId}`, {
@@ -1158,22 +1117,13 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
                   }
                 });
                 await Promise.all(deletePromises);
-                console.log('🔍 Day Calendar - Successfully deleted existing lessons');
               }
 
               // Create new lessons with the updated data
               const { timetableSlotIds, planCompleted, ...baseLessonData } = data;
-              console.log('🔍 Day Calendar - Creating new lessons with data:', {
-                timetableSlotIds,
-                baseLessonData,
-                planCompleted,
-                planCompletedType: typeof planCompleted,
-                fullData: data
-              });
               
               if (!timetableSlotIds || timetableSlotIds.length === 0) {
-                console.error('🔍 Day Calendar - No timetableSlotIds provided!');
-                alert('Error: No timetable slots selected. Please select at least one slot.');
+                alert(`Error: No ${getLocalizedTerm(user?.location, 'timetableSlot').toLowerCase()}s selected. Please select at least one slot.`);
                 return;
               }
               
@@ -1186,8 +1136,6 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
                   planCompleted: planCompletedValue,
                 };
                 
-                console.log('🔍 Day Calendar - Creating lesson for slot:', slotId, 'with data:', lessonData);
-                
                 const response = await fetch('/api/lessons', {
                   method: 'POST',
                   headers: {
@@ -1198,24 +1146,17 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
                 
                 if (!response.ok) {
                   const errorText = await response.text();
-                  console.error('🔍 Day Calendar - Error creating lesson for slot:', slotId, 'Response:', response.status, errorText);
-                  console.error('🔍 Day Calendar - Request data that failed:', JSON.stringify(lessonData, null, 2));
                   throw new Error(`Failed to create lesson for slot ${slotId}: ${errorText}`);
                 }
-                const result = await response.json();
-                console.log('🔍 Day Calendar - Successfully created lesson:', result);
-                return result;
+                return await response.json();
               });
               
-              const results = await Promise.all(lessonPromises);
-              console.log('🔍 Day Calendar - All lessons created successfully:', results);
+              await Promise.all(lessonPromises);
 
               // Refresh data
               await mutateLessons();
               setEditingLesson(null);
-              console.log('🔍 Day Calendar - Data refreshed and modal closed');
             } catch (error) {
-              console.error('🔍 Day Calendar - Error in onSave:', error);
               if (error instanceof Error) {
                 alert(`Error saving lesson: ${error.message}`);
               } else {
@@ -1236,15 +1177,10 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
               timetableSlotIds = [editingLesson.timetableSlotId.toString()];
             } else if (lessonIds && lessonIds.length > 0 && matchingLessons.length > 0) {
               // For regular lessons, get all unique timetable slot IDs from matching lessons
-              console.log('🔍 Day Calendar - Extracting timetableSlotIds from matchingLessons:', {
-                matchingLessons: matchingLessons.map(l => ({ id: l.id, timetableSlotId: l.timetableSlotId })),
-                firstLessonTimetableSlotId: firstLesson?.timetableSlotId
-              });
               const slotIds = matchingLessons
                 .map(lesson => lesson.timetableSlotId?.toString())
                 .filter((id): id is string => Boolean(id));
               timetableSlotIds = [...new Set(slotIds)]; // Remove duplicates
-              console.log('🔍 Day Calendar - Extracted timetableSlotIds:', timetableSlotIds);
             }
 
             // For unfinished lessons, we need to map class and subject names to IDs
@@ -1276,17 +1212,6 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
               color: firstLesson?.color || editingLesson.color || '#6B7280',
               planCompleted: firstLesson?.planCompleted || editingLesson.planCompleted || false,
             };
-            
-            console.log('🔍 Day Calendar Lesson Edit Debug:', {
-              editingLesson: editingLesson,
-              lessonIds: lessonIds,
-              matchingLessons: matchingLessons,
-              firstLesson: firstLesson,
-              timetableSlotIds: timetableSlotIds,
-              classes: classes,
-              subjects: subjects,
-              initialData: initialData
-            });
             
             return initialData;
           })()}
@@ -1395,15 +1320,15 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
                     Type
                   </label>
                   <select
-                    name="type"
-                    defaultValue="holiday"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="holiday">Holiday</option>
-                    <option value="half_term">Half Term</option>
-                    <option value="term_break">Term Break</option>
-                    <option value="inset_day">INSET Day</option>
-                  </select>
+                      name="type"
+                      defaultValue="holiday"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="holiday">Holiday</option>
+                      <option value="half_term">{getLocalizedHolidayType(user?.location, 'half_term')}</option>
+                      <option value="term_break">{getLocalizedHolidayType(user?.location, 'term_break')}</option>
+                      <option value="inset_day">{getLocalizedHolidayType(user?.location, 'inset_day')}</option>
+                    </select>
                 </div>
 
                 {/* Color */}
@@ -1451,7 +1376,7 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
                   {viewingEvent.type === 'activity'
                     ? (viewingEvent.title || 'Untitled Activity')
                     : viewingEvent.type === 'lesson' && viewingEvent.isUnfinished 
-                    ? `${user?.teacherType === 'primary' ? viewingEvent.subject : viewingEvent.class} - ${user?.teacherType === 'primary' ? viewingEvent.class : viewingEvent.subject}` || `Untitled ${viewingEvent.type}`
+                    ? `${(user?.colorPreference === 'subject') ? viewingEvent.subject : viewingEvent.class} - ${(user?.colorPreference === 'subject') ? viewingEvent.class : viewingEvent.subject}` || `Untitled ${viewingEvent.type}`
                     : (viewingEvent.title || `Untitled ${viewingEvent.type}`)
                   }
                 </h2>
@@ -1608,7 +1533,6 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
               mutateTimetableActivities();
               setEditingActivity(null);
             } catch (error) {
-              console.error('Error saving activity:', error);
               alert(`Error ${editingActivity.id ? 'updating' : 'creating'} activity. Please try again.`);
             }
           }}
@@ -1625,7 +1549,6 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
               mutateTimetableActivities();
               setEditingActivity(null);
             } catch (error) {
-              console.error('Error deleting activity:', error);
               throw error;
             }
           }}

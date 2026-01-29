@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, color } = body;
+    const { name, color, notes } = body;
 
     if (!name) {
       return Response.json({ error: 'Name is required' }, { status: 400 });
@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         name,
         color: color || null,
+        notes: notes || null,
       })
       .returning();
 
@@ -62,7 +63,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { id, name, color } = body;
+    const { id, name, color, notes } = body;
 
     if (!id || !name) {
       return Response.json({ error: 'ID and name are required' }, { status: 400 });
@@ -73,6 +74,7 @@ export async function PUT(request: NextRequest) {
       .set({
         name,
         color: color || null,
+        notes: notes || null,
       })
       .where(and(eq(subjects.id, id), eq(subjects.userId, user.id)))
       .returning();

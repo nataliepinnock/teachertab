@@ -468,4 +468,22 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Hide browser validation messages */
+  form:invalid {
+    outline: none;
+  }
+  
+  input:invalid,
+  select:invalid,
+  textarea:invalid {
+    box-shadow: none;
+  }
+  
+  /* Hide browser validation tooltips */
+  input:invalid::-webkit-validation-bubble-message,
+  select:invalid::-webkit-validation-bubble-message,
+  textarea:invalid::-webkit-validation-bubble-message {
+    display: none;
+  }
 }

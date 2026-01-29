@@ -14,6 +14,13 @@ import { TimetableActivityModal } from '@/components/timetable-activity-modal';
 import React from 'react';
 import Link from 'next/link';
 import { TimetableSlotModal as MultiDayTimetableSlotModal } from '@/components/timetable-slot-modal';
+import { getLocalizedTerm, getTeachingPhaseOptions, type Location } from '@/lib/utils/localization';
+import { User } from '@/lib/db/schema';
+import { updateTimetableSettings } from '@/app/(login)/actions';
+import { useActionState } from 'react';
+import { mutate } from 'swr';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const fetcher = async (url: string) => {
   const res = await fetch(url);
@@ -49,6 +56,8 @@ function ClassAssignmentModal({ open, onClose, onSave, slot, initialData }: {
   // Fetch classes and subjects
   const { data: classes } = useSWR<any[]>('/api/classes', fetcher);
   const { data: subjects } = useSWR<any[]>('/api/subjects', fetcher);
+  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const timetableSlotLabel = getLocalizedTerm(user?.location, 'timetableSlot');
 
   React.useEffect(() => {
     if (open) {
@@ -101,7 +110,7 @@ function ClassAssignmentModal({ open, onClose, onSave, slot, initialData }: {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Assign Class to Timetable Slot
+            Assign Class to {timetableSlotLabel}
           </DialogTitle>
           <p className="text-sm text-gray-600">
             {slot.label} - {slot.dayOfWeek} Week {slot.weekNumber} ({slot.startTime}-{slot.endTime})
@@ -208,10 +217,6 @@ function TimetableGrid({ slots, onEditSlot, onDeleteSlot, onAssignClass, onAssig
   // Fetch timetable entries (class assignments)
   const { data: timetableEntries } = useSWR<any[]>('/api/timetable', fetcher);
   
-  // Debug logging
-  console.log('TimetableGrid - timetableActivities:', timetableActivities);
-  console.log('TimetableGrid - timetableActivities length:', timetableActivities?.length);
-  
   
   // Get timetable entry for a specific slot
   const getTimetableEntry = (slotId: number) => {
@@ -220,9 +225,7 @@ function TimetableGrid({ slots, onEditSlot, onDeleteSlot, onAssignClass, onAssig
   
   // Get timetable activity for a specific slot
   const getTimetableActivity = (slotId: number) => {
-    const activity = Array.isArray(timetableActivities) ? timetableActivities.find(activity => activity.timetableSlotId === slotId) : null;
-    console.log(`Looking for activity for slot ${slotId}:`, activity);
-    return activity;
+    return Array.isArray(timetableActivities) ? timetableActivities.find(activity => activity.timetableSlotId === slotId) : null;
   };
   
   
@@ -273,9 +276,6 @@ function TimetableGrid({ slots, onEditSlot, onDeleteSlot, onAssignClass, onAssig
     }
   };
 
-  // Debug logging
-  console.log('Week slots:', weekSlots);
-  console.log('Current week:', currentWeek);
 
   // Auto-scroll to 8 AM when component mounts
   useEffect(() => {
@@ -553,13 +553,10 @@ export default function TimetableSetupPage() {
   const { data: timetableSlots, error, mutate, isLoading } = useSWR<TimetableSlot[]>('/api/timetable-slots', fetcher);
   const { data: timetableEntries, mutate: mutateTimetableEntries } = useSWR<any[]>('/api/timetable', fetcher);
   const { data: timetableActivities, error: activitiesError, mutate: mutateTimetableActivities } = useSWR<any[]>('/api/timetable-activities', fetcher);
+  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const timetableSlotLabel = getLocalizedTerm(user?.location, 'timetableSlot');
+  const timetableLabel = getLocalizedTerm(user?.location, 'timetable');
   
-  // Debug logging
-  console.log('TimetableSetupPage - timetableActivities:', timetableActivities);
-  console.log('TimetableSetupPage - timetableActivities type:', typeof timetableActivities);
-  console.log('TimetableSetupPage - timetableActivities isArray:', Array.isArray(timetableActivities));
-  console.log('TimetableSetupPage - timetableActivities length:', timetableActivities?.length);
-  console.log('TimetableSetupPage - activitiesError:', activitiesError);
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -614,7 +611,7 @@ export default function TimetableSetupPage() {
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update timetable slot');
+        throw new Error(errorData.error || `Failed to update ${timetableSlotLabel.toLowerCase()}`);
       }
       
       mutate();
@@ -628,7 +625,7 @@ export default function TimetableSetupPage() {
       if (!response.ok) {
         const errorData = await response.json();
         // Conflicts are now handled in the modal with warnings
-        throw new Error(errorData.error || 'Failed to create timetable slot');
+        throw new Error(errorData.error || `Failed to create ${timetableSlotLabel.toLowerCase()}`);
       }
       
       mutate();
@@ -658,11 +655,9 @@ export default function TimetableSetupPage() {
         // No dependencies, proceed with deletion
         mutate();
         mutateTimetableEntries();
-      } else {
-        console.error('Error checking slot dependencies:', await response.text());
       }
     } catch (error) {
-      console.error('Error checking slot dependencies:', error);
+      // Error checking slot dependencies
     }
   };
 
@@ -680,7 +675,7 @@ export default function TimetableSetupPage() {
       setSlotToDelete(null);
       setSlotDependencies(null);
     } catch (error) {
-      console.error('Error deleting slot:', error);
+      // Error deleting slot
     } finally {
       setIsDeletingSlot(false);
     }
@@ -754,7 +749,6 @@ export default function TimetableSetupPage() {
       setSelectedActivity(null);
       setSelectedSlotForActivity(null);
     } catch (error) {
-      console.error('Error saving activity:', error);
       alert(`Error ${activityModalMode === 'edit' ? 'updating' : 'creating'} activity. Please try again.`);
     }
   };
@@ -775,7 +769,6 @@ export default function TimetableSetupPage() {
       setSelectedActivity(null);
       setSelectedSlotForActivity(null);
     } catch (error) {
-      console.error('Error deleting activity:', error);
       throw error; // Re-throw so modal can handle it
     }
   };
@@ -821,7 +814,7 @@ export default function TimetableSetupPage() {
       setClassAssignmentModalOpen(false);
       mutateTimetableEntries();
     } catch (error) {
-      console.error('Error saving class assignment:', error);
+      // Error saving class assignment
     }
   };
 
@@ -832,8 +825,8 @@ export default function TimetableSetupPage() {
           <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
             <Calendar className="h-8 w-8 text-red-600" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Timetable</h3>
-          <p className="text-gray-600 mb-4">There was a problem loading your timetable slots. Please try again.</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading {timetableLabel}</h3>
+          <p className="text-gray-600 mb-4">There was a problem loading your {timetableSlotLabel.toLowerCase()}s. Please try again.</p>
           <Button onClick={() => mutate()}>Retry</Button>
         </div>
       </div>
@@ -887,7 +880,8 @@ export default function TimetableSetupPage() {
 
       {/* Content Section */}
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        
+        {/* Timetable Settings */}
+        <TimetableSettingsSection />
 
         {/* Timetable Grid */}
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
@@ -899,12 +893,12 @@ export default function TimetableSetupPage() {
                     <Calendar className="h-10 w-10 text-red-400" />
                   </div>
                   <h3 className="text-xl font-semibold text-red-900 mb-3">
-                    {(error as any)?.status === 401 ? 'Session Expired' : 'Error Loading Timetable Slots'}
+                    {(error as any)?.status === 401 ? 'Session Expired' : `Error Loading ${timetableSlotLabel}s`}
                   </h3>
                   <p className="text-red-600 mb-6 max-w-md mx-auto">
                     {(error as any)?.status === 401 
                       ? 'Your session has expired. Please sign in again to continue.'
-                      : error.message || 'There was an error loading your timetable slots. Please refresh the page or try again later.'}
+                      : error.message || `There was an error loading your ${timetableSlotLabel.toLowerCase()}s. Please refresh the page or try again later.`}
                   </p>
                   {(error as any)?.status === 401 ? (
                     <Button 
@@ -927,7 +921,7 @@ export default function TimetableSetupPage() {
                   <div className="mx-auto w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6 animate-pulse">
                     <Calendar className="h-10 w-10 text-gray-400" />
                   </div>
-                  <p className="text-gray-600">Loading timetable slots...</p>
+                  <p className="text-gray-600">Loading {timetableSlotLabel.toLowerCase()}s...</p>
                 </div>
               </div>
             ) : timetableSlots && Array.isArray(timetableSlots) && timetableSlots.length > 0 ? (
@@ -947,9 +941,9 @@ export default function TimetableSetupPage() {
                   <div className="mx-auto w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
                     <Calendar className="h-10 w-10 text-gray-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-3">No timetable slots yet</h3>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-3">No {timetableSlotLabel.toLowerCase()}s yet</h3>
                   <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    Get started by creating your first timetable slot. You can set specific times, days, and weeks to build your schedule.
+                    Get started by creating your first {timetableSlotLabel.toLowerCase()}. You can set specific times, days, and weeks to build your schedule.
                   </p>
                   <Button onClick={handleAddSlot} size="lg" className="h-11 px-6">
                     <Plus className="h-5 w-5 mr-2" />
@@ -1016,4 +1010,159 @@ export default function TimetableSetupPage() {
       />
     </div>
   );
-} 
+}
+
+// Timetable Settings Section
+function TimetableSettingsSection() {
+  const { data: user, mutate: mutateUser } = useSWR<User>('/api/user', fetcher);
+  const [settingsState, settingsAction, isSettingsPending] = useActionState<{ error?: string; success?: string }, FormData>(
+    async (prevState, formData) => {
+      const result = await updateTimetableSettings(prevState, formData);
+      if (result?.success && typeof window !== 'undefined') {
+        mutate('/api/user');
+        mutateUser();
+      }
+      return result;
+    },
+    {}
+  );
+
+  const [isClient, setIsClient] = useState(false);
+  const [location, setLocation] = useState<Location>((user?.location as Location) || 'UK');
+  const [teachingPhase, setTeachingPhase] = useState(user?.teachingPhase || 'primary');
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (user?.location) {
+      setLocation(user.location as Location);
+    }
+    if (user?.teachingPhase) {
+      setTeachingPhase(user.teachingPhase);
+    }
+  }, [user]);
+
+  // Update teaching phase when location changes
+  useEffect(() => {
+    if (isClient && user) {
+      const validPhases = getTeachingPhaseOptions(location);
+      const currentPhaseIsValid = validPhases.some(p => p.value === teachingPhase);
+      
+      if (!currentPhaseIsValid && validPhases.length > 0) {
+        setTeachingPhase(validPhases[0].value);
+      }
+    }
+  }, [location, isClient, user]);
+
+  const timetableCycleLabel = getLocalizedTerm(user?.location, 'timetableCycle');
+
+  if (!user) {
+    return null;
+  }
+
+  return (
+    <Card className="mb-8">
+      <CardHeader>
+        <CardTitle>Timetable Settings</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form className="space-y-6" action={settingsAction} noValidate>
+          <div>
+            <Label htmlFor="teachingPhase" className="mb-2">What phase do you teach?</Label>
+            {isClient ? (
+              <>
+                <Select 
+                  value={teachingPhase}
+                  onValueChange={(value) => {
+                    setTeachingPhase(value);
+                    const hiddenInput = document.getElementById('teachingPhase-input') as HTMLInputElement;
+                    if (hiddenInput) hiddenInput.value = value;
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select teaching phase" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getTeachingPhaseOptions(location).map((phase) => (
+                      <SelectItem key={phase.value} value={phase.value}>
+                        {phase.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <input 
+                  type="hidden" 
+                  id="teachingPhase-input" 
+                  name="teachingPhase" 
+                  value={teachingPhase || getTeachingPhaseOptions(location)[0]?.value || ''}
+                />
+              </>
+            ) : (
+              <div className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <span className="text-muted-foreground">
+                  {getTeachingPhaseOptions(location).find(p => p.value === user?.teachingPhase)?.label || user?.teachingPhase}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <Label className="mb-2">How would you like your {getLocalizedTerm(user?.location, 'timetable').toLowerCase()} color coded?</Label>
+            <RadioGroup
+              defaultValue={user?.colorPreference || 'subject'}
+              name="colorPreference"
+              className="flex space-x-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="subject" id="color-subject" />
+                <Label htmlFor="color-subject">By Subject</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="class" id="color-class" />
+                <Label htmlFor="color-class">By Class</Label>
+              </div>
+            </RadioGroup>
+            <p className="text-xs text-gray-500 mt-1">
+              This determines which colors are used for your lessons in the calendar
+            </p>
+          </div>
+
+          <div>
+            <Label className="mb-2">{timetableCycleLabel}</Label>
+            <RadioGroup
+              defaultValue={user?.timetableCycle || 'weekly'}
+              name="timetableCycle"
+              className="flex space-x-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="weekly" id="weekly" />
+                <Label htmlFor="weekly">Weekly</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="2-weekly" id="2-weekly" />
+                <Label htmlFor="2-weekly">2-Week Cycle</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {settingsState.error && (
+            <p className="text-red-500 text-sm">{settingsState.error}</p>
+          )}
+          {settingsState.success && (
+            <p className="text-green-500 text-sm">{settingsState.success}</p>
+          )}
+
+          <Button
+            type="submit"
+            className="bg-orange-500 hover:bg-orange-600 text-white"
+            disabled={isSettingsPending}
+          >
+            {isSettingsPending ? 'Saving...' : 'Save Settings'}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}

@@ -64,6 +64,13 @@
       "when": 1762710000000,
       "tag": "0008_stellar_password_reset",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1769690787097,
+      "tag": "0009_youthful_ghost_rider",
+      "breakpoints": true
     }
   ]
 }

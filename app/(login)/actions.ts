@@ -80,12 +80,13 @@ const signUpSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
-  teacherType: z.enum(['primary', 'secondary']),
-  timetableCycle: z.enum(['weekly', '2-weekly'])
+  teacherType: z.enum(['primary', 'secondary', 'mixed']),
+  timetableCycle: z.enum(['weekly', '2-weekly']),
+  location: z.enum(['UK', 'US', 'Other'])
 });
 
 export const signUp = validatedAction(signUpSchema, async (data, formData) => {
-  const { name, email, password, teacherType, timetableCycle } = data;
+  const { name, email, password, teachingPhase, colorPreference, timetableCycle, location } = data;
 
   const redirectIntent = formData.get('redirect') as string | null;
   const selectedPriceId = formData.get('priceId') as string | null;
@@ -146,8 +147,10 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
         name,
         email,
         passwordHash,
-        teacherType: teacherType as string,
-        timetableCycle: timetableCycle as string
+        teachingPhase: teachingPhase as string,
+        colorPreference: colorPreference as string,
+        timetableCycle: timetableCycle as string,
+        location: location as string
       }
     });
   }
@@ -429,22 +432,41 @@ export const deleteAccount = validatedActionWithUser(
 const updateAccountSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   email: z.string().email('Invalid email address'),
-  teacherType: z.enum(['primary', 'secondary']),
-  timetableCycle: z.enum(['weekly', '2-weekly'])
+  location: z.enum(['UK', 'US', 'Other'])
 });
 
 export const updateAccount = validatedActionWithUser(
   updateAccountSchema,
   async (data, _, user) => {
-    const { name, email, teacherType, timetableCycle } = data;
+    const { name, email, location } = data;
 
     await db.update(users).set({ 
       name, 
       email, 
-      teacherType, 
-      timetableCycle 
+      location
     }).where(eq(users.id, user.id));
 
     return { name, success: 'Account updated successfully.' };
+  }
+);
+
+const updateTimetableSettingsSchema = z.object({
+  teachingPhase: z.string().min(1, 'Teaching phase is required'),
+  colorPreference: z.enum(['class', 'subject']),
+  timetableCycle: z.enum(['weekly', '2-weekly']),
+});
+
+export const updateTimetableSettings = validatedActionWithUser(
+  updateTimetableSettingsSchema,
+  async (data, _, user) => {
+    const { teachingPhase, colorPreference, timetableCycle } = data;
+
+    await db.update(users).set({ 
+      teachingPhase, 
+      colorPreference,
+      timetableCycle,
+    }).where(eq(users.id, user.id));
+
+    return { success: 'Timetable settings updated successfully.' };
   }
 );

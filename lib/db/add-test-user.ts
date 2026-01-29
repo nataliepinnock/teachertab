@@ -23,7 +23,8 @@ async function addTestUser() {
     .values({
       email,
       passwordHash,
-      teacherType: 'primary',
+      teachingPhase: 'primary',
+      colorPreference: 'subject',
       timetableCycle: 'weekly',
       name: 'Test User',
       subscriptionStatus: 'active', // Required for sign-in

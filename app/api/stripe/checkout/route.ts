@@ -64,10 +64,12 @@ export async function GET(request: NextRequest) {
       const signupName = session.metadata?.signupName;
       const signupEmail = session.metadata?.signupEmail;
       const signupPasswordHash = session.metadata?.signupPasswordHash;
-      const signupTeacherType = session.metadata?.signupTeacherType;
+      const signupTeachingPhase = session.metadata?.signupTeachingPhase;
+      const signupColorPreference = session.metadata?.signupColorPreference;
       const signupTimetableCycle = session.metadata?.signupTimetableCycle;
+      const signupLocation = session.metadata?.signupLocation || 'UK'; // Default to UK if not provided
 
-      if (!signupName || !signupEmail || !signupPasswordHash || !signupTeacherType || !signupTimetableCycle) {
+      if (!signupName || !signupEmail || !signupPasswordHash || !signupTeachingPhase || !signupColorPreference || !signupTimetableCycle) {
         throw new Error('Missing signup data in session metadata.');
       }
 
@@ -98,8 +100,10 @@ export async function GET(request: NextRequest) {
           name: signupName,
           email: signupEmail,
           passwordHash: signupPasswordHash,
-          teacherType: signupTeacherType,
+          teachingPhase: signupTeachingPhase,
+          colorPreference: signupColorPreference,
           timetableCycle: signupTimetableCycle,
+          location: signupLocation,
           stripeCustomerId: customerId,
           stripeSubscriptionId: subscriptionId,
           stripeProductId: productId,

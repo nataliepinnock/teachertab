@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { formatHolidayType, getDefaultHolidayColor } from '@/lib/utils/academic-calendar';
+import { getLocalizedHolidayType, getLocalizedTerms, getLocalizedTerm } from '@/lib/utils/localization';
+import { User } from '@/lib/db/schema';
 import React from 'react';
 import Link from 'next/link';
 
@@ -25,6 +27,7 @@ function AcademicYearModal({ open, onClose, onSave, mode, initialData }: {
   mode: 'add' | 'view' | 'edit';
   initialData?: { name: string; startDate: string; endDate: string; weekCycleStartDate: string; isActive: boolean; skipHolidayWeeks?: boolean };
 }) {
+  const { data: user } = useSWR<User>('/api/user', fetcher);
   const [name, setName] = useState(initialData?.name || '');
   const [startDate, setStartDate] = useState(initialData?.startDate || '');
   const [endDate, setEndDate] = useState(initialData?.endDate || '');
@@ -129,7 +132,7 @@ function AcademicYearModal({ open, onClose, onSave, mode, initialData }: {
                 className="rounded border-gray-300 text-orange-600 focus:ring-orange-500 mt-0.5"
               />
               <div className="flex-1">
-                <Label htmlFor="skip-holiday-weeks" className="text-sm font-medium">Skip holiday weeks in timetable cycle</Label>
+                <Label htmlFor="skip-holiday-weeks" className="text-sm font-medium">Skip holiday weeks in {getLocalizedTerm(user?.location, 'timetableCycle').toLowerCase()}</Label>
                 <p className="text-xs text-gray-500 mt-1">
                   When enabled, Week 1/Week 2 alternation pauses during holidays and resumes with the same week pattern after holidays end. 
                   When disabled, the week cycle continues during holidays (useful if you run activities during breaks).
@@ -154,13 +157,14 @@ function AcademicYearModal({ open, onClose, onSave, mode, initialData }: {
 }
 
 // Holiday Modal
-function HolidayModal({ open, onClose, onSave, mode, initialData, academicYearId }: {
+function HolidayModal({ open, onClose, onSave, mode, initialData, academicYearId, userLocation }: {
   open: boolean;
   onClose: () => void;
   onSave: (data: { name: string; startDate: string; endDate: string; type: string; color?: string }) => Promise<void>;
   mode: 'add' | 'view' | 'edit';
   initialData?: { name: string; startDate: string; endDate: string; type: string; color?: string };
   academicYearId: number | null;
+  userLocation?: string | null;
 }) {
   const [name, setName] = useState(initialData?.name || '');
   const [startDate, setStartDate] = useState(initialData?.startDate || '');
@@ -242,14 +246,15 @@ function HolidayModal({ open, onClose, onSave, mode, initialData, academicYearId
                 <SelectValue placeholder="Select holiday type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="holiday">Holiday</SelectItem>
-                <SelectItem value="half_term">Half Term</SelectItem>
-                <SelectItem value="training_day">Training Day</SelectItem>
-                <SelectItem value="planning_day">Planning Day</SelectItem>
+                <SelectItem value="holiday">{getLocalizedHolidayType(userLocation, 'holiday')}</SelectItem>
+                <SelectItem value="half_term">{getLocalizedHolidayType(userLocation, 'half_term')}</SelectItem>
+                <SelectItem value="inset_day">{getLocalizedHolidayType(userLocation, 'inset_day')}</SelectItem>
+                <SelectItem value="training_day">{getLocalizedHolidayType(userLocation, 'training_day')}</SelectItem>
+                <SelectItem value="planning_day">{getLocalizedHolidayType(userLocation, 'planning_day')}</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-gray-500">
-              Choose Holiday or Half Term for multi-day breaks. Use Training Day for staff development and Planning Day for preparation days — these are treated as non-teaching days.
+              Choose Holiday or {getLocalizedHolidayType(userLocation, 'half_term')} for multi-day breaks. Use {getLocalizedHolidayType(userLocation, 'inset_day')} for staff development and {getLocalizedHolidayType(userLocation, 'planning_day')} for preparation days — these are treated as non-teaching days.
             </p>
           </div>
           <div className="space-y-2">
@@ -280,6 +285,7 @@ function HolidayModal({ open, onClose, onSave, mode, initialData, academicYearId
 export default function AcademicYearSetupPage() {
   const { data: academicYears, error: academicYearsError, mutate: mutateAcademicYears } = useSWR<AcademicYear[]>('/api/academic-years', fetcher);
   const { data: holidays, error: holidaysError, mutate: mutateHolidays } = useSWR<Holiday[]>('/api/holidays', fetcher);
+  const { data: user } = useSWR<User>('/api/user', fetcher);
 
   // Academic Year Modal state
   const [academicYearModalOpen, setAcademicYearModalOpen] = useState(false);
@@ -482,7 +488,7 @@ export default function AcademicYearSetupPage() {
                   <GraduationCap className="h-6 w-6 text-orange-600" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Academic Year: Holidays and Training Days</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">{getLocalizedTerm(user?.location, 'academicYear')}: {getLocalizedTerm(user?.location, 'holidaysAndTrainingDays')}</h1>
                   <p className="text-gray-600">Set up your academic year, holidays, and week cycles.<br/> Add training or planning days to exclude them from teaching days.</p>
                 </div>
               </div>
@@ -611,7 +617,7 @@ export default function AcademicYearSetupPage() {
                   <CardContent>
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="font-medium text-gray-900">
-                        Holidays and Training Days ({yearHolidays.length})
+                        {getLocalizedTerm(user?.location, 'holidaysAndTrainingDays')} ({yearHolidays.length})
                       </h4>
                       <Button 
                         variant="outline" 
@@ -659,7 +665,7 @@ export default function AcademicYearSetupPage() {
                               {new Date(holiday.startDate).toLocaleDateString()} - {new Date(holiday.endDate).toLocaleDateString()}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {formatHolidayType(holiday.type)}
+                              {getLocalizedHolidayType(user?.location, holiday.type)}
                             </p>
                           </div>
                         ))}
@@ -717,6 +723,7 @@ export default function AcademicYearSetupPage() {
         onSave={handleSaveHoliday}
         mode={holidayModalMode}
         academicYearId={holidayAcademicYearId}
+        userLocation={user?.location}
         initialData={selectedHoliday ? {
           name: selectedHoliday.name,
           startDate: selectedHoliday.startDate,

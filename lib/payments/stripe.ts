@@ -25,8 +25,10 @@ type SignupData = {
   name: string;
   email: string;
   passwordHash: string;
-  teacherType: string;
+  teachingPhase: string;
+  colorPreference: string;
   timetableCycle: string;
+  location: string;
 };
 
 export async function createCheckoutSession({
@@ -72,8 +74,10 @@ export async function createCheckoutSession({
     metadata.signupName = signupData.name;
     metadata.signupEmail = signupData.email;
     metadata.signupPasswordHash = signupData.passwordHash;
-    metadata.signupTeacherType = signupData.teacherType;
+    metadata.signupTeachingPhase = signupData.teachingPhase;
+    metadata.signupColorPreference = signupData.colorPreference;
     metadata.signupTimetableCycle = signupData.timetableCycle;
+    metadata.signupLocation = signupData.location;
   }
 
   const session = await stripe.checkout.sessions.create({

@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ColorPicker } from '@/components/ui/color-picker';
 import useSWR from 'swr';
 import { useAcademicCalendar } from '@/lib/hooks/useAcademicCalendar';
+import { getLocalizedTerm } from '@/lib/utils/localization';
+import { User } from '@/lib/db/schema';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -25,6 +27,9 @@ interface LessonModalProps {
 }
 
 export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialData, isUnfinished }: LessonModalProps) {
+  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const timetableSlotLabel = getLocalizedTerm(user?.location, 'timetableSlot');
+  
   const [formData, setFormData] = useState({
     title: '',
     classId: '',
@@ -63,15 +68,12 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
       );
       
       if (hasInitialData) {
-        console.log('🔍 Lesson Modal - Populating form with initialData:', initialData);
         // Ensure timetableSlotIds is an array of strings
         const slotIds = initialData.timetableSlotIds 
           ? (Array.isArray(initialData.timetableSlotIds) 
               ? initialData.timetableSlotIds.map(id => id.toString()).filter(id => id)
               : [initialData.timetableSlotIds.toString()].filter(id => id))
           : [];
-        
-        console.log('🔍 Lesson Modal - Processed slotIds:', slotIds);
         
         const newFormData = {
           title: initialData.title || '',
@@ -83,11 +85,9 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
           color: initialData.color || '#000000',
           planCompleted: initialData.planCompleted !== undefined ? initialData.planCompleted : false,
         };
-        console.log('🔍 Lesson Modal - Setting formData:', newFormData);
         setFormData(newFormData);
         setErrors({}); // Clear errors when setting new form data
       } else {
-        console.log('🔍 Lesson Modal - No initialData, using default form');
         // For add mode with no initialData, auto-select if only one option available
         const autoSelectedClassId = (classes && classes.length === 1) ? classes[0].id.toString() : '';
         const autoSelectedSubjectId = (subjects && subjects.length === 1) ? subjects[0].id.toString() : '';
@@ -117,7 +117,6 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
       // Only update if formData doesn't have the slot IDs
       if (formData.timetableSlotIds.length === 0 || 
           !formData.timetableSlotIds.every(id => slotIds.includes(id.toString()))) {
-        console.log('🔍 Lesson Modal - Updating timetableSlotIds from initialData:', slotIds);
         setFormData(prev => ({
           ...prev,
           timetableSlotIds: slotIds
@@ -162,14 +161,14 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
     if (userData && formData.classId && formData.subjectId && classes && subjects) {
       let autoColor = '#000000'; // Default fallback
       
-      if (userData.teacherType === 'primary') {
-        // Primary teachers: use subject color
+      if (userData.colorPreference === 'subject') {
+        // Use subject color
         const selectedSubject = subjects.find(s => s.id === parseInt(formData.subjectId));
         if (selectedSubject?.color) {
           autoColor = selectedSubject.color;
         }
-      } else if (userData.teacherType === 'secondary') {
-        // Secondary teachers: use class color
+      } else if (userData.colorPreference === 'class') {
+        // Use class color
         const selectedClass = classes.find(c => c.id === parseInt(formData.classId));
         if (selectedClass?.color) {
           autoColor = selectedClass.color;
@@ -203,7 +202,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
     const hasPreFilledSlots = (initialData?.timetableSlotIds && initialData.timetableSlotIds.length > 0) ||
                                (formData.timetableSlotIds && formData.timetableSlotIds.length > 0);
     if (!hasPreFilledSlots) {
-      newErrors.timetableSlotIds = 'At least one timetable slot is required';
+      newErrors.timetableSlotIds = `At least one ${timetableSlotLabel.toLowerCase()} is required`;
     }
 
     setErrors(newErrors);
@@ -216,20 +215,10 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
     }
     
     const isValid = validateForm();
-    console.log('🔍 Lesson Modal - Form validation result:', isValid, 'Errors:', errors);
     
     if (!isValid) {
-      console.error('🔍 Lesson Modal - Form validation failed, not submitting');
       return;
     }
-
-    console.log('🔍 Lesson Modal - Submitting lesson form with data:', {
-      formData,
-      isUnfinished
-    });
-    console.log('Available classes:', classes);
-    console.log('Available subjects:', subjects);
-    console.log('Available timetable slots:', timetableSlots);
 
     // Check if we have the required data
     if (!classes || classes.length === 0) {
@@ -241,7 +230,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
       return;
     }
     if (!timetableSlots || timetableSlots.length === 0) {
-      alert('No timetable slots available. Please create a timetable slot first.');
+      alert(`No ${timetableSlotLabel.toLowerCase()}s available. Please create a ${timetableSlotLabel.toLowerCase()} first.`);
       return;
     }
 
@@ -265,24 +254,9 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
         planCompleted: finalPlanCompleted 
       };
       
-      console.log('🔍 Lesson Modal - Calling onSave with data:', {
-        ...dataToSave,
-        timetableSlotIds: dataToSave.timetableSlotIds,
-        timetableSlotIdsLength: dataToSave.timetableSlotIds?.length,
-        hasTimetableSlotIds: !!dataToSave.timetableSlotIds && dataToSave.timetableSlotIds.length > 0,
-        formDataTimetableSlotIds: formData.timetableSlotIds,
-        initialDataTimetableSlotIds: initialData?.timetableSlotIds
-      });
-      
       // Double-check that timetableSlotIds are present for unfinished lessons
       if (isUnfinished && (!dataToSave.timetableSlotIds || dataToSave.timetableSlotIds.length === 0)) {
-        console.error('🔍 Lesson Modal - ERROR: timetableSlotIds missing for unfinished lesson!', {
-          formData,
-          initialData,
-          dataToSave,
-          finalTimetableSlotIds
-        });
-        alert('Error: Timetable slot information is missing. Please try again.');
+        alert(`Error: ${timetableSlotLabel} information is missing. Please try again.`);
         setIsLoading(false);
         return;
       }
@@ -290,7 +264,6 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
       await onSave(dataToSave);
       onClose();
     } catch (error) {
-      console.error('Error saving lesson:', error);
       // Show error to user
       if (error instanceof Error) {
         alert(`Error creating lesson: ${error.message}`);
@@ -309,7 +282,6 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
   };
 
   const handleDelete = async () => {
-    console.log('Delete button clicked:', { onDelete: !!onDelete, initialData: !!initialData, mode });
     if (!onDelete) return;
     
     if (confirm('Are you sure you want to delete this lesson? This action cannot be undone.')) {
@@ -318,7 +290,6 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
         await onDelete(initialData);
         onClose();
       } catch (error) {
-        console.error('Error deleting lesson:', error);
         alert('Error deleting lesson. Please try again.');
       } finally {
         setIsLoading(false);
@@ -334,27 +305,12 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
     const dayOfWeek = selectedDate.toLocaleDateString('en-GB', { weekday: 'long' });
     const weekNumber = getWeekNumberForDate(selectedDate);
     
-    console.log('🔍 Lesson Modal - Filtering timetable slots:', {
-      selectedDate: formData.date,
-      dayOfWeek,
-      weekNumber,
-      totalSlots: timetableSlots.length,
-      allSlots: timetableSlots.map(s => ({
-        id: s.id,
-        dayOfWeek: s.dayOfWeek,
-        weekNumber: s.weekNumber,
-        label: s.label
-      }))
-    });
-    
     // Filter slots that match the selected day of the week and week number
     // This applies to both add and edit modes to show only relevant slots for the selected date
     const availableSlots = timetableSlots.filter(slot => 
       slot.dayOfWeek === dayOfWeek && 
       slot.weekNumber === weekNumber
     );
-    
-    console.log('✅ Available slots after filtering:', availableSlots.length, availableSlots);
     
     return availableSlots;
   };
@@ -373,7 +329,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
           {(!classes || classes.length === 0 || !subjects || subjects.length === 0 || !timetableSlots || timetableSlots.length === 0) && (
             <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
               <p className="text-sm text-orange-800">
-                <strong>Setup Required:</strong> You need to create classes, subjects, and timetable slots before you can create lessons.
+                <strong>Setup Required:</strong> You need to create classes, subjects, and {timetableSlotLabel.toLowerCase()}s before you can create lessons.
               </p>
             </div>
           )}
@@ -562,7 +518,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
               if (availableSlots.length === 0) {
                 return (
                   <div className="border rounded-md p-3 bg-gray-50">
-                    <p className="text-sm text-gray-500">No timetable slots available for this date. Please create timetable slots first or select a different date.</p>
+                    <p className="text-sm text-gray-500">No {timetableSlotLabel.toLowerCase()}s available for this date. Please create {timetableSlotLabel.toLowerCase()}s first or select a different date.</p>
                   </div>
                 );
               }

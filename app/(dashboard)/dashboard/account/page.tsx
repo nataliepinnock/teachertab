@@ -1,17 +1,18 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Lock, Trash2, CreditCard } from 'lucide-react';
 import { updateAccount, updatePassword, deleteAccount } from '@/app/(login)/actions';
 import { customerPortalAction } from '@/lib/payments/actions';
 import { User } from '@/lib/db/schema';
-import useSWR from 'swr';
+import useSWR, { mutate } from 'swr';
 import { Suspense } from 'react';
+import { getLocalizedTerm, type Location } from '@/lib/utils/localization';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -39,17 +40,35 @@ type AccountFormProps = {
   state: AccountState;
   nameValue?: string;
   emailValue?: string;
-  teacherTypeValue?: string;
-  timetableCycleValue?: string;
+  locationValue?: string;
 };
 
 function AccountForm({
   state,
   nameValue = '',
   emailValue = '',
-  teacherTypeValue = 'primary',
-  timetableCycleValue = 'weekly'
+  locationValue = 'UK',
 }: AccountFormProps) {
+  const [isClient, setIsClient] = useState(false);
+  const [location, setLocation] = useState<Location>(locationValue as Location);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Sync hidden input whenever location changes
+  useEffect(() => {
+    if (isClient) {
+      const locationInput = document.getElementById('location-input') as HTMLInputElement;
+      
+      if (locationInput) {
+        locationInput.value = location;
+        // Remove any validation attributes that might cause issues
+        locationInput.removeAttribute('required');
+      }
+    }
+  }, [location, isClient]);
+
   return (
     <>
       <div>
@@ -78,38 +97,39 @@ function AccountForm({
         />
       </div>
       <div>
-        <Label className="mb-2">Teacher Type</Label>
-        <RadioGroup
-          defaultValue={teacherTypeValue}
-          name="teacherType"
-          className="flex space-x-4"
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="primary" id="primary" />
-            <Label htmlFor="primary">Primary Teacher</Label>
+        <Label htmlFor="location" className="mb-2">Location</Label>
+        {isClient ? (
+          <>
+            <Select 
+              value={location}
+              onValueChange={(value) => {
+                setLocation(value as Location);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select your location" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="UK">UK</SelectItem>
+                <SelectItem value="US">US</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+            <input 
+              type="hidden" 
+              id="location-input" 
+              name="location" 
+              value={location}
+            />
+          </>
+        ) : (
+          <div className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm">
+            <span className="text-muted-foreground">{locationValue}</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="secondary" id="secondary" />
-            <Label htmlFor="secondary">Secondary Teacher</Label>
-          </div>
-        </RadioGroup>
-      </div>
-      <div>
-        <Label className="mb-2">Timetable Cycle</Label>
-        <RadioGroup
-          defaultValue={timetableCycleValue}
-          name="timetableCycle"
-          className="flex space-x-4"
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="weekly" id="weekly" />
-            <Label htmlFor="weekly">Weekly</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="2-weekly" id="2-weekly" />
-            <Label htmlFor="2-weekly">2-Week Cycle</Label>
-          </div>
-        </RadioGroup>
+        )}
+        <p className="text-xs text-gray-500 mt-1">
+          This affects terminology used throughout the app (e.g., "Term" vs "Semester", "Timetable" vs "Schedule")
+        </p>
       </div>
     </>
   );
@@ -117,13 +137,13 @@ function AccountForm({
 
 function AccountFormWithData({ state }: { state: AccountState }) {
   const { data: user } = useSWR<User>('/api/user', fetcher);
+
   return (
     <AccountForm
       state={state}
       nameValue={user?.name ?? ''}
       emailValue={user?.email ?? ''}
-      teacherTypeValue={user?.teacherType ?? 'primary'}
-      timetableCycleValue={user?.timetableCycle ?? 'weekly'}
+      locationValue={user?.location ?? 'UK'}
     />
   );
 }
@@ -192,7 +212,14 @@ function SubscriptionSection() {
 
 export default function AccountPage() {
   const [accountState, accountAction, isAccountPending] = useActionState<AccountState, FormData>(
-    updateAccount,
+    async (prevState, formData) => {
+      const result = await updateAccount(prevState, formData);
+      // Invalidate user cache after successful update so calendar views refresh
+      if (result?.success && typeof window !== 'undefined') {
+        mutate('/api/user');
+      }
+      return result;
+    },
     {}
   );
 
@@ -207,10 +234,11 @@ export default function AccountPage() {
   >(deleteAccount, {});
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
-      <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
-        Account Settings
-      </h1>
+    <section className="flex-1 min-h-0 flex flex-col overflow-y-auto">
+      <div className="p-4 lg:p-8 max-w-4xl mx-auto w-full pb-8">
+        <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
+          Account Settings
+        </h1>
 
       {/* Subscription Section */}
       <Suspense fallback={<Card className="mb-8"><CardContent className="p-6"><div className="animate-pulse h-20 bg-gray-100 rounded"></div></CardContent></Card>}>
@@ -223,7 +251,7 @@ export default function AccountPage() {
           <CardTitle>Personal Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" action={accountAction}>
+          <form className="space-y-4" action={accountAction} noValidate>
             <Suspense fallback={<AccountForm state={accountState} />}>
               <AccountFormWithData state={accountState} />
             </Suspense>
@@ -383,6 +411,7 @@ export default function AccountPage() {
           </form>
         </CardContent>
       </Card>
+      </div>
     </section>
   );
 }

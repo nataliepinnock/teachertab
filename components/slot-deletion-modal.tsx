@@ -118,7 +118,7 @@ export function SlotDeletionModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-orange-500" />
-            Delete Timetable Slot
+            Delete {timetableSlotLabel}
           </DialogTitle>
         </DialogHeader>
 
@@ -141,7 +141,7 @@ export function SlotDeletionModal({
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-orange-600">
                     <AlertTriangle className="h-4 w-4" />
-                    <span className="font-medium">This timetable slot is currently being used and has content that will be affected:</span>
+                    <span className="font-medium">This {timetableSlotLabel.toLowerCase()} is currently being used and has content that will be affected:</span>
                   </div>
 
                   {/* Lessons */}

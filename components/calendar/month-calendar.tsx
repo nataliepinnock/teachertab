@@ -6,6 +6,7 @@ import { Event, Lesson, Class, Subject, User } from '@/lib/db/schema';
 import { useAcademicCalendar } from '@/lib/hooks/useAcademicCalendar';
 import { isWeekFullyCoveredByHolidays } from '@/lib/utils/academic-calendar';
 import { getCardStyle, getCardClassName, getBorderColorWithOpacity } from '@/lib/utils/card-styles';
+import { getLocalizedHolidayType } from '@/lib/utils/localization';
 
 // Function to lighten a hex color
 function lightenColor(color: string, amount: number = 0.7): string {
@@ -307,7 +308,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
       // Refresh data
       window.location.reload(); // Simple refresh for month calendar
     } catch (error) {
-      console.error('Error deleting lessons:', error);
       alert('Error deleting lessons. Please try again.');
     }
   };
@@ -331,7 +331,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
       // Refresh data
       window.location.reload(); // Simple refresh for month calendar
     } catch (error) {
-      console.error('Error deleting event:', error);
       alert('Error deleting event. Please try again.');
     }
   };
@@ -360,7 +359,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
       mutate('/api/holidays');
       setEditingHoliday(null);
     } catch (error) {
-      console.error('Error updating holiday:', error);
       alert('Error updating holiday. Please try again.');
     }
   };
@@ -387,7 +385,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
       // Refresh holidays data
       mutate('/api/holidays');
     } catch (error) {
-      console.error('Error deleting holiday:', error);
       alert('Error deleting holiday. Please try again.');
     }
   };
@@ -446,7 +443,9 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
             }
           }
           
-          const lessonColor = lesson.color || lSubjectInfo.color || '#4F46E5';
+          const lessonColor = lesson.color || (user?.colorPreference === 'subject'
+            ? (lSubjectInfo.color || '#6B7280')
+            : (lClassInfo.color || '#6B7280'));
           initialEvents.push({
             id: `lesson-${lesson.id}`,
             title: lesson.title,
@@ -468,18 +467,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
     });
 
     events.forEach((event, index) => {
-      // Debug logging only in development
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`Event ${index + 1}:`, {
-          id: event.id,
-          title: event.title,
-          startTime: event.startTime,
-          endTime: event.endTime,
-          color: event.color || '#8B5CF6',
-          startTimeType: typeof event.startTime,
-          startTimeParsed: new Date(event.startTime)
-        });
-      }
       
       // Handle different date formats - some events might have string dates, others Date objects
       let eventStartDate: Date;
@@ -489,11 +476,9 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
         eventEndDate = new Date(event.endTime);
         // Check if the dates are valid
         if (isNaN(eventStartDate.getTime()) || isNaN(eventEndDate.getTime())) {
-          console.warn(`Event ${event.id} has invalid dates:`, event.startTime, event.endTime);
           return; // Skip this event
         }
       } catch (error) {
-        console.warn(`Event ${event.id} has unparseable dates:`, event.startTime, event.endTime, error);
         return; // Skip this event
       }
       
@@ -553,16 +538,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
           currentDate.setDate(currentDate.getDate() + 1);
         }
       } else {
-        // Debug logging only in development
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`Event ${event.id} is NOT in month range:`, {
-            startDate: startDate.toDateString(),
-            endDate: endDate.toDateString(),
-            monthStart: monthStart.toDateString(),
-            monthEnd: monthEnd.toDateString(),
-            isInRange: startDate <= monthEnd && endDate >= monthStart
-          });
-        }
       }
     });
 
@@ -579,11 +554,9 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
         holidayEndDate = new Date(holiday.endTime);
         // Check if the dates are valid
         if (isNaN(holidayStartDate.getTime()) || isNaN(holidayEndDate.getTime())) {
-          console.warn(`Holiday ${holiday.id} has invalid dates:`, holiday.startTime, holiday.endTime);
           return; // Skip this holiday
         }
       } catch (error) {
-        console.warn(`Holiday ${holiday.id} has unparseable dates:`, holiday.startTime, holiday.endTime, error);
         return; // Skip this holiday
       }
       
@@ -772,7 +745,7 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
               const endTime = new Date(year, month, day, endHour, endMinute);
               
               // Create title based on teacher type
-              const title = user?.teacherType === 'primary' 
+              const title = (user?.colorPreference === 'subject')
                 ? `${subjectInfo?.name || 'Subject'} - ${classInfo?.name || 'Class'}`
                 : `${classInfo?.name || 'Class'} - ${subjectInfo?.name || 'Subject'}`;
               
@@ -786,7 +759,9 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
                 description: undefined,
                 class: classInfo?.name || undefined,
                 subject: subjectInfo?.name || undefined,
-                color: subjectInfo?.color || classInfo?.color || '#D1D5DB',
+                color: (user?.colorPreference === 'subject'
+                  ? (subjectInfo?.color || '#6B7280')
+                  : (classInfo?.color || '#6B7280')),
                 allDay: false,
                 classId: entry.classId || undefined,
                 subjectId: entry.subjectId || undefined,
@@ -891,12 +866,7 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
               
               // Apply events-only filter if enabled
               if (showEventsOnly) {
-                const beforeCount = eventsForDay.length;
-                const eventTypes = eventsForDay.map(e => e.type);
-                console.log(`Before filtering: ${beforeCount} events with types:`, eventTypes);
                 eventsForDay = eventsForDay.filter(event => event.type === 'event' || event.type === 'holiday');
-                const afterCount = eventsForDay.length;
-                console.log(`After filtering: ${afterCount} events only (showEventsOnly: ${showEventsOnly})`);
               }
               
               eventsForDay = eventsForDay.sort((a, b) => {
@@ -1022,12 +992,12 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
                                 whiteSpace: 'nowrap'
                               }}
                               title={event.type === 'lesson' && event.isUnfinished 
-                                ? `${user?.teacherType === 'primary' ? (event.subject || '') : (event.class || '')}${user?.teacherType === 'primary' ? (event.class ? ` - ${event.class}` : '') : (event.subject ? ` - ${event.subject}` : '')}` || `Untitled ${event.type}`
+                                ? `${(user?.colorPreference === 'subject') ? (event.subject || '') : (event.class || '')}${(user?.colorPreference === 'subject') ? (event.class ? ` - ${event.class}` : '') : (event.subject ? ` - ${event.subject}` : '')}` || `Untitled ${event.type}`
                                 : (event.title || `Untitled ${event.type}`)
                               }
                             >
                               {event.type === 'lesson' && event.isUnfinished 
-                                ? `${user?.teacherType === 'primary' ? (event.subject || '') : (event.class || '')}${user?.teacherType === 'primary' ? (event.class ? ` - ${event.class}` : '') : (event.subject ? ` - ${event.subject}` : '')}` || `Untitled ${event.type}`
+                                ? `${(user?.colorPreference === 'subject') ? (event.subject || '') : (event.class || '')}${(user?.colorPreference === 'subject') ? (event.class ? ` - ${event.class}` : '') : (event.subject ? ` - ${event.subject}` : '')}` || `Untitled ${event.type}`
                                 : (event.title || `Untitled ${event.type}`)
                               }
                             </p>
@@ -1248,7 +1218,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
                       try {
                         // For events, update via PATCH API
                         const eventId = editingEvent.id.replace('event-', '');
-                        console.log('Updating event via API:', { eventId, event: editingEvent });
                         
                         const response = await fetch('/api/events', {
                           method: 'PATCH',
@@ -1270,8 +1239,7 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
                           throw new Error('Failed to update event');
                         }
 
-                        const updatedEvent = await response.json();
-                        console.log('Event updated successfully:', updatedEvent);
+                        await response.json();
                         
                         // Close the modal
                         setEditingEvent(null);
@@ -1279,7 +1247,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
                         // Refresh the data
                         mutate('/api/events');
                       } catch (error) {
-                        console.error('Error updating event:', error);
                         alert('Failed to update event. Please try again.');
                       }
                     }}
@@ -1331,7 +1298,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
                 mutate('/api/lessons');
               }
             } catch (error) {
-              console.error('Error deleting lesson:', error);
               alert('Error deleting lesson. Please try again.');
             }
           } : undefined}
@@ -1354,11 +1320,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
 
               // Create new lessons with the updated data
               const { timetableSlotIds, ...baseLessonData } = data;
-              console.log('🔍 Month Calendar - Creating new lessons with data:', {
-                timetableSlotIds,
-                baseLessonData,
-                data
-              });
               
               if (timetableSlotIds && timetableSlotIds.length > 0) {
                 const lessonPromises = timetableSlotIds.map(async (slotId: string) => {
@@ -1366,8 +1327,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
                     ...baseLessonData,
                     timetableSlotId: slotId,
                   };
-                  
-                  console.log('🔍 Month Calendar - Creating lesson for slot:', slotId, 'with data:', lessonData);
                   
                   const response = await fetch('/api/lessons', {
                     method: 'POST',
@@ -1379,7 +1338,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
                   
                   if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('🔍 Month Calendar - Error creating lesson for slot:', slotId, 'Response:', response.status, errorText);
                     throw new Error(`Failed to create lesson for slot ${slotId}: ${errorText}`);
                   }
                   return response.json();
@@ -1391,7 +1349,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
               mutate('/api/lessons');
               setEditingLesson(null);
             } catch (error) {
-              console.error('Error updating lesson:', error);
               alert('Error updating lesson. Please try again.');
             }
           }}
@@ -1399,7 +1356,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
             const lessonIds = editingLesson.lessonIds;
             
             if (!lessons || lessons.length === 0) {
-              console.log('🔍 Month Calendar - No lessons data available yet');
               // Try to find class and subject IDs by name if available
               let classId = '';
               let subjectId = '';
@@ -1473,16 +1429,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
               lessonPlan: firstLesson?.lessonPlan || editingLesson.description || '',
               color: firstLesson?.color || editingLesson.color || '#6B7280',
             };
-            
-            console.log('🔍 Month Calendar Lesson Edit Debug:', {
-              editingLesson: editingLesson,
-              lessonIds: lessonIds,
-              matchingLessons: matchingLessons,
-              firstLesson: firstLesson,
-              classes: classes,
-              subjects: subjects,
-              initialData: initialData
-            });
             
             return initialData;
           })()}
@@ -1563,15 +1509,15 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
                     Type
                   </label>
                   <select
-                    name="type"
-                    defaultValue="holiday"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="holiday">Holiday</option>
-                    <option value="half_term">Half Term</option>
-                    <option value="term_break">Term Break</option>
-                    <option value="inset_day">INSET Day</option>
-                  </select>
+                      name="type"
+                      defaultValue="holiday"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="holiday">Holiday</option>
+                      <option value="half_term">{getLocalizedHolidayType(user?.location, 'half_term')}</option>
+                      <option value="term_break">{getLocalizedHolidayType(user?.location, 'term_break')}</option>
+                      <option value="inset_day">{getLocalizedHolidayType(user?.location, 'inset_day')}</option>
+                    </select>
                 </div>
 
                 {/* Color */}
@@ -1654,7 +1600,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
               mutateTimetableActivities();
               setEditingActivity(null);
             } catch (error) {
-              console.error('Error saving activity:', error);
               alert(`Error ${editingActivity.id ? 'updating' : 'creating'} activity. Please try again.`);
             }
           }}
@@ -1671,7 +1616,6 @@ export function MonthCalendar({ onAddEvent, className = '', currentDate: externa
               mutateTimetableActivities();
               setEditingActivity(null);
             } catch (error) {
-              console.error('Error deleting activity:', error);
               throw error;
             }
           }}

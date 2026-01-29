@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle, ArrowRight, CalendarDays, Clock, Users, BookOpen, FileText, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
 import useSWR from 'swr';
+import { getLocalizedTerm } from '@/lib/utils/localization';
+import { User } from '@/lib/db/schema';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -17,6 +19,7 @@ interface SetupStep {
 }
 
 export function SetupProgress() {
+  const { data: user } = useSWR<User>('/api/user', fetcher);
   const { data: academicYears, error: academicYearsError } = useSWR('/api/academic-years', fetcher);
   const { data: holidays, error: holidaysError } = useSWR('/api/holidays', fetcher);
   const { data: timetableSlots, error: timetableSlotsError } = useSWR('/api/timetable-slots', fetcher);
@@ -71,8 +74,8 @@ export function SetupProgress() {
     },
     {
       id: 'timetable',
-      title: 'Build your timetable',
-      description: 'Set up your weekly timetable with time slots for each day.',
+      title: getLocalizedTerm(user?.location, 'buildTimetable'),
+      description: `${getLocalizedTerm(user?.location, 'setUpTimetable')} with time slots for each day.`,
       icon: Clock,
       href: '/dashboard/setup/timetable',
       checkComplete: () => timetableSlotsArray.length > 0

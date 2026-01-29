@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { use, useState, Suspense } from 'react';
+import { use, useState, Suspense, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Home, LogOut } from 'lucide-react';
@@ -21,8 +21,13 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const { data: user } = useSWR<User>('/api/user', fetcher);
   const router = useRouter();
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   async function handleSignOut() {
     await signOut();
@@ -62,6 +67,19 @@ function UserMenu() {
     const emailParts = user.email.split('@');
     return (emailParts[0][0] + (emailParts[1]?.[0] || emailParts[0][1] || '')).toUpperCase();
   };
+
+  if (!isClient) {
+    return (
+      <button className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#001b3d] rounded-full">
+        <Avatar className="size-9 ring-2 ring-white/20 hover:ring-white/40 transition-all">
+          <AvatarImage alt={user.name || user.email} />
+          <AvatarFallback className="bg-[#fbae36] text-[#001b3d] font-semibold text-sm">
+            {getInitials()}
+          </AvatarFallback>
+        </Avatar>
+      </button>
+    );
+  }
 
   return (
     <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>

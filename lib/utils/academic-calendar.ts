@@ -178,8 +178,11 @@ export function getAcademicYearForDate(date: Date, academicYears: AcademicYear[]
   ) || null;
 }
 
+import { getLocalizedHolidayType } from './localization';
+
 /**
  * Format holiday type for display
+ * @deprecated Use getLocalizedHolidayType instead for location-aware formatting
  */
 export function formatHolidayType(type: string): string {
   switch (type) {

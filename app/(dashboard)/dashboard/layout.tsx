@@ -7,13 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { signOut } from '@/app/(login)/actions';
 import { mutate } from 'swr';
-import { User, Users, Settings, Menu, Clock, CheckCircle, CalendarDays, Grid3X3, Home, BookOpen, FileText, BarChart3, LogOut, ListTodo } from 'lucide-react';
+import { User, Users, Settings, Menu, Clock, CheckCircle, CalendarDays, Grid3X3, Home, BookOpen, FileText, BarChart3, LogOut, ListTodo, GraduationCap } from 'lucide-react';
 
 interface UserData {
   id: number;
   name: string;
   email: string;
-  teacherType: string;
+  teachingPhase: string;
+  colorPreference: string;
 }
 
 export default function DashboardLayout({
@@ -48,6 +49,7 @@ export default function DashboardLayout({
     { href: '/dashboard/calendar', icon: CalendarDays, label: 'Calendar' },
     { href: '/dashboard/lessons', icon: BookOpen, label: 'Lessons' },
     { href: '/dashboard/classes', icon: Users, label: 'Classes' },
+    { href: '/dashboard/subjects', icon: GraduationCap, label: 'Subjects' },
     { href: '/dashboard/tasks', icon: ListTodo, label: 'Tasks' }
   ];
 
@@ -57,6 +59,8 @@ export default function DashboardLayout({
   ];
 
   const isCalendarPage = pathname === '/dashboard/calendar';
+  const isDashboardPage = pathname === '/dashboard';
+  const isFixedHeightPage = isCalendarPage || isDashboardPage;
 
   // Generate initials from name or email
   const getInitials = () => {
@@ -206,9 +210,9 @@ export default function DashboardLayout({
 
       {/* Main content */}
       <main
-        className={`flex-1 flex flex-col overflow-hidden lg:pt-0 pt-14 ${
-          isCalendarPage ? 'overflow-hidden' : 'overflow-y-auto'
-        }`}
+        className={`flex-1 flex flex-col min-h-0 ${
+          isFixedHeightPage ? 'overflow-hidden' : 'overflow-y-auto'
+        } lg:pt-0 pt-14`}
       >
         {children}
       </main>

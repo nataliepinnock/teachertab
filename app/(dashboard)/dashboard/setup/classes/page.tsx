@@ -319,7 +319,7 @@ export default function ClassesSetupPage() {
           notes: selectedClass.notes || '',
           color: selectedClass.color || ''
         } : undefined}
-        showColorField={user?.teacherType === 'secondary'}
+        showColorField={user?.colorPreference === 'class'}
       />
     </div>
   );

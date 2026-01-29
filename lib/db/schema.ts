@@ -16,8 +16,10 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 255 }).notNull().unique(),
   passwordHash: text('password_hash').notNull(),
 
-  teacherType: varchar('teacher_type', { length: 20 }).notNull(),
+  teachingPhase: varchar('teaching_phase', { length: 20 }).notNull().default('primary'), // primary, secondary, further, elementary, middle, high
+  colorPreference: varchar('color_preference', { length: 10 }).notNull().default('subject'), // 'class' or 'subject'
   timetableCycle: varchar('timetable_cycle', { length: 10 }).notNull().default('weekly'),
+  location: varchar('location', { length: 10 }).notNull().default('UK'), // UK, US, or Other
 
   stripeCustomerId: text('stripe_customer_id').unique(),
   stripeSubscriptionId: text('stripe_subscription_id').unique(),
@@ -91,6 +93,7 @@ export const subjects = pgTable('subjects', {
   userId: integer('user_id').notNull().references(() => users.id),
   name: varchar('name', { length: 100 }).notNull(),
   color: varchar('color', { length: 10 }),
+  notes: text('notes'),
 });
 
 export const subjectsRelations = relations(subjects, ({ one, many }) => ({

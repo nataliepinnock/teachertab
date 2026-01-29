@@ -12,6 +12,8 @@ import { Loader2 } from 'lucide-react';
 import { TeacherTabLogo } from '@/components/ui/logo';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
+import { getTeachingPhaseOptions, type Location } from '@/lib/utils/localization';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export type PlanOption = {
   id: string;
@@ -106,6 +108,7 @@ export function Login({
   }, [mode, statePriceId, initialPriceId, priceIdQuery, safePlans]);
 
   const [selectedPlan, setSelectedPlan] = useState(computedInitialPlan);
+  const [location, setLocation] = useState<Location>('UK');
 
   useEffect(() => {
     if (mode === 'signup') {
@@ -239,22 +242,43 @@ export function Login({
 
               <div>
                 <Label className="block text-sm font-medium text-gray-700 mb-2">
-                  Teacher Type
+                  What phase do you teach?
+                </Label>
+                <Select name="teachingPhase" defaultValue={getTeachingPhaseOptions(location)[0]?.value || 'primary'}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select teaching phase" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getTeachingPhaseOptions(location).map((phase) => (
+                      <SelectItem key={phase.value} value={phase.value}>
+                        {phase.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="block text-sm font-medium text-gray-700 mb-2">
+                  How would you like your {location === 'US' ? 'schedule' : 'timetable'} color coded?
                 </Label>
                 <RadioGroup
-                  defaultValue="primary"
-                  name="teacherType"
+                  defaultValue="subject"
+                  name="colorPreference"
                   className="flex space-x-4"
                 >
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="primary" id="primary" />
-                    <Label htmlFor="primary">Primary Teacher</Label>
+                    <RadioGroupItem value="subject" id="color-subject" />
+                    <Label htmlFor="color-subject">By Subject</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="secondary" id="secondary" />
-                    <Label htmlFor="secondary">Secondary Teacher</Label>
+                    <RadioGroupItem value="class" id="color-class" />
+                    <Label htmlFor="color-class">By Class</Label>
                   </div>
                 </RadioGroup>
+                <p className="mt-1 text-xs text-gray-500">
+                  This determines which colors are used for your lessons in the calendar
+                </p>
               </div>
 
               <div>
@@ -275,6 +299,35 @@ export function Login({
                     <Label htmlFor="2-weekly">2-Week Cycle</Label>
                   </div>
                 </RadioGroup>
+              </div>
+
+              <div>
+                <Label className="block text-sm font-medium text-gray-700 mb-2">
+                  Location
+                </Label>
+                <RadioGroup
+                  defaultValue="UK"
+                  name="location"
+                  value={location}
+                  onValueChange={(value) => setLocation(value as Location)}
+                  className="flex space-x-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="UK" id="location-uk" />
+                    <Label htmlFor="location-uk">UK</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="US" id="location-us" />
+                    <Label htmlFor="location-us">US</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Other" id="location-other" />
+                    <Label htmlFor="location-other">Other</Label>
+                  </div>
+                </RadioGroup>
+                <p className="mt-1 text-xs text-gray-500">
+                  This affects terminology used throughout the app (e.g., Term vs Semester, INSET vs Training Day)
+                </p>
               </div>
             </>
           )}

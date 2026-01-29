@@ -258,7 +258,7 @@ export default function SubjectsSetupPage() {
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-3">No subjects yet</h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              Get started by creating your first subject. You can assign colors to help organize and identify different subjects in your timetable.
+              Get started by creating your first subject. You can assign colors to help organize and identify different subjects in your {getLocalizedTerm(user?.location, 'timetable').toLowerCase()}.
             </p>
             <Button onClick={handleAddSubject} size="lg" className="h-11 px-6">
               <Plus className="h-5 w-5 mr-2" />
@@ -278,7 +278,7 @@ export default function SubjectsSetupPage() {
           name: selectedSubject.name,
           color: selectedSubject.color || ''
         } : undefined}
-        showColorField={user?.teacherType === 'primary'}
+        showColorField={user?.colorPreference === 'subject'}
       />
     </div>
   );
