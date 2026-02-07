@@ -184,3 +184,42 @@ export function getTeachingPhaseOptions(location: Location | string | null | und
   }
 }
 
+/**
+ * Get localized spelling for "organize" based on location
+ * UK: "organise", US/Other: "organize"
+ * @param location - User's location
+ * @returns The localized spelling
+ */
+export function getLocalizedOrganize(location: Location | string | null | undefined): string {
+  if (location === 'UK') {
+    return 'organise';
+  }
+  return 'organize';
+}
+
+/**
+ * Get localized spelling for "organization" (noun) based on location
+ * UK: "organisation", US/Other: "organization"
+ * @param location - User's location
+ * @returns The localized spelling
+ */
+export function getLocalizedOrganization(location: Location | string | null | undefined): string {
+  if (location === 'UK') {
+    return 'organisation';
+  }
+  return 'organization';
+}
+
+/**
+ * Get localized spelling for "organizing" (gerund) based on location
+ * UK: "organising", US/Other: "organizing"
+ * @param location - User's location
+ * @returns The localized spelling
+ */
+export function getLocalizedOrganizing(location: Location | string | null | undefined): string {
+  if (location === 'UK') {
+    return 'organising';
+  }
+  return 'organizing';
+}
+

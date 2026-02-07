@@ -3,7 +3,11 @@ import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
 import { getUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
+import TermlyCMP from '@/components/TermlyCMP';
 
+const WEBSITE_UUID = '1432f3dc-f773-4030-aec0-71b2e73afd60'
+
+  
 export const metadata: Metadata = {
   title: 'TeacherTab',
   description: 'Teach. Plan. Organise.',
@@ -34,6 +38,7 @@ export default function RootLayout({
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
     >
       <body className="min-h-[100dvh] bg-gray-50">
+        <TermlyCMP autoBlock={true} masterConsentsOrigin="https://yourdomain.com" websiteUUID={WEBSITE_UUID} />
         <SWRConfig
           value={{
             fallback: {

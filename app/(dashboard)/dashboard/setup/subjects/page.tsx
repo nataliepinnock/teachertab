@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Edit, Trash2, Eye, ArrowLeft, BookOpen, Palette } from 'lucide-react';
 import { Subject, User } from '@/lib/db/schema';
 import useSWR from 'swr';
+import { getLocalizedTerm, getLocalizedOrganize } from '@/lib/utils/localization';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -187,7 +188,7 @@ export default function SubjectsSetupPage() {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">Subjects</h1>
-                  <p className="text-gray-600">Configure subjects with colors and organize your curriculum</p>
+                  <p className="text-gray-600">Configure subjects with colors and {getLocalizedOrganize(user?.location)} your curriculum</p>
                 </div>
               </div>
             </div>
@@ -258,7 +259,7 @@ export default function SubjectsSetupPage() {
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-3">No subjects yet</h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              Get started by creating your first subject. You can assign colors to help organize and identify different subjects in your {getLocalizedTerm(user?.location, 'timetable').toLowerCase()}.
+              Get started by creating your first subject. You can assign colors to help {getLocalizedOrganize(user?.location)} and identify different subjects in your {getLocalizedTerm(user?.location, 'timetable').toLowerCase()}.
             </p>
             <Button onClick={handleAddSubject} size="lg" className="h-11 px-6">
               <Plus className="h-5 w-5 mr-2" />

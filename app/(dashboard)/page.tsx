@@ -785,6 +785,11 @@ export default function HomePage() {
                       Cookie Policy
                     </Link>
                   </li>
+                  <li>
+                    <a href="#" className="termly-display-preferences text-gray-300 hover:text-white transition-colors">
+                      Consent Preferences
+                    </a>
+                  </li>
                 </ul>
               </div>
               <div>

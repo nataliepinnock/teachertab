@@ -2,16 +2,31 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, BookOpen, Clock, ArrowRight, Settings, CheckCircle, GraduationCap } from 'lucide-react';
+import { Users, BookOpen, Clock, ArrowRight, Settings, CheckCircle, GraduationCap, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { User } from '@/lib/db/schema';
 import useSWR from 'swr';
-import { getLocalizedTerm } from '@/lib/utils/localization';
+import { getLocalizedTerm, getLocalizedOrganize, getLocalizedOrganization } from '@/lib/utils/localization';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function SetupPage() {
   const { data: user } = useSWR<User>('/api/user', fetcher);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    const welcome = searchParams.get('welcome');
+    if (welcome === 'true') {
+      setShowWelcome(true);
+      // Remove the query parameter from URL without reload
+      router.replace('/dashboard/setup', { scroll: false });
+    }
+  }, [searchParams, router]);
   const { data: academicYears, error: academicYearsError } = useSWR('/api/academic-years', fetcher);
   const { data: classes, error: classesError } = useSWR('/api/classes', fetcher);
   const { data: subjects, error: subjectsError } = useSWR('/api/subjects', fetcher);
@@ -53,13 +68,13 @@ export default function SetupPage() {
     },
     {
       title: 'Subjects',
-      description: 'Configure subjects with colors and organize your curriculum',
+      description: `Configure subjects with colors and ${getLocalizedOrganize(user?.location)} your curriculum`,
       icon: BookOpen,
       href: '/dashboard/setup/subjects',
       isComplete: isSubjectsComplete,
       features: user?.colorPreference === 'subject'
-        ? ['Color coding', 'Curriculum organization', 'Subject management']
-        : ['Curriculum organization', 'Subject management', 'Learning objectives']
+        ? ['Color coding', `Curriculum ${getLocalizedOrganization(user?.location)}`, 'Subject management']
+        : [`Curriculum ${getLocalizedOrganization(user?.location)}`, 'Subject management', 'Learning objectives']
     },
     {
       title: timetableLabel,
@@ -67,7 +82,7 @@ export default function SetupPage() {
       icon: Clock,
       href: '/dashboard/setup/timetable',
       isComplete: isTimetableComplete,
-      features: ['Weekly schedules', 'Time slots', 'Day organization']
+      features: ['Weekly schedules', 'Time slots', `Day ${getLocalizedOrganization(user?.location)}`]
     }
   ];
 
@@ -76,6 +91,94 @@ export default function SetupPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* Welcome Modal */}
+      <Dialog open={showWelcome} onOpenChange={setShowWelcome}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 bg-gradient-to-br from-[#001b3d] to-[#002855] rounded-full flex items-center justify-center">
+                <Sparkles className="h-6 w-6 text-white" />
+              </div>
+              <DialogTitle className="text-2xl font-bold text-gray-900">
+                Welcome to TeacherTab, {user?.name?.split(' ')[0] || 'there'}! 🎉
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-base text-gray-600">
+              Let's get you set up in just a few simple steps
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 mt-4">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+              <h3 className="font-semibold text-gray-900 mb-3">Getting Started Guide</h3>
+              <ol className="space-y-4 text-sm text-gray-700">
+                <li className="flex gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 bg-[#fbae36] text-white rounded-full flex items-center justify-center font-bold text-xs">
+                    1
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Set up your Academic Year</p>
+                    <p className="text-gray-600 mt-1">Define your school year, terms, and holidays. This helps {getLocalizedOrganize(user?.location)} your calendar and timetable.</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 bg-[#fbae36] text-white rounded-full flex items-center justify-center font-bold text-xs">
+                    2
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Add your Classes</p>
+                    <p className="text-gray-600 mt-1">Create class groups with student counts. You can add notes and {getLocalizedOrganize(user?.location)} by year group or subject area.</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 bg-[#fbae36] text-white rounded-full flex items-center justify-center font-bold text-xs">
+                    3
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Configure your Subjects</p>
+                    <p className="text-gray-600 mt-1">Add the subjects you teach. You can {getLocalizedOrganize(user?.location)} by curriculum areas and add notes for each subject.</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 bg-[#fbae36] text-white rounded-full flex items-center justify-center font-bold text-xs">
+                    4
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Build your {getLocalizedTerm(user?.location, 'timetable')}</p>
+                    <p className="text-gray-600 mt-1">Set up your weekly schedule with time slots. This creates the structure for your lessons and events.</p>
+                  </div>
+                </li>
+              </ol>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <p className="text-sm text-gray-600">
+                <strong className="text-gray-900">Tip:</strong> You can complete these steps in any order, but we recommend starting with Academic Year as it helps {getLocalizedOrganize(user?.location)} everything else. Don't worry - you can always come back and update your settings later!
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              <Button
+                onClick={() => setShowWelcome(false)}
+                variant="outline"
+                className="px-6"
+              >
+                I'll explore on my own
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowWelcome(false);
+                  router.push('/dashboard/setup/academic-year');
+                }}
+                className="px-6 bg-[#001b3d] hover:bg-[#002855] text-white"
+              >
+                Start Setup
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Header Section with Tips */}
       <div className="bg-white border-b border-gray-200 shadow-sm px-4 py-6 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
@@ -84,7 +187,7 @@ export default function SetupPage() {
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Setup Your Teaching Environment</h1>
           <p className="text-sm sm:text-base text-gray-600 max-w-3xl mx-auto mb-4 leading-relaxed">
-            Configure the essential components of your teaching setup. Start with any section below to get organized.
+            Configure the essential components of your teaching setup. Start with any section below to get {getLocalizedOrganize(user?.location) === 'organise' ? 'organised' : 'organized'}.
           </p>
           
           {/* Progress Bar */}

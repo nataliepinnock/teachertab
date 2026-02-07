@@ -12,7 +12,7 @@ import { Loader2 } from 'lucide-react';
 import { TeacherTabLogo } from '@/components/ui/logo';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
-import { getTeachingPhaseOptions, type Location } from '@/lib/utils/localization';
+import { getTeachingPhaseOptions, getLocalizedOrganizing, type Location } from '@/lib/utils/localization';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export type PlanOption = {
@@ -35,10 +35,56 @@ export function Login({
   const searchParams = useSearchParams();
   const redirectQuery = searchParams.get('redirect');
   const priceIdQuery = searchParams.get('priceId');
+  const oauthError = searchParams.get('error');
+  const checkoutStatus = searchParams.get('checkout');
+  const checkoutError = searchParams.get('error');
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     mode === 'signin' ? signIn : signUp,
     { error: '' }
   );
+
+  const getOAuthErrorMessage = (error: string): string => {
+    switch (error) {
+      case 'oauth_cancelled':
+        return 'Sign in was cancelled.';
+      case 'oauth_failed':
+        return 'Sign in failed. Please try again.';
+      case 'invalid_state':
+        return 'Invalid sign in request. Please try again.';
+      case 'oauth_not_configured':
+        return 'OAuth is not configured. Please use email sign in.';
+      case 'email_not_verified':
+        return 'Your email is not verified. Please use a verified email address.';
+      case 'email_not_available':
+        return 'Email address not available from your account.';
+      case 'subscription_required':
+        return 'Your subscription has expired. Please renew to continue.';
+      case 'no_plan_selected':
+        return 'Please select a subscription plan.';
+      case 'user_not_found':
+        return mode === 'signup' 
+          ? 'Please select a subscription plan and try again.' 
+          : 'No account found. Please sign up first.';
+      case 'oauth_error':
+        return 'An error occurred during sign in. Please try again.';
+      default:
+        return 'An error occurred. Please try again.';
+    }
+  };
+
+  // Get error message from OAuth, checkout, or form
+  let errorMessage = '';
+  if (checkoutStatus === 'failed') {
+    if (checkoutError) {
+      errorMessage = decodeURIComponent(checkoutError);
+    } else {
+      errorMessage = 'Payment processing failed. Please try again.';
+    }
+  } else if (oauthError) {
+    errorMessage = getOAuthErrorMessage(oauthError);
+  } else {
+    errorMessage = state.error;
+  }
 
   // Ensure plans is always a valid array with strict validation and deduplication
   const safePlans = useMemo(() => {
@@ -159,7 +205,7 @@ export function Login({
         <p className="mt-2 text-center text-sm text-gray-600">
           {mode === 'signin'
             ? 'Sign in to continue your teaching journey'
-            : 'Start organizing your teaching life'}
+            : `Start ${getLocalizedOrganizing(location)} your teaching life`}
         </p>
       </div>
 
@@ -242,6 +288,35 @@ export function Login({
 
               <div>
                 <Label className="block text-sm font-medium text-gray-700 mb-2">
+                  Location
+                </Label>
+                <RadioGroup
+                  defaultValue="UK"
+                  name="location"
+                  value={location}
+                  onValueChange={(value) => setLocation(value as Location)}
+                  className="flex space-x-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="UK" id="location-uk" />
+                    <Label htmlFor="location-uk">UK</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="US" id="location-us" />
+                    <Label htmlFor="location-us">US</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Other" id="location-other" />
+                    <Label htmlFor="location-other">Other</Label>
+                  </div>
+                </RadioGroup>
+                <p className="mt-1 text-xs text-gray-500">
+                  This affects terminology used throughout the app (e.g., Term vs Semester, INSET vs Training Day)
+                </p>
+              </div>
+
+              <div>
+                <Label className="block text-sm font-medium text-gray-700 mb-2">
                   What phase do you teach?
                 </Label>
                 <Select name="teachingPhase" defaultValue={getTeachingPhaseOptions(location)[0]?.value || 'primary'}>
@@ -300,119 +375,162 @@ export function Login({
                   </div>
                 </RadioGroup>
               </div>
-
-              <div>
-                <Label className="block text-sm font-medium text-gray-700 mb-2">
-                  Location
-                </Label>
-                <RadioGroup
-                  defaultValue="UK"
-                  name="location"
-                  value={location}
-                  onValueChange={(value) => setLocation(value as Location)}
-                  className="flex space-x-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="UK" id="location-uk" />
-                    <Label htmlFor="location-uk">UK</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="US" id="location-us" />
-                    <Label htmlFor="location-us">US</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Other" id="location-other" />
-                    <Label htmlFor="location-other">Other</Label>
-                  </div>
-                </RadioGroup>
-                <p className="mt-1 text-xs text-gray-500">
-                  This affects terminology used throughout the app (e.g., Term vs Semester, INSET vs Training Day)
-                </p>
-              </div>
             </>
           )}
 
-          <div>
-            <Label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Email
-            </Label>
-            <div className="mt-1">
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                defaultValue={state.email}
-                required
-                maxLength={50}
-                className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Enter your email"
-              />
+          <div className="pt-6 border-t border-gray-200">
+            <h3 className="text-base font-semibold text-gray-900 mb-4">
+              How would you like to log in?
+            </h3>
+
+            <div>
+              <Label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Email
+              </Label>
+              <div className="mt-1">
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  defaultValue={state.email}
+                  required
+                  maxLength={50}
+                  className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  placeholder="Enter your email"
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <Label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Password
-            </Label>
-            <div className="mt-1">
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete={
-                  mode === 'signin' ? 'current-password' : 'new-password'
-                }
-                defaultValue={state.password}
-                required
-                minLength={8}
-                maxLength={100}
-                className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Enter your password"
-              />
+            <div className="mt-4">
+              <Label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Password
+              </Label>
+              <div className="mt-1">
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete={
+                    mode === 'signin' ? 'current-password' : 'new-password'
+                  }
+                  defaultValue={state.password}
+                  required
+                  minLength={8}
+                  maxLength={100}
+                  className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  placeholder="Enter your password"
+                />
+              </div>
             </div>
-          </div>
 
-        {mode === 'signin' && (
-          <div className="flex justify-end">
-            <Link
-              href="/forgot-password"
-              className="text-sm text-blue-600 hover:text-blue-500 font-medium"
-            >
-              Forgot your password?
-            </Link>
-          </div>
-        )}
+            {mode === 'signin' && (
+              <div className="flex justify-end mt-2">
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
+            )}
 
-          {state?.error && (
-            <div className="text-red-500 text-sm">{state.error}</div>
-          )}
+            {errorMessage && (
+              <div className="mt-4 text-red-500 text-sm bg-red-50 border border-red-200 rounded-lg p-3">
+                {errorMessage}
+              </div>
+            )}
 
-          <div>
-            <Button
-              type="submit"
-              className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              disabled={pending || !canSubmit}
-            >
-              {pending ? (
-                <>
-                  <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                  Loading...
-                </>
-              ) : mode === 'signin' ? (
-                'Sign in'
-              ) : (
-                'Create Account'
+            <div className="mt-4">
+              <Button
+                type="submit"
+                className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                disabled={pending || !canSubmit}
+              >
+                {pending ? (
+                  <>
+                    <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                    Loading...
+                  </>
+                ) : mode === 'signin' ? (
+                  'Sign in'
+                ) : (
+                  'Create Account'
+                )}
+              </Button>
+              {mode === 'signup' && (
+                <p className="mt-4 text-xs text-center text-gray-500">
+                  By creating an account, you agree to our{' '}
+                  <Link href="/privacy" className="text-blue-600 hover:text-blue-500 underline">
+                    Privacy Policy
+                  </Link>
+                </p>
               )}
-            </Button>
+            </div>
           </div>
         </form>
+
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-gray-50 text-gray-500">Or continue with</span>
+          </div>
+        </div>
+
+        {/* OAuth Buttons */}
+        <div className="space-y-3 mb-6">
+          <a
+            href={`/api/auth/google?mode=${mode}${priceFieldValue ? `&priceId=${priceFieldValue}` : ''}${redirectValue ? `&redirect=${redirectValue}` : ''}`}
+            className={`w-full flex items-center justify-center gap-3 px-4 py-2.5 border rounded-full font-medium text-sm transition-colors ${
+              mode === 'signup' && !priceFieldValue
+                ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none'
+                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+            onClick={(e) => {
+              if (mode === 'signup' && !priceFieldValue) {
+                e.preventDefault();
+              }
+            }}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Continue with Google
+          </a>
+          
+          <a
+            href={`/api/auth/microsoft?mode=${mode}${priceFieldValue ? `&priceId=${priceFieldValue}` : ''}${redirectValue ? `&redirect=${redirectValue}` : ''}`}
+            className={`w-full flex items-center justify-center gap-3 px-4 py-2.5 border rounded-full font-medium text-sm transition-colors ${
+              mode === 'signup' && !priceFieldValue
+                ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none'
+                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+            onClick={(e) => {
+              if (mode === 'signup' && !priceFieldValue) {
+                e.preventDefault();
+              }
+            }}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 23 23" fill="none">
+              <path d="M11.4 11.4H0V0h11.4v11.4z" fill="#F25022"/>
+              <path d="M23 11.4H11.6V0H23v11.4z" fill="#7FBA00"/>
+              <path d="M11.4 23H0V11.6h11.4V23z" fill="#00A4EF"/>
+              <path d="M23 23H11.6V11.6H23V23z" fill="#FFB900"/>
+            </svg>
+            Continue with Microsoft
+          </a>
+        </div>
 
         <div className="mt-6">
           <div className="relative">

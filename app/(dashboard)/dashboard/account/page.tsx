@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Lock, Trash2, CreditCard } from 'lucide-react';
-import { updateAccount, updatePassword, deleteAccount } from '@/app/(login)/actions';
+import { Loader2, Lock, Trash2, CreditCard, Mail } from 'lucide-react';
+import { updateAccount, updatePassword, deleteAccount, resendWelcomeEmail } from '@/app/(login)/actions';
 import { customerPortalAction } from '@/lib/payments/actions';
 import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
@@ -233,6 +233,11 @@ export default function AccountPage() {
     FormData
   >(deleteAccount, {});
 
+  const [emailState, emailAction, isEmailPending] = useActionState<
+    { success?: string; error?: string },
+    FormData
+  >(resendWelcomeEmail, {});
+
   return (
     <section className="flex-1 min-h-0 flex flex-col overflow-y-auto">
       <div className="p-4 lg:p-8 max-w-4xl mx-auto w-full pb-8">
@@ -261,21 +266,74 @@ export default function AccountPage() {
             {accountState.success && (
               <p className="text-green-500 text-sm">{accountState.success}</p>
             )}
-            <Button
-              type="submit"
-              className="bg-orange-500 hover:bg-orange-600 text-white"
-              disabled={isAccountPending}
-            >
-              {isAccountPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                type="submit"
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+                disabled={isAccountPending}
+              >
+                {isAccountPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
+            </div>
           </form>
+          
+          {/* Resend Welcome Email Section */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <p className="text-sm text-gray-600 mb-3">
+              Didn't receive your welcome email? We can resend it to you.
+            </p>
+            <form action={emailAction}>
+              <Button
+                type="submit"
+                variant="outline"
+                disabled={isEmailPending}
+                className="w-full sm:w-auto"
+              >
+                {isEmailPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="mr-2 h-4 w-4" />
+                    Resend Welcome Email
+                  </>
+                )}
+              </Button>
+            </form>
+            {emailState.error && (
+              <p className="text-red-500 text-sm mt-2">{emailState.error}</p>
+            )}
+            {emailState.success && (
+              <p className="text-green-500 text-sm mt-2">{emailState.success}</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Privacy & Consent Section */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Privacy & Consent</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-600 mb-4">
+            Manage your cookie and data consent preferences. You can change these settings at any time.
+          </p>
+          <a 
+            href="#" 
+            className="termly-display-preferences inline-flex items-center px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md transition-colors"
+          >
+            Manage Consent Preferences
+          </a>
         </CardContent>
       </Card>
 

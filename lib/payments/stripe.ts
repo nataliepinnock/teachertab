@@ -1,4 +1,4 @@
-                                                                                                              import Stripe from 'stripe';
+import Stripe from 'stripe';
 import { redirect } from 'next/navigation';
 import { User } from '@/lib/db/schema';
 import {
@@ -6,6 +6,8 @@ import {
   getUser,
   updateUserSubscription
 } from '@/lib/db/queries';
+import { sendEmail } from '@/lib/emails/service';
+import { getSubscriptionCanceledEmail, getSubscriptionExpiredEmail, getSubscriptionReactivatedEmail } from '@/lib/emails/templates';
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 if (!stripeSecretKey) {
@@ -185,14 +187,66 @@ export async function handleSubscriptionChange(
     return;
   }
 
-  if (status === 'active' || status === 'trialing') {
+  // Store previous status to detect reactivation
+  const previousStatus = user.subscriptionStatus;
+  const wasInactive = previousStatus && !['active', 'trialing'].includes(previousStatus);
+  const isNowActive = status === 'active' || status === 'trialing';
+
+  if (isNowActive) {
     const plan = subscription.items.data[0]?.plan;
+    const planName = (plan?.product as Stripe.Product).name;
+    
     await updateUserSubscription(user.id, {
       stripeSubscriptionId: subscriptionId,
       stripeProductId: plan?.product as string,
-      planName: (plan?.product as Stripe.Product).name,
+      planName: planName,
       subscriptionStatus: status
     });
+
+    // Send reactivation email if user was previously inactive
+    if (wasInactive) {
+      try {
+        const { subject, html } = getSubscriptionReactivatedEmail({
+          name: user.name,
+          email: user.email,
+          planName: planName,
+        });
+        await sendEmail({
+          to: user.email,
+          subject,
+          html,
+        });
+      } catch (emailError) {
+        // Log error but don't fail the subscription update
+      }
+    }
+    
+    // Send cancellation confirmation email if subscription is set to cancel at period end
+    // This happens when user first cancels (status is still 'active' but cancel_at_period_end is true)
+    // Only send if subscription was previously active (not reactivating)
+    if (subscription.cancel_at_period_end && status === 'active' && !wasInactive) {
+      try {
+        const periodEnd = subscription.current_period_end 
+          ? new Date(subscription.current_period_end * 1000)
+          : undefined;
+
+        const { subject, html } = getSubscriptionCanceledEmail({
+          name: user.name,
+          email: user.email,
+          planName: planName || undefined,
+          cancelAtPeriodEnd: true,
+          periodEnd: periodEnd,
+          location: user.location || undefined,
+        });
+        await sendEmail({
+          to: user.email,
+          subject,
+          html,
+        });
+      } catch (emailError) {
+        // Log error but don't fail the subscription update
+      }
+    }
   } else if (status === 'canceled' || status === 'unpaid') {
     await updateUserSubscription(user.id, {
       stripeSubscriptionId: null,
@@ -200,6 +254,24 @@ export async function handleSubscriptionChange(
       planName: null,
       subscriptionStatus: status
     });
+
+    // Send expiration email when subscription actually ends
+    // This happens when the period ends and subscription becomes 'canceled'
+    try {
+      const { subject, html } = getSubscriptionExpiredEmail({
+        name: user.name,
+        email: user.email,
+        planName: user.planName || undefined,
+        location: user.location || undefined,
+      });
+      await sendEmail({
+        to: user.email,
+        subject,
+        html,
+      });
+    } catch (emailError) {
+      // Log error but don't fail the subscription update
+    }
   }
 }
 

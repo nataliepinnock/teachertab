@@ -8,7 +8,8 @@
     "db:seed": "npx tsx lib/db/seed.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "oauth:verify": "npx tsx lib/oauth/verify-setup.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

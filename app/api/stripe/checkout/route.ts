@@ -5,12 +5,21 @@ import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { sendEmail } from '@/lib/emails/service';
+import { getWelcomeEmail } from '@/lib/emails/templates';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const sessionId = searchParams.get('session_id');
 
+  console.log('[checkout] Checkout route called:', {
+    sessionId,
+    url: request.url,
+    searchParams: Object.fromEntries(searchParams.entries()),
+  });
+
   if (!sessionId) {
+    console.error('[checkout] No session_id provided');
     return NextResponse.redirect(new URL('/pricing', request.url));
   }
 
@@ -21,8 +30,33 @@ export async function GET(request: NextRequest) {
       expand: ['customer', 'subscription', 'line_items'],
     });
 
-    // Check payment status first - if payment failed or unpaid, redirect immediately
+    console.log('[checkout] Session retrieved:', {
+      sessionId: session.id,
+      paymentStatus: session.payment_status,
+      sessionStatus: session.status,
+      flow: session.metadata?.flow,
+      hasCustomer: !!session.customer,
+      hasSubscription: !!session.subscription,
+    });
+
+    // Check session status first - if not complete, payment hasn't finished
+    if (session.status !== 'complete') {
+      console.error('[checkout] Session not complete:', {
+        sessionStatus: session.status,
+        paymentStatus: session.payment_status,
+      });
+      throw new Error(`Checkout session status: ${session.status}`);
+    }
+
+    // Check payment status - for subscriptions, this should be 'paid' when complete
+    // Note: For subscriptions, payment_status might be 'paid' or 'unpaid' initially
+    // 'unpaid' can occur if payment requires action (3D Secure, etc.)
     if (session.payment_status !== 'paid') {
+      console.error('[checkout] Payment not paid:', {
+        paymentStatus: session.payment_status,
+        sessionStatus: session.status,
+        paymentIntent: session.payment_intent,
+      });
       throw new Error(`Payment status: ${session.payment_status}`);
     }
 
@@ -59,6 +93,8 @@ export async function GET(request: NextRequest) {
 
     const flow = session.metadata?.flow;
 
+    console.log('[checkout] Processing flow:', flow);
+
     if (flow === 'signup') {
       // Create new user from signup data in metadata
       const signupName = session.metadata?.signupName;
@@ -69,7 +105,25 @@ export async function GET(request: NextRequest) {
       const signupTimetableCycle = session.metadata?.signupTimetableCycle;
       const signupLocation = session.metadata?.signupLocation || 'UK'; // Default to UK if not provided
 
+      console.log('[checkout] Signup data:', {
+        hasName: !!signupName,
+        hasEmail: !!signupEmail,
+        hasPasswordHash: !!signupPasswordHash,
+        hasTeachingPhase: !!signupTeachingPhase,
+        hasColorPreference: !!signupColorPreference,
+        hasTimetableCycle: !!signupTimetableCycle,
+        email: signupEmail,
+      });
+
       if (!signupName || !signupEmail || !signupPasswordHash || !signupTeachingPhase || !signupColorPreference || !signupTimetableCycle) {
+        console.error('[checkout] Missing signup data:', {
+          signupName: !!signupName,
+          signupEmail: !!signupEmail,
+          signupPasswordHash: !!signupPasswordHash,
+          signupTeachingPhase: !!signupTeachingPhase,
+          signupColorPreference: !!signupColorPreference,
+          signupTimetableCycle: !!signupTimetableCycle,
+        });
         throw new Error('Missing signup data in session metadata.');
       }
 
@@ -96,6 +150,7 @@ export async function GET(request: NextRequest) {
         await setSession(existingUser);
       } else {
         // Create new user
+        console.log('[checkout] Creating new user in database...');
         const newUser: NewUser = {
           name: signupName,
           email: signupEmail,
@@ -114,10 +169,40 @@ export async function GET(request: NextRequest) {
         const [createdUser] = await db.insert(users).values(newUser).returning();
 
         if (!createdUser) {
+          console.error('[checkout] Failed to create user - no user returned from insert');
           throw new Error('Failed to create user account.');
         }
 
+        console.log('[checkout] User created successfully:', {
+          id: createdUser.id,
+          email: createdUser.email,
+          name: createdUser.name,
+        });
+
         await setSession(createdUser);
+
+        // Send welcome email for new sign-ups
+        if (flow === 'signup') {
+          try {
+            const { subject, html } = getWelcomeEmail({
+              name: createdUser.name,
+              email: createdUser.email,
+              planName: createdUser.planName || undefined,
+              location: createdUser.location || undefined,
+            });
+            await sendEmail({
+              to: createdUser.email,
+              subject,
+              html,
+            });
+          } catch (emailError) {
+            // Log error but don't fail the signup process
+            // Email sending failures shouldn't block user registration
+          }
+        }
+
+        // Redirect new users to setup page with welcome flag
+        return NextResponse.redirect(new URL('/dashboard/setup?welcome=true', request.url));
       }
     } else {
       // Existing user flow - update subscription
@@ -152,11 +237,22 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
-    console.error('Error handling checkout:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    console.error('[checkout] Error handling checkout:', {
+      error: errorMessage,
+      stack: errorStack,
+      sessionId,
+      sessionStatus: session?.status,
+      paymentStatus: session?.payment_status,
+      flow: session?.metadata?.flow,
+    });
 
     // Default to pricing page
     let redirectUrl = new URL('/pricing', request.url);
     redirectUrl.searchParams.set('checkout', 'failed');
+    redirectUrl.searchParams.set('error', encodeURIComponent(errorMessage));
 
     // Try to get session info for better redirect
     let fallbackSession = session;

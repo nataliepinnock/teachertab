@@ -18,6 +18,8 @@ import {
   validatedActionWithUser
 } from '@/lib/auth/middleware';
 import { Resend } from 'resend';
+import { getWelcomeEmail, getGoodbyeEmail } from '@/lib/emails/templates';
+import { sendEmail } from '@/lib/emails/service';
 
 const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -421,6 +423,25 @@ export const deleteAccount = validatedActionWithUser(
       return { error: 'Incorrect password. Account deletion failed.' };
     }
 
+    // Send goodbye email before deleting account
+    try {
+      const { subject, html } = getGoodbyeEmail({
+        name: user.name,
+        email: user.email,
+        reason: 'account_deleted',
+        planName: user.planName || undefined,
+        location: user.location || undefined,
+      });
+      await sendEmail({
+        to: user.email,
+        subject,
+        html,
+      });
+    } catch (emailError) {
+      // Log error but don't fail account deletion
+      console.error('Failed to send goodbye email:', emailError);
+    }
+
     // Delete the user account
     await db.delete(users).where(eq(users.id, user.id));
 
@@ -468,5 +489,30 @@ export const updateTimetableSettings = validatedActionWithUser(
     }).where(eq(users.id, user.id));
 
     return { success: 'Timetable settings updated successfully.' };
+  }
+);
+
+export const resendWelcomeEmail = validatedActionWithUser(
+  z.object({}),
+  async (_, __, user) => {
+    try {
+      const { subject, html } = getWelcomeEmail({
+        name: user.name,
+        email: user.email,
+        planName: user.planName || undefined,
+        location: user.location || undefined,
+      });
+
+      await sendEmail({
+        to: user.email,
+        subject,
+        html,
+      });
+
+      return { success: 'Welcome email sent successfully!' };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { error: `Failed to send email: ${errorMessage}` };
+    }
   }
 );
