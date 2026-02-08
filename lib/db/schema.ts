@@ -27,6 +27,8 @@ export const users = pgTable('users', {
   planName: varchar('plan_name', { length: 50 }),
   subscriptionStatus: varchar('subscription_status', { length: 20 }),
 
+  marketingEmails: integer('marketing_emails').notNull().default(1), // 1 = subscribed, 0 = unsubscribed
+
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   deletedAt: timestamp('deleted_at'),

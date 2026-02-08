@@ -9,7 +9,16 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "oauth:verify": "npx tsx lib/oauth/verify-setup.ts"
+    "oauth:verify": "npx tsx lib/oauth/verify-setup.ts",
+    "resend:add-all-users": "npx tsx lib/db/add-all-users-to-resend.ts",
+    "resend:verify-contacts": "npx tsx lib/db/verify-resend-contacts.ts",
+    "resend:list-contacts": "npx tsx lib/db/list-resend-contacts.ts",
+    "resend:fix-duplicate-names": "npx tsx lib/db/update-testuser-name.ts",
+    "resend:test": "npx tsx lib/db/test-resend-audience.ts",
+    "resend:remove-from-marketing": "npx tsx lib/db/remove-user-from-marketing.ts",
+    "resend:sync-marketing-status": "npx tsx lib/db/sync-marketing-emails-to-resend.ts",
+    "resend:verify-marketing-status": "npx tsx lib/db/verify-resend-marketing-status.ts",
+    "db:cleanup-deleted": "npx tsx lib/db/cleanup-deleted-accounts.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

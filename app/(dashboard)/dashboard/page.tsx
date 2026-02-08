@@ -159,7 +159,7 @@ function ToDoList() {
   const [editingTask, setEditingTask] = useState<any | null>(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
 
-  if (!tasks) {
+  if (!tasks || !Array.isArray(tasks)) {
     return <ToDoListSkeleton />;
   }
 

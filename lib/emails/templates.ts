@@ -1,4 +1,4 @@
-import { getAppBaseUrl } from './utils';
+import { getAppBaseUrl, getEmailHeader } from './utils';
 import { getLocalizedOrganize } from '@/lib/utils/localization';
 
 export interface WelcomeEmailData {
@@ -14,6 +14,13 @@ export interface SubscriptionCanceledEmailData {
   planName?: string;
   cancelAtPeriodEnd?: boolean;
   periodEnd?: Date;
+}
+
+export interface SubscriptionExpiredEmailData {
+  name: string;
+  email: string;
+  planName?: string;
+  location?: string;
 }
 
 export interface SubscriptionReactivatedEmailData {
@@ -45,43 +52,67 @@ export function getWelcomeEmail(data: WelcomeEmailData): { subject: string; html
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Welcome to TeacherTab</title>
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to TeacherTab!</h1>
-        </div>
-        
-        <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
-          <p style="font-size: 16px; margin-top: 0;">Hi ${data.name},</p>
-          
-          <p style="font-size: 16px;">Thank you for signing up for TeacherTab! We're excited to help you ${organizeText} your teaching schedule and manage your lessons more efficiently.</p>
-          
-          ${data.planName ? `
-          <div style="background: #f3f4f6; padding: 15px; border-radius: 6px; margin: 20px 0;">
-            <p style="margin: 0; font-size: 14px; color: #6b7280;"><strong>Your Plan:</strong> ${data.planName}</p>
-          </div>
-          ` : ''}
-          
-          <p style="font-size: 16px;">Here's what you can do next:</p>
-          
-          <ul style="font-size: 16px; padding-left: 20px;">
-            <li style="margin-bottom: 10px;">Set up your academic year and terms</li>
-            <li style="margin-bottom: 10px;">Create your timetable structure</li>
-            <li style="margin-bottom: 10px;">Add your classes and subjects</li>
-            <li style="margin-bottom: 10px;">Start planning your lessons</li>
-          </ul>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${dashboardUrl}" style="display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Go to Dashboard</a>
-          </div>
-          
-          <p style="font-size: 16px;">If you have any questions or need help getting started, please don't hesitate to reach out to our support team.</p>
-          
-          <p style="font-size: 16px;">Best regards,<br>The TeacherTab Team</p>
-        </div>
-        
-        <div style="text-align: center; margin-top: 20px; padding: 20px; color: #6b7280; font-size: 14px;">
-          <p style="margin: 0;">© ${new Date().getFullYear()} TeacherTab. All rights reserved.</p>
-        </div>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f9fafb;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f9fafb; padding: 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+                <tr>
+                  <td style="padding: 0;">
+                    ${getEmailHeader()}
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                      <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to TeacherTab!</h1>
+                    </div>
+                    
+                    <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
+                      <p style="font-size: 16px; margin-top: 0;">Hi ${data.name},</p>
+                      
+                      <p style="font-size: 16px;">Thank you for signing up for TeacherTab! We're excited to help you ${organizeText} your teaching schedule and manage your lessons more efficiently.</p>
+                      
+                      ${data.planName ? `
+                      <div style="background: #f3f4f6; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                        <p style="margin: 0; font-size: 14px; color: #6b7280;"><strong>Your Plan:</strong> ${data.planName}</p>
+                      </div>
+                      ` : ''}
+                      
+                      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 20px; margin: 25px 0;">
+                        <h3 style="font-size: 16px; font-weight: 600; color: #1e3a8a; margin: 0 0 12px 0;">👋 Quick reminder: TeacherTab is for your personal teaching organisation.</h3>
+                        <p style="font-size: 14px; color: #1e40af; margin: 0 0 10px 0; font-weight: 500;">THINK CAREFULLY about if it is necessary for you to include student information:</p>
+                        <ul style="font-size: 14px; color: #1e3a8a; padding-left: 20px; margin: 0 0 12px 0;">
+                          <li style="margin-bottom: 6px;">✓ Use first names or initials only</li>
+                          <li style="margin-bottom: 6px;">✓ Avoid sensitive details (medical, SEN, safeguarding)</li>
+                        </ul>
+                        <p style="font-size: 14px; color: #1e3a8a; margin: 0 0 12px 0;">If in doubt, check your school's policy on using personal apps for work purposes.</p>
+                        <p style="font-size: 14px; color: #1e3a8a; margin: 0;">You're in control of what you save here. We keep your data private and secure, but you are responsible for what you choose to include.</p>
+                      </div>
+                      
+                      <p style="font-size: 16px;">Here's what you can do next:</p>
+                      
+                      <ul style="font-size: 16px; padding-left: 20px;">
+                        <li style="margin-bottom: 10px;">Set up your academic year and terms</li>
+                        <li style="margin-bottom: 10px;">Create your timetable structure</li>
+                        <li style="margin-bottom: 10px;">Add your classes and subjects</li>
+                        <li style="margin-bottom: 10px;">Start planning your lessons</li>
+                      </ul>
+                      
+                      <div style="text-align: center; margin: 30px 0;">
+                        <a href="${dashboardUrl}" style="display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Go to Dashboard</a>
+                      </div>
+                      
+                      <p style="font-size: 16px;">If you have any questions or need help getting started, please don't hesitate to reach out to our support team.</p>
+                      
+                      <p style="font-size: 16px;">Best regards,<br>The TeacherTab Team</p>
+                      
+                      <div style="text-align: center; margin-top: 20px; padding: 20px; color: #6b7280; font-size: 14px;">
+                        <p style="margin: 0;">© ${new Date().getFullYear()} TeacherTab. All rights reserved.</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       </body>
     </html>
   `;
@@ -111,12 +142,13 @@ export function getSubscriptionCanceledEmail(data: SubscriptionCanceledEmailData
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Subscription Canceled</title>
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: #fef3c7; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; border: 1px solid #fde68a;">
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 0;">
+        ${getEmailHeader()}
+        <div style="background: #fef3c7; padding: 30px; text-align: center; border-top: none; border: 1px solid #fde68a;">
           <h1 style="color: #92400e; margin: 0; font-size: 28px;">Sorry to See You Go</h1>
         </div>
         
-        <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+        <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
           <p style="font-size: 16px; margin-top: 0;">Hi ${data.name},</p>
           
           <p style="font-size: 16px;">We've received your request to cancel your TeacherTab subscription.</p>
@@ -144,9 +176,16 @@ export function getSubscriptionCanceledEmail(data: SubscriptionCanceledEmailData
           <p style="font-size: 16px;">Best regards,<br>The TeacherTab Team</p>
         </div>
         
-        <div style="text-align: center; margin-top: 20px; padding: 20px; color: #6b7280; font-size: 14px;">
-          <p style="margin: 0;">© ${new Date().getFullYear()} TeacherTab. All rights reserved.</p>
-        </div>
+                      <div style="text-align: center; margin-top: 20px; padding: 20px; color: #6b7280; font-size: 14px;">
+                        <p style="margin: 0;">© ${new Date().getFullYear()} TeacherTab. All rights reserved.</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       </body>
     </html>
   `;
@@ -169,12 +208,13 @@ export function getSubscriptionExpiredEmail(data: SubscriptionExpiredEmailData):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Subscription Expired</title>
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: #fef3c7; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; border: 1px solid #fde68a;">
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 0;">
+        ${getEmailHeader()}
+        <div style="background: #fef3c7; padding: 30px; text-align: center; border-top: none; border: 1px solid #fde68a;">
           <h1 style="color: #92400e; margin: 0; font-size: 28px;">Sorry to See You Go</h1>
         </div>
         
-        <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+        <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
           <p style="font-size: 16px; margin-top: 0;">Hi ${data.name},</p>
           
           <p style="font-size: 16px;">We're sorry to see you go! Your TeacherTab subscription has ended and you no longer have access to your account.</p>
@@ -204,9 +244,16 @@ export function getSubscriptionExpiredEmail(data: SubscriptionExpiredEmailData):
           <p style="font-size: 16px;">Best regards,<br>The TeacherTab Team</p>
         </div>
         
-        <div style="text-align: center; margin-top: 20px; padding: 20px; color: #6b7280; font-size: 14px;">
-          <p style="margin: 0;">© ${new Date().getFullYear()} TeacherTab. All rights reserved.</p>
-        </div>
+                      <div style="text-align: center; margin-top: 20px; padding: 20px; color: #6b7280; font-size: 14px;">
+                        <p style="margin: 0;">© ${new Date().getFullYear()} TeacherTab. All rights reserved.</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       </body>
     </html>
   `;
@@ -233,12 +280,13 @@ export function getGoodbyeEmail(data: GoodbyeEmailData): { subject: string; html
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Sorry to See You Go</title>
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: #fef3c7; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; border: 1px solid #fde68a;">
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 0;">
+        ${getEmailHeader()}
+        <div style="background: #fef3c7; padding: 30px; text-align: center; border-top: none; border: 1px solid #fde68a;">
           <h1 style="color: #92400e; margin: 0; font-size: 28px;">Sorry to See You Go</h1>
         </div>
         
-        <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+        <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
           <p style="font-size: 16px; margin-top: 0;">Hi ${data.name},</p>
           
           <p style="font-size: 16px;">We're sorry to see you go! ${reasonText}.</p>
@@ -266,9 +314,16 @@ export function getGoodbyeEmail(data: GoodbyeEmailData): { subject: string; html
           <p style="font-size: 16px;">Best regards,<br>The TeacherTab Team</p>
         </div>
         
-        <div style="text-align: center; margin-top: 20px; padding: 20px; color: #6b7280; font-size: 14px;">
-          <p style="margin: 0;">© ${new Date().getFullYear()} TeacherTab. All rights reserved.</p>
-        </div>
+                      <div style="text-align: center; margin-top: 20px; padding: 20px; color: #6b7280; font-size: 14px;">
+                        <p style="margin: 0;">© ${new Date().getFullYear()} TeacherTab. All rights reserved.</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       </body>
     </html>
   `;
@@ -290,12 +345,13 @@ export function getSubscriptionReactivatedEmail(data: SubscriptionReactivatedEma
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Subscription Reactivated</title>
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 0;">
+        ${getEmailHeader()}
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-top: none;">
           <h1 style="color: white; margin: 0; font-size: 28px;">Welcome Back!</h1>
         </div>
         
-        <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+        <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
           <p style="font-size: 16px; margin-top: 0;">Hi ${data.name},</p>
           
           <p style="font-size: 16px;">Great news! Your TeacherTab subscription has been reactivated, and you now have full access to all features again.</p>
@@ -317,9 +373,16 @@ export function getSubscriptionReactivatedEmail(data: SubscriptionReactivatedEma
           <p style="font-size: 16px;">Best regards,<br>The TeacherTab Team</p>
         </div>
         
-        <div style="text-align: center; margin-top: 20px; padding: 20px; color: #6b7280; font-size: 14px;">
-          <p style="margin: 0;">© ${new Date().getFullYear()} TeacherTab. All rights reserved.</p>
-        </div>
+                      <div style="text-align: center; margin-top: 20px; padding: 20px; color: #6b7280; font-size: 14px;">
+                        <p style="margin: 0;">© ${new Date().getFullYear()} TeacherTab. All rights reserved.</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       </body>
     </html>
   `;

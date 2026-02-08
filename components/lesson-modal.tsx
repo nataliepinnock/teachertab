@@ -89,8 +89,8 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
         setErrors({}); // Clear errors when setting new form data
       } else {
         // For add mode with no initialData, auto-select if only one option available
-        const autoSelectedClassId = (classes && classes.length === 1) ? classes[0].id.toString() : '';
-        const autoSelectedSubjectId = (subjects && subjects.length === 1) ? subjects[0].id.toString() : '';
+        const autoSelectedClassId = (Array.isArray(classes) && classes.length === 1) ? classes[0].id.toString() : '';
+        const autoSelectedSubjectId = (Array.isArray(subjects) && subjects.length === 1) ? subjects[0].id.toString() : '';
         
         setFormData({
           title: '',
@@ -163,13 +163,13 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
       
       if (userData.colorPreference === 'subject') {
         // Use subject color
-        const selectedSubject = subjects.find(s => s.id === parseInt(formData.subjectId));
+        const selectedSubject = Array.isArray(subjects) ? subjects.find(s => s.id === parseInt(formData.subjectId)) : null;
         if (selectedSubject?.color) {
           autoColor = selectedSubject.color;
         }
       } else if (userData.colorPreference === 'class') {
         // Use class color
-        const selectedClass = classes.find(c => c.id === parseInt(formData.classId));
+        const selectedClass = Array.isArray(classes) ? classes.find(c => c.id === parseInt(formData.classId)) : null;
         if (selectedClass?.color) {
           autoColor = selectedClass.color;
         }
@@ -221,15 +221,15 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
     }
 
     // Check if we have the required data
-    if (!classes || classes.length === 0) {
+    if (!Array.isArray(classes) || classes.length === 0) {
       alert('No classes available. Please create a class first.');
       return;
     }
-    if (!subjects || subjects.length === 0) {
+    if (!Array.isArray(subjects) || subjects.length === 0) {
       alert('No subjects available. Please create a subject first.');
       return;
     }
-    if (!timetableSlots || timetableSlots.length === 0) {
+    if (!Array.isArray(timetableSlots) || timetableSlots.length === 0) {
       alert(`No ${timetableSlotLabel.toLowerCase()}s available. Please create a ${timetableSlotLabel.toLowerCase()} first.`);
       return;
     }
@@ -299,7 +299,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
 
   // Get available timetable slots based on selected date
   const getAvailableTimetableSlots = () => {
-    if (!timetableSlots || !formData.date) return [];
+    if (!Array.isArray(timetableSlots) || !formData.date) return [];
     
     const selectedDate = new Date(formData.date);
     const dayOfWeek = selectedDate.toLocaleDateString('en-GB', { weekday: 'long' });
@@ -326,7 +326,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
         
         <div className="flex-1 overflow-y-auto px-1">
           <form id="lesson-form" onSubmit={handleSubmit} className="space-y-4">
-          {(!classes || classes.length === 0 || !subjects || subjects.length === 0 || !timetableSlots || timetableSlots.length === 0) && (
+          {(!Array.isArray(classes) || classes.length === 0 || !Array.isArray(subjects) || subjects.length === 0 || !Array.isArray(timetableSlots) || timetableSlots.length === 0) && (
             <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
               <p className="text-sm text-orange-800">
                 <strong>Setup Required:</strong> You need to create classes, subjects, and {timetableSlotLabel.toLowerCase()}s before you can create lessons.
@@ -375,7 +375,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                 : formData.timetableSlotIds;
               
               // Get all timetable slots to find selected slots
-              const allSlots = timetableSlots || [];
+              const allSlots = Array.isArray(timetableSlots) ? timetableSlots : [];
               
               // Find selected slots from all slots
               const selectedSlots = allSlots.filter(slot => {
@@ -392,7 +392,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                         entry.timetableSlotId === slot.id &&
                         entry.dayOfWeek === new Date(initialData.date || formData.date).toLocaleDateString('en-GB', { weekday: 'long' })
                       );
-                      const className = slotEntry && classes 
+                      const className = slotEntry && Array.isArray(classes)
                         ? classes.find(c => c.id === slotEntry.classId)?.name 
                         : null;
                       
@@ -441,9 +441,9 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                           entry.timetableSlotId === slot.id &&
                           entry.dayOfWeek === new Date(formData.date).toLocaleDateString('en-GB', { weekday: 'long' })
                         );
-                        const className = slotEntry && classes 
-                          ? classes.find(c => c.id === slotEntry.classId)?.name 
-                          : null;
+                      const className = slotEntry && Array.isArray(classes)
+                        ? classes.find(c => c.id === slotEntry.classId)?.name 
+                        : null;
                         
                         return (
                           <div key={slot.id} className="flex items-center justify-between py-1">
@@ -488,10 +488,10 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                               entry.timetableSlotId === slot.id &&
                               entry.dayOfWeek === new Date(formData.date).toLocaleDateString('en-GB', { weekday: 'long' })
                             );
-                            const className = slotEntry && classes 
-                              ? classes.find(c => c.id === slotEntry.classId)?.name 
-                              : null;
-                            const subjectName = slotEntry && subjects
+                      const className = slotEntry && Array.isArray(classes)
+                        ? classes.find(c => c.id === slotEntry.classId)?.name 
+                        : null;
+                            const subjectName = slotEntry && Array.isArray(subjects)
                               ? subjects.find(s => s.id === slotEntry.subjectId)?.name
                               : null;
                             
@@ -545,9 +545,9 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                           entry.timetableSlotId === slot.id &&
                           entry.dayOfWeek === new Date(formData.date).toLocaleDateString('en-GB', { weekday: 'long' })
                         );
-                        const className = slotEntry && classes 
-                          ? classes.find(c => c.id === slotEntry.classId)?.name 
-                          : null;
+                      const className = slotEntry && Array.isArray(classes)
+                        ? classes.find(c => c.id === slotEntry.classId)?.name 
+                        : null;
                         const subjectName = slotEntry && subjects
                           ? subjects.find(s => s.id === slotEntry.subjectId)?.name
                           : null;
@@ -583,9 +583,9 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                           entry.timetableSlotId === slot.id &&
                           entry.dayOfWeek === new Date(formData.date).toLocaleDateString('en-GB', { weekday: 'long' })
                         );
-                        const className = slotEntry && classes 
-                          ? classes.find(c => c.id === slotEntry.classId)?.name 
-                          : null;
+                      const className = slotEntry && Array.isArray(classes)
+                        ? classes.find(c => c.id === slotEntry.classId)?.name 
+                        : null;
                         
                         return (
                           <div key={slotId} className="flex items-center justify-between py-1">
@@ -623,7 +623,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
               {initialData?.classId ? (
                 <div className="py-2">
                   <p className="text-sm text-gray-900">
-                    {classes?.find(c => c.id.toString() === initialData.classId?.toString())?.name || 'Unknown'}
+                    {Array.isArray(classes) ? classes.find(c => c.id.toString() === initialData.classId?.toString())?.name || 'Unknown' : 'Unknown'}
                   </p>
                 </div>
               ) : (
@@ -636,7 +636,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                       <SelectValue placeholder="Select a class" />
                     </SelectTrigger>
                     <SelectContent>
-                      {classes?.map((cls) => (
+                      {Array.isArray(classes) && classes.map((cls) => (
                         <SelectItem key={cls.id} value={cls.id.toString()}>
                           {cls.name}
                         </SelectItem>
@@ -644,7 +644,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                     </SelectContent>
                   </Select>
                   {errors.classId && <p className="text-sm text-red-500 mt-1">{errors.classId}</p>}
-                  {(!classes || classes.length === 0) && (
+                  {(!Array.isArray(classes) || classes.length === 0) && (
                     <p className="text-sm text-orange-600 mt-1">No classes available. Create a class first.</p>
                   )}
                 </>
@@ -656,7 +656,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
               {initialData?.subjectId ? (
                 <div className="py-2">
                   <p className="text-sm text-gray-900">
-                    {subjects?.find(s => s.id.toString() === initialData.subjectId?.toString())?.name || 'Unknown'}
+                    {Array.isArray(subjects) ? subjects.find(s => s.id.toString() === initialData.subjectId?.toString())?.name || 'Unknown' : 'Unknown'}
                   </p>
                 </div>
               ) : (
@@ -669,7 +669,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                       <SelectValue placeholder="Select a subject" />
                     </SelectTrigger>
                     <SelectContent>
-                      {subjects?.map((subject) => (
+                      {Array.isArray(subjects) && subjects.map((subject) => (
                         <SelectItem key={subject.id} value={subject.id.toString()}>
                           {subject.name}
                         </SelectItem>
@@ -677,7 +677,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                     </SelectContent>
                   </Select>
                   {errors.subjectId && <p className="text-sm text-red-500 mt-1">{errors.subjectId}</p>}
-                  {(!subjects || subjects.length === 0) && (
+                  {(!Array.isArray(subjects) || subjects.length === 0) && (
                     <p className="text-sm text-orange-600 mt-1">No subjects available. Create a subject first.</p>
                   )}
                 </>

@@ -21,6 +21,7 @@ type SignupData = {
   colorPreference: string;
   timetableCycle: string;
   location: string;
+  marketingEmails?: boolean;
 };
 
 /**
@@ -52,6 +53,8 @@ export async function createCheckoutSessionUrl({
     metadata.signupColorPreference = signupData.colorPreference;
     metadata.signupTimetableCycle = signupData.timetableCycle;
     metadata.signupLocation = signupData.location;
+    // Store marketingEmails preference (default to true/1 if not specified)
+    metadata.signupMarketingEmails = (signupData.marketingEmails !== false).toString();
   }
 
   console.log('[checkout-helper] Creating checkout session:', {

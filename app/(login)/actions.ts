@@ -19,7 +19,7 @@ import {
 } from '@/lib/auth/middleware';
 import { Resend } from 'resend';
 import { getWelcomeEmail, getGoodbyeEmail } from '@/lib/emails/templates';
-import { sendEmail } from '@/lib/emails/service';
+import { sendEmail, sendUserInfoToResend } from '@/lib/emails/service';
 
 const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -82,7 +82,8 @@ const signUpSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
-  teacherType: z.enum(['primary', 'secondary', 'mixed']),
+  teachingPhase: z.enum(['primary', 'secondary', 'further', 'elementary', 'middle', 'high']),
+  colorPreference: z.enum(['class', 'subject']),
   timetableCycle: z.enum(['weekly', '2-weekly']),
   location: z.enum(['UK', 'US', 'Other'])
 });
@@ -92,12 +93,22 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
   const redirectIntent = formData.get('redirect') as string | null;
   const selectedPriceId = formData.get('priceId') as string | null;
+  const termsConsent = formData.get('termsConsent') === 'on' || formData.get('termsConsent') === 'true';
 
   if (!selectedPriceId) {
     return {
       error: 'Please select a subscription plan to continue.',
       name,
       email
+    };
+  }
+
+  if (!termsConsent) {
+    return {
+      error: 'You must agree to the Terms of Service and Privacy Policy to create an account.',
+      name,
+      email,
+      priceId: selectedPriceId
     };
   }
 
@@ -140,6 +151,9 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   const passwordHash = await hashPassword(password);
 
   if (redirectIntent === 'checkout') {
+    // Get marketing emails preference from form
+    const marketingEmails = formData.get('marketingEmails') === 'on' || formData.get('marketingEmails') === 'true';
+    
     // Create checkout session with signup data in metadata (no user account yet)
     return createCheckoutSession({
       user: null,
@@ -152,7 +166,8 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
         teachingPhase: teachingPhase as string,
         colorPreference: colorPreference as string,
         timetableCycle: timetableCycle as string,
-        location: location as string
+        location: location as string,
+        marketingEmails: marketingEmails, // Pass marketing emails preference
       }
     });
   }
@@ -409,21 +424,47 @@ export const updatePassword = validatedActionWithUser(
   }
 );
 
-const deleteAccountSchema = z.object({
+const initiateDeleteAccountSchema = z.object({
   password: z.string().min(1, 'Password is required')
 });
 
-export const deleteAccount = validatedActionWithUser(
-  deleteAccountSchema,
+// First step: Validate password and redirect to confirmation page
+export const initiateDeleteAccount = validatedActionWithUser(
+  initiateDeleteAccountSchema,
   async (data, _, user) => {
     const { password } = data;
 
     const isValidPassword = await comparePasswords(password, user.passwordHash);
     if (!isValidPassword) {
-      return { error: 'Incorrect password. Account deletion failed.' };
+      return { error: 'Incorrect password. Please try again.' };
     }
 
-    // Send goodbye email before deleting account
+    // Password is valid, redirect to confirmation page
+    redirect('/dashboard/account/delete-confirm');
+  }
+);
+
+const deleteAccountSchema = z.object({
+  feedback: z.string().optional(), // Optional feedback
+});
+
+// Second step: Actually delete the account (soft delete)
+export const deleteAccount = validatedActionWithUser(
+  deleteAccountSchema,
+  async (data, _, user) => {
+    // Check if user is already deleted
+    if (user.deletedAt) {
+      (await cookies()).delete('session');
+      redirect('/sign-in');
+    }
+
+    // Soft delete: Mark account as deleted instead of hard deleting
+    await db.update(users).set({
+      deletedAt: new Date(),
+      updatedAt: new Date(),
+    }).where(eq(users.id, user.id));
+
+    // Send goodbye email
     try {
       const { subject, html } = getGoodbyeEmail({
         name: user.name,
@@ -442,11 +483,90 @@ export const deleteAccount = validatedActionWithUser(
       console.error('Failed to send goodbye email:', emailError);
     }
 
-    // Delete the user account
-    await db.delete(users).where(eq(users.id, user.id));
+    // Add to "Deleted Users" segment in Resend (will be fully removed after 30 days)
+    try {
+      const { addUserToDeletedUsersSegment } = await import('@/lib/emails/service');
+      const metadata: Record<string, string> = {
+        user_id: user.id.toString(),
+        account_deleted_at: new Date().toISOString(),
+        ...(user.location && { location: user.location }),
+        ...(user.planName && { plan_name: user.planName }),
+        ...(user.subscriptionStatus && { subscription_status: user.subscriptionStatus }),
+      };
+      await addUserToDeletedUsersSegment(user.email, user.name, metadata);
+    } catch (resendError) {
+      // Log error but don't fail account deletion
+      console.error('[deleteAccount] Failed to add to Deleted Users segment:', resendError);
+    }
 
+    // If feedback was provided, submit it via Resend API directly
+    if (data.feedback && data.feedback.trim().length > 0) {
+      try {
+        const { Resend } = await import('resend');
+        const resendApiKey = process.env.RESEND_API_KEY;
+        const resendFromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+        const feedbackRecipientEmail = process.env.FEEDBACK_RECIPIENT_EMAIL || resendFromEmail;
+
+        if (resendApiKey) {
+          const resend = new Resend(resendApiKey);
+          await resend.emails.send({
+            from: resendFromEmail,
+            to: feedbackRecipientEmail,
+            replyTo: user.email,
+            subject: 'TeacherTab Feedback: Account Deleted',
+            html: `
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <title>TeacherTab Feedback</title>
+                </head>
+                <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h2 style="margin: 0 0 10px 0; color: #1f2937;">New Feedback Submission</h2>
+                    <p style="margin: 0; color: #6b7280; font-size: 14px;">Received from TeacherTab account deletion confirmation</p>
+                  </div>
+                  
+                  <div style="background: #ffffff; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                      <tr>
+                        <td style="padding: 8px 0; font-weight: 600; color: #374151; width: 120px;">Name:</td>
+                        <td style="padding: 8px 0; color: #1f2937;">${user.name || 'User'}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; font-weight: 600; color: #374151;">Email:</td>
+                        <td style="padding: 8px 0; color: #1f2937;">${user.email}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; font-weight: 600; color: #374151;">Reason:</td>
+                        <td style="padding: 8px 0; color: #1f2937;">Account Deleted</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; font-weight: 600; color: #374151; vertical-align: top;">Feedback:</td>
+                        <td style="padding: 8px 0; color: #1f2937; white-space: pre-wrap;">${data.feedback}</td>
+                      </tr>
+                    </table>
+                  </div>
+                  
+                  <div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b;">
+                    <p style="margin: 0; font-size: 14px; color: #92400e;">
+                      <strong>Note:</strong> This feedback was submitted during account deletion.
+                    </p>
+                  </div>
+                </body>
+              </html>
+            `,
+          });
+        }
+      } catch (feedbackError) {
+        console.error('[deleteAccount] Error submitting feedback:', feedbackError);
+      }
+    }
+
+    // Clear session and redirect
     (await cookies()).delete('session');
-    redirect('/sign-in');
+    redirect('/sign-in?deleted=true');
   }
 );
 
@@ -461,13 +581,55 @@ export const updateAccount = validatedActionWithUser(
   async (data, _, user) => {
     const { name, email, location } = data;
 
-    await db.update(users).set({ 
+    const updatedUser = await db.update(users).set({ 
       name, 
       email, 
       location
-    }).where(eq(users.id, user.id));
+    }).where(eq(users.id, user.id)).returning();
+
+    // Send user info to Resend for admin tracking
+    if (updatedUser.length > 0) {
+      try {
+        await sendUserInfoToResend(updatedUser[0], 'profile_update');
+      } catch (error) {
+        // Log error but don't fail the account update
+        console.error('[updateAccount] Failed to send user info to Resend:', error);
+      }
+    }
 
     return { name, success: 'Account updated successfully.' };
+  }
+);
+
+const updateMarketingEmailsSchema = z.object({
+  marketingEmails: z.string().transform((val) => val === 'true' || val === 'on'),
+});
+
+export const updateMarketingEmails = validatedActionWithUser(
+  updateMarketingEmailsSchema,
+  async (data, _, user) => {
+    const { marketingEmails } = data;
+
+    const updatedUser = await db.update(users).set({
+      marketingEmails: marketingEmails ? 1 : 0, // Convert boolean to integer
+      updatedAt: new Date(),
+    }).where(eq(users.id, user.id)).returning();
+
+    // Sync the change to Resend
+    if (updatedUser.length > 0) {
+      try {
+        await sendUserInfoToResend(updatedUser[0], 'profile_update');
+      } catch (error) {
+        // Log error but don't fail the update
+        console.error('[updateMarketingEmails] Failed to sync to Resend:', error);
+      }
+    }
+
+    return {
+      success: marketingEmails
+        ? 'You are now subscribed to marketing emails.'
+        : 'You have been unsubscribed from marketing emails. You will still receive important account-related emails.',
+    };
   }
 );
 
@@ -482,11 +644,21 @@ export const updateTimetableSettings = validatedActionWithUser(
   async (data, _, user) => {
     const { teachingPhase, colorPreference, timetableCycle } = data;
 
-    await db.update(users).set({ 
+    const updatedUser = await db.update(users).set({ 
       teachingPhase, 
       colorPreference,
       timetableCycle,
-    }).where(eq(users.id, user.id));
+    }).where(eq(users.id, user.id)).returning();
+
+    // Send user info to Resend for admin tracking
+    if (updatedUser.length > 0) {
+      try {
+        await sendUserInfoToResend(updatedUser[0], 'profile_update');
+      } catch (error) {
+        // Log error but don't fail the settings update
+        console.error('[updateTimetableSettings] Failed to send user info to Resend:', error);
+      }
+    }
 
     return { success: 'Timetable settings updated successfully.' };
   }

@@ -155,6 +155,8 @@ export function Login({
 
   const [selectedPlan, setSelectedPlan] = useState(computedInitialPlan);
   const [location, setLocation] = useState<Location>('UK');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [marketingEmails, setMarketingEmails] = useState(false);
 
   useEffect(() => {
     if (mode === 'signup') {
@@ -166,7 +168,9 @@ export function Login({
   const priceFieldValue =
     mode === 'signup' ? selectedPlan : statePriceId || priceIdQuery || '';
 
-  const canSubmit = mode === 'signup' ? Boolean(selectedPlan) && safePlans.length > 0 : true;
+  const canSubmit = mode === 'signup' 
+    ? Boolean(selectedPlan) && safePlans.length > 0 && agreedToTerms 
+    : true;
 
   const switchLinkHref = useMemo(() => {
     if (mode === 'signin') {
@@ -213,6 +217,9 @@ export function Login({
         <form className="space-y-6" action={formAction}>
           <input type="hidden" name="redirect" value={redirectValue} />
           <input type="hidden" name="priceId" value={priceFieldValue} />
+          {mode === 'signup' && (
+            <input type="hidden" name="marketingEmails" value={marketingEmails ? 'true' : 'false'} />
+          )}
           
           {mode === 'signup' && (
             <>
@@ -447,10 +454,52 @@ export function Login({
               </div>
             )}
 
+            {mode === 'signup' && (
+              <div className="mt-4 space-y-3">
+                {/* Required Terms & Privacy Checkbox */}
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="terms-consent"
+                    name="termsConsent"
+                    checked={agreedToTerms}
+                    onChange={(e) => setAgreedToTerms(e.target.checked)}
+                    required
+                    className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                  />
+                  <label htmlFor="terms-consent" className="text-sm text-gray-700 cursor-pointer leading-5">
+                    I agree to TeacherTab's{' '}
+                    <Link href="/terms" className="text-blue-600 hover:text-blue-500 underline" target="_blank">
+                      Terms of Service
+                    </Link>
+                    {' '}and{' '}
+                    <Link href="/privacy" className="text-blue-600 hover:text-blue-500 underline" target="_blank">
+                      Privacy Policy
+                    </Link>
+                  </label>
+                </div>
+
+                {/* Optional Marketing Emails Checkbox */}
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="marketing-emails"
+                    name="marketingEmails"
+                    checked={marketingEmails}
+                    onChange={(e) => setMarketingEmails(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                  />
+                  <label htmlFor="marketing-emails" className="text-sm text-gray-700 cursor-pointer leading-5">
+                    Email me teaching tips and product updates (you can unsubscribe anytime)
+                  </label>
+                </div>
+              </div>
+            )}
+
             <div className="mt-4">
               <Button
                 type="submit"
-                className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 disabled={pending || !canSubmit}
               >
                 {pending ? (
@@ -464,14 +513,6 @@ export function Login({
                   'Create Account'
                 )}
               </Button>
-              {mode === 'signup' && (
-                <p className="mt-4 text-xs text-center text-gray-500">
-                  By creating an account, you agree to our{' '}
-                  <Link href="/privacy" className="text-blue-600 hover:text-blue-500 underline">
-                    Privacy Policy
-                  </Link>
-                </p>
-              )}
             </div>
           </div>
         </form>

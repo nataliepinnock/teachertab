@@ -4,10 +4,21 @@ import { Manrope } from 'next/font/google';
 import { getUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
 import TermlyCMP from '@/components/TermlyCMP';
+import Script from 'next/script';
 
 const WEBSITE_UUID = '1432f3dc-f773-4030-aec0-71b2e73afd60'
 
-  
+// Build Termly script URL
+const termlyScriptUrl = (() => {
+  const url = new URL('https://app.termly.io');
+  url.pathname = `/resource-blocker/${WEBSITE_UUID}`;
+  url.searchParams.set('autoBlock', 'on');
+  if (process.env.NEXT_PUBLIC_TERMLY_MASTER_CONSENTS_ORIGIN) {
+    url.searchParams.set('masterConsentsOrigin', process.env.NEXT_PUBLIC_TERMLY_MASTER_CONSENTS_ORIGIN);
+  }
+  return url.toString();
+})();
+
 export const metadata: Metadata = {
   title: 'TeacherTab',
   description: 'Teach. Plan. Organise.',
@@ -36,9 +47,17 @@ export default function RootLayout({
     <html
       lang="en"
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
+      suppressHydrationWarning
     >
-      <body className="min-h-[100dvh] bg-gray-50">
-        <TermlyCMP autoBlock={true} masterConsentsOrigin="https://yourdomain.com" websiteUUID={WEBSITE_UUID} />
+      <body className="min-h-[100dvh] bg-gray-50" suppressHydrationWarning>
+        {/* Termly ResourceBlocker - Load early to block unapproved content */}
+        {/* Note: Using afterInteractive to avoid hydration issues. Termly will still block third-party scripts effectively. */}
+        <Script
+          id="termly-resource-blocker"
+          src={termlyScriptUrl}
+          strategy="afterInteractive"
+        />
+        <TermlyCMP />
         <SWRConfig
           value={{
             fallback: {

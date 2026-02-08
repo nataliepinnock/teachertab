@@ -196,6 +196,7 @@ export async function handleSubscriptionChange(
     const plan = subscription.items.data[0]?.plan;
     const planName = (plan?.product as Stripe.Product).name;
     
+    // updateUserSubscription now automatically syncs to Resend
     await updateUserSubscription(user.id, {
       stripeSubscriptionId: subscriptionId,
       stripeProductId: plan?.product as string,
@@ -248,6 +249,7 @@ export async function handleSubscriptionChange(
       }
     }
   } else if (status === 'canceled' || status === 'unpaid') {
+    // updateUserSubscription now automatically syncs to Resend
     await updateUserSubscription(user.id, {
       stripeSubscriptionId: null,
       stripeProductId: null,

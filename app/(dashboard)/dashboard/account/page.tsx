@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Lock, Trash2, CreditCard, Mail } from 'lucide-react';
-import { updateAccount, updatePassword, deleteAccount, resendWelcomeEmail } from '@/app/(login)/actions';
+import { Loader2, Lock, Trash2, CreditCard, Mail, Bell, Download } from 'lucide-react';
+import { updateAccount, updatePassword, initiateDeleteAccount, resendWelcomeEmail, updateMarketingEmails } from '@/app/(login)/actions';
 import { customerPortalAction } from '@/lib/payments/actions';
 import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
@@ -148,6 +148,96 @@ function AccountFormWithData({ state }: { state: AccountState }) {
   );
 }
 
+function MarketingEmailsSection() {
+  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const [marketingEmailsState, marketingEmailsAction, isMarketingEmailsPending] = useActionState<
+    { success?: string; error?: string },
+    FormData
+  >(
+    async (prevState, formData) => {
+      const result = await updateMarketingEmails(prevState, formData);
+      // Invalidate user cache after successful update
+      if (result?.success && typeof window !== 'undefined') {
+        mutate('/api/user');
+      }
+      return result;
+    },
+    {}
+  );
+
+  if (!user) {
+    return null;
+  }
+
+  const isSubscribed = user.marketingEmails === 1 || user.marketingEmails === true;
+  const [checked, setChecked] = useState(isSubscribed);
+
+  // Update checkbox when user data changes
+  useEffect(() => {
+    if (user) {
+      setChecked(user.marketingEmails === 1 || user.marketingEmails === true);
+    }
+  }, [user]);
+
+  return (
+    <form action={marketingEmailsAction} className="space-y-4">
+      <div className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          id="marketing-emails"
+          name="marketingEmails"
+          checked={checked}
+          onChange={(e) => {
+            setChecked(e.target.checked);
+            // Update the hidden input value
+            const form = e.target.closest('form');
+            if (form) {
+              const hiddenInput = form.querySelector('input[type="hidden"][name="marketingEmails"]') as HTMLInputElement;
+              if (hiddenInput) {
+                hiddenInput.value = e.target.checked ? 'true' : 'false';
+              }
+            }
+          }}
+          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 border-gray-300 rounded"
+        />
+        <div className="flex-1">
+          <label htmlFor="marketing-emails" className="text-sm font-medium text-gray-900 leading-5 cursor-pointer block">
+            Receive marketing emails
+          </label>
+          <p className="text-xs text-gray-500 mt-1">
+            Get teaching tips, product updates, and special offers. You can unsubscribe at any time.
+          </p>
+          <p className="text-xs text-gray-600 mt-2 font-medium">
+            Note: You will still receive important account-related emails such as password resets, subscription updates, and security notifications.
+          </p>
+        </div>
+      </div>
+      <input type="hidden" name="marketingEmails" value={checked ? 'true' : 'false'} />
+      {marketingEmailsState?.error && (
+        <p className="text-red-500 text-sm">{marketingEmailsState.error}</p>
+      )}
+      {marketingEmailsState?.success && (
+        <p className="text-green-500 text-sm">{marketingEmailsState.success}</p>
+      )}
+      <Button
+        type="submit"
+        variant="outline"
+        disabled={isMarketingEmailsPending}
+        className="w-full sm:w-auto"
+      >
+        {isMarketingEmailsPending ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Saving...
+          </>
+        ) : (
+          'Save Email Preferences'
+        )}
+      </Button>
+    </form>
+  );
+}
+
 function SubscriptionSection() {
   const { data: user } = useSWR<User>('/api/user', fetcher);
   
@@ -231,12 +321,17 @@ export default function AccountPage() {
   const [deleteState, deleteAction, isDeletePending] = useActionState<
     DeleteState,
     FormData
-  >(deleteAccount, {});
+  >(initiateDeleteAccount, {});
 
   const [emailState, emailAction, isEmailPending] = useActionState<
     { success?: string; error?: string },
     FormData
   >(resendWelcomeEmail, {});
+
+  const [marketingEmailsState, marketingEmailsAction, isMarketingEmailsPending] = useActionState<
+    { success?: string; error?: string },
+    FormData
+  >(updateMarketingEmails, {});
 
   return (
     <section className="flex-1 min-h-0 flex flex-col overflow-y-auto">
@@ -319,6 +414,19 @@ export default function AccountPage() {
         </CardContent>
       </Card>
 
+      {/* Email Preferences Section */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Email Preferences
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <MarketingEmailsSection />
+        </CardContent>
+      </Card>
+
       {/* Privacy & Consent Section */}
       <Card className="mb-8">
         <CardHeader>
@@ -334,6 +442,53 @@ export default function AccountPage() {
           >
             Manage Consent Preferences
           </a>
+        </CardContent>
+      </Card>
+
+      {/* Data Export Section */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            Download Your Data
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-600 mb-4">
+            Download all your data stored in TeacherTab. This includes your account information, classes, subjects, 
+            timetable, lessons, tasks, events, academic years, and holidays. The data will be exported as a CSV file.
+          </p>
+          <Button
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/user/data-export');
+                if (!response.ok) {
+                  throw new Error('Failed to download data');
+                }
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const contentDisposition = response.headers.get('Content-Disposition');
+                const filename = contentDisposition 
+                  ? contentDisposition.split('filename=')[1]?.replace(/"/g, '') 
+                  : `teachertab-data-export-${new Date().toISOString().split('T')[0]}.csv`;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+              } catch (error) {
+                console.error('Error downloading data:', error);
+                alert('Failed to download your data. Please try again.');
+              }
+            }}
+            variant="outline"
+            className="w-full sm:w-auto"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Download All Data
+          </Button>
         </CardContent>
       </Card>
 

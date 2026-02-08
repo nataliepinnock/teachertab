@@ -5,7 +5,7 @@ import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
-import { sendEmail } from '@/lib/emails/service';
+import { sendEmail, sendUserInfoToResend } from '@/lib/emails/service';
 import { getWelcomeEmail } from '@/lib/emails/templates';
 
 export async function GET(request: NextRequest) {
@@ -104,6 +104,7 @@ export async function GET(request: NextRequest) {
       const signupColorPreference = session.metadata?.signupColorPreference;
       const signupTimetableCycle = session.metadata?.signupTimetableCycle;
       const signupLocation = session.metadata?.signupLocation || 'UK'; // Default to UK if not provided
+      const signupMarketingEmails = session.metadata?.signupMarketingEmails === 'true' || session.metadata?.signupMarketingEmails === undefined; // Default to true (subscribed) if not specified
 
       console.log('[checkout] Signup data:', {
         hasName: !!signupName,
@@ -136,7 +137,7 @@ export async function GET(request: NextRequest) {
 
       if (existingUser) {
         // User exists, update their subscription
-        await db
+        const [updatedUser] = await db
           .update(users)
           .set({
             stripeCustomerId: customerId,
@@ -145,9 +146,19 @@ export async function GET(request: NextRequest) {
             planName: (plan.product as Stripe.Product).name,
             subscriptionStatus: subscription.status,
           })
-          .where(eq(users.id, existingUser.id));
+          .where(eq(users.id, existingUser.id))
+          .returning();
 
         await setSession(existingUser);
+
+        // Sync subscription change to Resend
+        if (updatedUser) {
+          try {
+            await sendUserInfoToResend(updatedUser, 'subscription_change');
+          } catch (error) {
+            console.error('[checkout] Failed to send user info to Resend:', error);
+          }
+        }
       } else {
         // Create new user
         console.log('[checkout] Creating new user in database...');
@@ -159,6 +170,7 @@ export async function GET(request: NextRequest) {
           colorPreference: signupColorPreference,
           timetableCycle: signupTimetableCycle,
           location: signupLocation,
+          marketingEmails: signupMarketingEmails ? 1 : 0, // 1 = subscribed, 0 = unsubscribed
           stripeCustomerId: customerId,
           stripeSubscriptionId: subscriptionId,
           stripeProductId: productId,
@@ -199,6 +211,24 @@ export async function GET(request: NextRequest) {
             // Log error but don't fail the signup process
             // Email sending failures shouldn't block user registration
           }
+
+          // Send user info to Resend for admin tracking and add to audience
+          try {
+            console.log('[checkout] Adding user to Resend Audience:', {
+              email: createdUser.email,
+              name: createdUser.name,
+              marketingEmails: createdUser.marketingEmails,
+            });
+            await sendUserInfoToResend(createdUser, 'signup');
+            console.log('[checkout] Successfully added user to Resend Audience');
+          } catch (error) {
+            // Log error but don't fail the signup process
+            console.error('[checkout] Failed to send user info to Resend:', {
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined,
+              email: createdUser.email,
+            });
+          }
         }
 
         // Redirect new users to setup page with welcome flag
@@ -221,7 +251,7 @@ export async function GET(request: NextRequest) {
         throw new Error('User not found in database.');
       }
 
-      await db
+      const updatedUser = await db
         .update(users)
         .set({
           stripeCustomerId: customerId,
@@ -230,9 +260,20 @@ export async function GET(request: NextRequest) {
           planName: (plan.product as Stripe.Product).name,
           subscriptionStatus: subscription.status,
         })
-        .where(eq(users.id, user[0].id));
+        .where(eq(users.id, user[0].id))
+        .returning();
 
       await setSession(user[0]);
+
+      // Send user info to Resend for admin tracking (subscription change)
+      if (updatedUser.length > 0) {
+        try {
+          await sendUserInfoToResend(updatedUser[0], 'subscription_change');
+        } catch (error) {
+          // Log error but don't fail the subscription update
+          console.error('[checkout] Failed to send user info to Resend:', error);
+        }
+      }
     }
 
     return NextResponse.redirect(new URL('/dashboard', request.url));

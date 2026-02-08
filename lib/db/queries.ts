@@ -26,7 +26,10 @@ export async function getUser() {
   const user = await db
     .select()
     .from(users)
-    .where(eq(users.id, sessionData.user.id))
+    .where(and(
+      eq(users.id, sessionData.user.id),
+      isNull(users.deletedAt)
+    ))
     .limit(1);
 
   if (user.length === 0) {
@@ -40,7 +43,10 @@ export async function getUserByStripeCustomerId(customerId: string) {
   const result = await db
     .select()
     .from(users)
-    .where(eq(users.stripeCustomerId, customerId))
+    .where(and(
+      eq(users.stripeCustomerId, customerId),
+      isNull(users.deletedAt)
+    ))
     .limit(1);
 
   return result.length > 0 ? result[0] : null;
@@ -50,7 +56,10 @@ export async function getUserById(userId: number) {
   const result = await db
     .select()
     .from(users)
-    .where(eq(users.id, userId))
+    .where(and(
+      eq(users.id, userId),
+      isNull(users.deletedAt)
+    ))
     .limit(1);
 
   return result.length > 0 ? result[0] : null;
@@ -87,10 +96,24 @@ export async function updateUserSubscription(
     subscriptionStatus: string;
   }
 ) {
-  await db
+  const [updatedUser] = await db
     .update(users)
     .set({
       ...subscriptionData
     })
-    .where(eq(users.id, userId));
+    .where(eq(users.id, userId))
+    .returning();
+
+  // Sync subscription change to Resend if user was updated
+  if (updatedUser) {
+    try {
+      const { sendUserInfoToResend } = await import('@/lib/emails/service');
+      await sendUserInfoToResend(updatedUser, 'subscription_change');
+    } catch (error) {
+      // Log error but don't fail the subscription update
+      console.error('[updateUserSubscription] Failed to sync to Resend:', error);
+    }
+  }
+
+  return updatedUser;
 }

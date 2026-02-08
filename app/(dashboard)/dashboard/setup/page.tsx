@@ -157,6 +157,32 @@ export default function SetupPage() {
               </p>
             </div>
 
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                <span>👋</span>
+                <span>Quick reminder: TeacherTab is for your personal teaching organisation.</span>
+              </h3>
+              <div className="mt-3 space-y-2 text-sm text-gray-700">
+                <p className="font-medium text-gray-900">THINK CAREFULLY about if it is necessary for you to include student information:</p>
+                <ul className="space-y-1.5 ml-4">
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 mt-0.5">✓</span>
+                    <span>Use first names or initials only</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 mt-0.5">✓</span>
+                    <span>Avoid sensitive details (medical, SEN, safeguarding)</span>
+                  </li>
+                </ul>
+                <p className="mt-3 text-gray-600">
+                  If in doubt, check your school's policy on using personal apps for work purposes.
+                </p>
+                <p className="mt-3 text-gray-600">
+                  You're in control of what you save here. We keep your data private and secure, but you are responsible for what you choose to include.
+                </p>
+              </div>
+            </div>
+
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
               <Button
                 onClick={() => setShowWelcome(false)}
@@ -172,7 +198,7 @@ export default function SetupPage() {
                 }}
                 className="px-6 bg-[#001b3d] hover:bg-[#002855] text-white"
               >
-                Start Setup
+                Got it, let's go!
               </Button>
             </div>
           </div>
