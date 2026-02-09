@@ -2,7 +2,7 @@
 
 import { randomBytes, createHash } from 'crypto';
 import { z } from 'zod';
-import { and, eq, ne } from 'drizzle-orm';
+import { and, eq, ne, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import {
   users,
@@ -32,11 +32,22 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.email, email))
+    .where(and(
+      eq(users.email, email),
+      isNull(users.deletedAt)
+    ))
     .limit(1);
 
   if (!user) {
     return { error: 'Invalid email or password.', email };
+  }
+
+  // Check if account is deleted (double-check even though query filters it)
+  if (user.deletedAt) {
+    return { 
+      error: 'This account has been deleted and cannot be accessed. If you believe this is an error, please contact support.', 
+      email 
+    };
   }
 
   const isValidPassword = await comparePasswords(password, user.passwordHash);

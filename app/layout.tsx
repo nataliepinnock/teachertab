@@ -4,6 +4,7 @@ import { Manrope } from 'next/font/google';
 import { getUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
 import TermlyCMP from '@/components/TermlyCMP';
+import ContactWidget from '@/components/ContactWidget';
 import Script from 'next/script';
 
 const WEBSITE_UUID = '1432f3dc-f773-4030-aec0-71b2e73afd60'
@@ -58,6 +59,7 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
         <TermlyCMP />
+        <ContactWidget />
         <SWRConfig
           value={{
             fallback: {

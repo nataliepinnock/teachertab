@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Lock, Trash2, CreditCard, Mail, Bell, Download } from 'lucide-react';
+import { Loader2, Lock, Trash2, CreditCard, Mail, Bell, Download, FileText, Shield } from 'lucide-react';
+import Link from 'next/link';
 import { updateAccount, updatePassword, initiateDeleteAccount, resendWelcomeEmail, updateMarketingEmails } from '@/app/(login)/actions';
 import { customerPortalAction } from '@/lib/payments/actions';
 import { User } from '@/lib/db/schema';
@@ -436,12 +437,33 @@ export default function AccountPage() {
           <p className="text-sm text-gray-600 mb-4">
             Manage your cookie and data consent preferences. You can change these settings at any time.
           </p>
-          <a 
-            href="#" 
-            className="termly-display-preferences inline-flex items-center px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md transition-colors"
-          >
-            Manage Consent Preferences
-          </a>
+          <div className="space-y-3">
+            <a 
+              href="#" 
+              className="termly-display-preferences inline-flex items-center px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md transition-colors"
+            >
+              Manage Consent Preferences
+            </a>
+            <div className="pt-2 border-t">
+              <p className="text-sm font-medium text-gray-900 mb-3">Legal Documents</p>
+              <div className="space-y-2">
+                <Link 
+                  href="/terms" 
+                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors hover:underline"
+                >
+                  <FileText className="h-4 w-4" />
+                  Terms of Service
+                </Link>
+                <Link 
+                  href="/privacy" 
+                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors hover:underline"
+                >
+                  <Shield className="h-4 w-4" />
+                  Privacy Policy
+                </Link>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

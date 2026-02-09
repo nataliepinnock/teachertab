@@ -3,7 +3,7 @@ import { getMicrosoftAccessToken, getMicrosoftUserInfo } from '@/lib/oauth/provi
 import { getOAuthRedirectUri } from '@/lib/oauth/utils';
 import { jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
-import { eq } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import { users } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
@@ -94,14 +94,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/sign-in?error=email_not_available', request.url));
     }
 
-    // Check if user exists
+    // Check if user exists (excluding deleted accounts)
     const [existingUser] = await db
       .select()
       .from(users)
-      .where(eq(users.email, email))
+      .where(and(
+        eq(users.email, email),
+        isNull(users.deletedAt)
+      ))
       .limit(1);
 
     if (existingUser) {
+      // Double-check account is not deleted
+      if (existingUser.deletedAt) {
+        return NextResponse.redirect(new URL('/sign-in?error=account_deleted', request.url));
+      }
+
       // Sign in existing user
       const activeStatuses = new Set(['active', 'trialing']);
       const isSubscriptionActive =

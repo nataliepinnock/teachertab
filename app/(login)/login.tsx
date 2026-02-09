@@ -59,6 +59,8 @@ export function Login({
         return 'Email address not available from your account.';
       case 'subscription_required':
         return 'Your subscription has expired. Please renew to continue.';
+      case 'account_deleted':
+        return 'This account has been deleted and cannot be accessed. If you believe this is an error, please contact support.';
       case 'no_plan_selected':
         return 'Please select a subscription plan.';
       case 'user_not_found':
