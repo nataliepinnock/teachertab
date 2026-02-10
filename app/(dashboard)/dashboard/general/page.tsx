@@ -107,7 +107,7 @@ function AccountFormWithData({ state }: { state: ActionState }) {
       state={state}
       nameValue={user?.name ?? ''}
       emailValue={user?.email ?? ''}
-      teacherTypeValue={user?.teacherType ?? 'primary'}
+      teacherTypeValue={user?.teachingPhase ?? 'primary'}
       timetableCycleValue={user?.timetableCycle ?? 'weekly'}
     />
   );
