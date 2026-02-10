@@ -442,8 +442,8 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                           entry.dayOfWeek === new Date(formData.date).toLocaleDateString('en-GB', { weekday: 'long' })
                         );
                       const className = slotEntry && Array.isArray(classes)
-                        ? classes.find(c => c.id === slotEntry.classId)?.name 
-                        : null;
+                          ? classes.find(c => c.id === slotEntry.classId)?.name 
+                          : null;
                         
                         return (
                           <div key={slot.id} className="flex items-center justify-between py-1">
@@ -489,8 +489,8 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                               entry.dayOfWeek === new Date(formData.date).toLocaleDateString('en-GB', { weekday: 'long' })
                             );
                       const className = slotEntry && Array.isArray(classes)
-                        ? classes.find(c => c.id === slotEntry.classId)?.name 
-                        : null;
+                              ? classes.find(c => c.id === slotEntry.classId)?.name 
+                              : null;
                             const subjectName = slotEntry && Array.isArray(subjects)
                               ? subjects.find(s => s.id === slotEntry.subjectId)?.name
                               : null;
@@ -546,8 +546,8 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                           entry.dayOfWeek === new Date(formData.date).toLocaleDateString('en-GB', { weekday: 'long' })
                         );
                       const className = slotEntry && Array.isArray(classes)
-                        ? classes.find(c => c.id === slotEntry.classId)?.name 
-                        : null;
+                          ? classes.find(c => c.id === slotEntry.classId)?.name 
+                          : null;
                         const subjectName = slotEntry && subjects
                           ? subjects.find(s => s.id === slotEntry.subjectId)?.name
                           : null;
@@ -584,8 +584,8 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                           entry.dayOfWeek === new Date(formData.date).toLocaleDateString('en-GB', { weekday: 'long' })
                         );
                       const className = slotEntry && Array.isArray(classes)
-                        ? classes.find(c => c.id === slotEntry.classId)?.name 
-                        : null;
+                          ? classes.find(c => c.id === slotEntry.classId)?.name 
+                          : null;
                         
                         return (
                           <div key={slotId} className="flex items-center justify-between py-1">
