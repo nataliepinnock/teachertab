@@ -371,7 +371,6 @@ function TasksList() {
                     onClick={() => {
                       setIsSimpleAddOpen(false);
                       setSimpleTaskTitle('');
-                      setSimpleTaskDueDate('');
                     }}
                   >
                     <X className="h-4 w-4" />
