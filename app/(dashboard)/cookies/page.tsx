@@ -101,16 +101,16 @@ export default function CookiePolicyPage() {
           <span style={{ color: 'rgb(127, 127, 127)' }}>
             <span style={{ color: 'rgb(89, 89, 89)', fontSize: '15px' }}>
               <span data-custom-class="body_text">
-                This Cookie Policy explains how <bdt className="question">TeacherTab Ltd</bdt> ("<strong>Company</strong>," "<strong>we</strong>," "<strong>us</strong>," and "<strong>our</strong>") uses cookies and similar technologies to recognize you when you visit our website at{' '}
+                This Cookie Policy explains how <span className="question">TeacherTab Ltd</span> ("<strong>Company</strong>," "<strong>we</strong>," "<strong>us</strong>," and "<strong>our</strong>") uses cookies and similar technologies to recognize you when you visit our website at{' '}
               </span>
             </span>
             <span style={{ color: 'rgb(0, 58, 250)', fontSize: '15px' }}>
               <span data-custom-class="body_text">
-                <bdt className="question">
+                <span className="question">
                   <a target="_blank" data-custom-class="link" href="https://www.teachertab.com" rel="noopener noreferrer">
                     https://www.teachertab.com
                   </a>
-                </bdt>
+                </span>
               </span>
             </span>
             <span style={{ color: 'rgb(89, 89, 89)', fontSize: '15px' }}>
@@ -154,7 +154,7 @@ export default function CookiePolicyPage() {
           <span style={{ color: 'rgb(127, 127, 127)' }}>
             <span style={{ color: 'rgb(89, 89, 89)', fontSize: '15px' }}>
               <span data-custom-class="body_text">
-                Cookies set by the website owner (in this case, <bdt className="question">TeacherTab Ltd</bdt>) are called "first-party cookies." Cookies set by parties other than the website owner are called "third-party cookies." Third-party cookies enable third-party features or functionality to be provided on or through the website (e.g., advertising, interactive content, and analytics). The parties that set these third-party cookies can recognize your computer both when it visits the website in question and also when it visits certain other websites.
+                Cookies set by the website owner (in this case, <span className="question">TeacherTab Ltd</span>) are called "first-party cookies." Cookies set by parties other than the website owner are called "third-party cookies." Third-party cookies enable third-party features or functionality to be provided on or through the website (e.g., advertising, interactive content, and analytics). The parties that set these third-party cookies can recognize your computer both when it visits the website in question and also when it visits certain other websites.
               </span>
             </span>
           </span>
@@ -175,7 +175,7 @@ export default function CookiePolicyPage() {
           <span style={{ color: 'rgb(127, 127, 127)' }}>
             <span style={{ color: 'rgb(89, 89, 89)', fontSize: '15px' }}>
               <span data-custom-class="body_text">
-                We use first-<bdt className="block-component"></bdt> and third-<bdt className="statement-end-if-in-editor"></bdt>party cookies for several reasons. Some cookies are required for technical reasons in order for our Website to operate, and we refer to these as "essential" or "strictly necessary" cookies. Other cookies also enable us to track and target the interests of our users to enhance the experience on our Online Properties. <bdt className="block-component"></bdt>Third parties serve cookies through our Website for advertising, analytics, and other purposes. <bdt className="statement-end-if-in-editor"></bdt>This is described in more detail below.
+                We use first-<span className="block-component"></span> and third-<span className="statement-end-if-in-editor"></span>party cookies for several reasons. Some cookies are required for technical reasons in order for our Website to operate, and we refer to these as "essential" or "strictly necessary" cookies. Other cookies also enable us to track and target the interests of our users to enhance the experience on our Online Properties. <span className="block-component"></span>Third parties serve cookies through our Website for advertising, analytics, and other purposes. <span className="statement-end-if-in-editor"></span>This is described in more detail below.
               </span>
             </span>
           </span>
@@ -330,14 +330,14 @@ export default function CookiePolicyPage() {
             <span style={{ color: 'rgb(89, 89, 89)', fontSize: '15px' }}>
               <span style={{ fontSize: '15px', color: 'rgb(89, 89, 89)' }}>
                 <span data-custom-class="body_text">
-                  Cookies are not the only way to recognize or track visitors to a website. We may use other, similar technologies from time to time, like web beacons (sometimes called "tracking pixels" or "clear gifs"). These are tiny graphics files that contain a unique identifier that enables us to recognize when someone has visited our Website<bdt className="block-component"></bdt> or opened an email including them<bdt className="statement-end-if-in-editor"></bdt>. This allows us, for example, to monitor{' '}
+                  Cookies are not the only way to recognize or track visitors to a website. We may use other, similar technologies from time to time, like web beacons (sometimes called "tracking pixels" or "clear gifs"). These are tiny graphics files that contain a unique identifier that enables us to recognize when someone has visited our Website<span className="block-component"></span> or opened an email including them<span className="statement-end-if-in-editor"></span>. This allows us, for example, to monitor{' '}
                 </span>
                 <span style={{ fontSize: '15px', color: 'rgb(89, 89, 89)' }}>
                   <span style={{ color: 'rgb(89, 89, 89)' }}>
                     <span data-custom-class="body_text">
                       the traffic patterns of users from one page within a website to another, to deliver or communicate with cookies, to understand whether you have come to the website from an online advertisement displayed on a third-party website, to improve site performance, and to measure the success of email marketing campaigns. In many instances, these technologies are reliant on cookies to function properly, and so declining cookies will impair their functioning.
                     </span>
-                    <bdt className="block-component"></bdt>
+                    <span className="block-component"></span>
                   </span>
                 </span>
               </span>
@@ -463,9 +463,9 @@ export default function CookiePolicyPage() {
             <span style={{ fontSize: '15px', color: 'rgb(89, 89, 89)' }}>
               <span style={{ fontSize: '15px', color: 'rgb(89, 89, 89)' }}>
                 <span data-custom-class="body_text">
-                  If you have any questions about our use of cookies or other technologies, please<bdt className="block-component"></bdt> email us at <bdt className="question">
+                  If you have any questions about our use of cookies or other technologies, please<span className="block-component"></span> email us at <span className="question">
                     <a target="_blank" data-custom-class="link" href="mailto:hello@teachertab.com">hello@teachertab.com</a>
-                  </bdt> or by post to<bdt className="else-block"></bdt>:
+                  </span> or by post to<span className="else-block"></span>:
                 </span>
               </span>
             </span>
@@ -476,66 +476,66 @@ export default function CookiePolicyPage() {
           <span style={{ fontSize: '15px', color: 'rgb(89, 89, 89)' }}>
             <span style={{ fontSize: '15px', color: 'rgb(89, 89, 89)' }}>
               <span data-custom-class="body_text">
-                <bdt className="question">TeacherTab Ltd</bdt>
+                <span className="question">TeacherTab Ltd</span>
               </span>
             </span>
           </span>
         </div>
         <div style={{ lineHeight: 1.5 }}>
-          <bdt className="block-component"><span style={{ fontSize: '15px' }}></span></bdt>
+          <span className="block-component"><span style={{ fontSize: '15px' }}></span></span>
           <span style={{ fontSize: '15px' }}>
-            <bdt className="question">
+            <span className="question">
               <span data-custom-class="body_text">9 Blackford Cl</span>
-            </bdt>
+            </span>
           </span>
-          <bdt className="statement-end-if-in-editor"><span style={{ fontSize: '15px' }}></span></bdt>
+          <span className="statement-end-if-in-editor"><span style={{ fontSize: '15px' }}></span></span>
         </div>
         <div style={{ lineHeight: 1.5 }}>
           <span style={{ fontSize: '15px', color: 'rgb(89, 89, 89)' }}>
             <span data-custom-class="body_text">
-              <bdt className="block-component"></bdt>
+              <span className="block-component"></span>
             </span>
           </span>
         </div>
         <div style={{ lineHeight: 1.5 }}>
-          <bdt className="block-component"></bdt>
+          <span className="block-component"></span>
           <span data-custom-class="body_text">
             <span style={{ fontSize: '15px', color: 'rgb(89, 89, 89)' }}>
-              <bdt className="block-component"></bdt> <bdt className="question">England</bdt>
-              <bdt className="statement-end-if-in-editor"></bdt>
-              <bdt className="block-component"></bdt> <bdt className="question">B63 1JU</bdt>
-              <bdt className="statement-end-if-in-editor"></bdt>
-              <bdt className="block-component"></bdt>
-              <bdt className="block-component"></bdt>
-            </span>
-          </span>
-        </div>
-        <div style={{ lineHeight: 1.5 }}>
-          <span data-custom-class="body_text">
-            <span style={{ fontSize: '15px', color: 'rgb(89, 89, 89)' }}>
-              <bdt className="question">United Kingdom</bdt>
-              <bdt className="statement-end-if-in-editor"></bdt>
-            </span>
-          </span>
-          <span data-custom-class="body_text">
-            <span style={{ fontSize: '15px', color: 'rgb(89, 89, 89)' }}>
-              <bdt className="statement-end-if-in-editor">
-                <bdt className="block-component"></bdt>
-              </bdt>
+              <span className="block-component"></span> <span className="question">England</span>
+              <span className="statement-end-if-in-editor"></span>
+              <span className="block-component"></span> <span className="question">B63 1JU</span>
+              <span className="statement-end-if-in-editor"></span>
+              <span className="block-component"></span>
+              <span className="block-component"></span>
             </span>
           </span>
         </div>
         <div style={{ lineHeight: 1.5 }}>
           <span data-custom-class="body_text">
             <span style={{ fontSize: '15px', color: 'rgb(89, 89, 89)' }}>
-              <bdt className="statement-end-if-in-editor">
-                Phone: <bdt className="question">(+44)7792136376</bdt>
-              </bdt>
+              <span className="question">United Kingdom</span>
+              <span className="statement-end-if-in-editor"></span>
             </span>
           </span>
           <span data-custom-class="body_text">
             <span style={{ fontSize: '15px', color: 'rgb(89, 89, 89)' }}>
-              <bdt className="block-component"></bdt>
+              <span className="statement-end-if-in-editor">
+                <span className="block-component"></span>
+              </span>
+            </span>
+          </span>
+        </div>
+        <div style={{ lineHeight: 1.5 }}>
+          <span data-custom-class="body_text">
+            <span style={{ fontSize: '15px', color: 'rgb(89, 89, 89)' }}>
+              <span className="statement-end-if-in-editor">
+                Phone: <span className="question">(+44)7792136376</span>
+              </span>
+            </span>
+          </span>
+          <span data-custom-class="body_text">
+            <span style={{ fontSize: '15px', color: 'rgb(89, 89, 89)' }}>
+              <span className="block-component"></span>
             </span>
           </span>
         </div>
