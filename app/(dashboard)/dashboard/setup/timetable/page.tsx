@@ -39,6 +39,19 @@ const fetcher = async (url: string) => {
   return Array.isArray(data) ? data : [];
 };
 
+const userFetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    if (res.status === 401) {
+      const error = new Error('Unauthorized - Please sign in again');
+      (error as any).status = 401;
+      throw error;
+    }
+    throw new Error('Failed to fetch user');
+  }
+  return res.json();
+};
+
 // Class Assignment Modal
 function ClassAssignmentModal({ open, onClose, onSave, slot, initialData }: {
   open: boolean;
@@ -56,7 +69,7 @@ function ClassAssignmentModal({ open, onClose, onSave, slot, initialData }: {
   // Fetch classes and subjects
   const { data: classes } = useSWR<any[]>('/api/classes', fetcher);
   const { data: subjects } = useSWR<any[]>('/api/subjects', fetcher);
-  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const { data: user } = useSWR<User>('/api/user', userFetcher);
   const timetableSlotLabel = getLocalizedTerm(user?.location, 'timetableSlot');
 
   React.useEffect(() => {
@@ -553,7 +566,7 @@ export default function TimetableSetupPage() {
   const { data: timetableSlots, error, mutate, isLoading } = useSWR<TimetableSlot[]>('/api/timetable-slots', fetcher);
   const { data: timetableEntries, mutate: mutateTimetableEntries } = useSWR<any[]>('/api/timetable', fetcher);
   const { data: timetableActivities, error: activitiesError, mutate: mutateTimetableActivities } = useSWR<any[]>('/api/timetable-activities', fetcher);
-  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const { data: user } = useSWR<User>('/api/user', userFetcher);
   const timetableSlotLabel = getLocalizedTerm(user?.location, 'timetableSlot');
   const timetableLabel = getLocalizedTerm(user?.location, 'timetable');
   
@@ -1014,7 +1027,7 @@ export default function TimetableSetupPage() {
 
 // Timetable Settings Section
 function TimetableSettingsSection() {
-  const { data: user, mutate: mutateUser } = useSWR<User>('/api/user', fetcher);
+  const { data: user, mutate: mutateUser } = useSWR<User>('/api/user', userFetcher);
   const [settingsState, settingsAction, isSettingsPending] = useActionState<{ error?: string; success?: string }, FormData>(
     async (prevState, formData) => {
       const result = await updateTimetableSettings(prevState, formData);
