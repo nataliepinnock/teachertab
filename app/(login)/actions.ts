@@ -478,7 +478,7 @@ export const deleteAccount = validatedActionWithUser(
     // Send goodbye email
     try {
       const { subject, html } = getGoodbyeEmail({
-        name: user.name,
+        name: user.name || 'User',
         email: user.email,
         reason: 'account_deleted',
         planName: user.planName || undefined,
