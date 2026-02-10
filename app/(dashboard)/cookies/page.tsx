@@ -88,7 +88,7 @@ export default function CookiePolicyPage() {
             <strong>
               <span style={{ fontSize: '15px' }}>
                 <span data-custom-class="subtitle">
-                  Last updated <bdt className="question">February 05, 2026</bdt>
+                  Last updated <span className="question">February 05, 2026</span>
                 </span>
               </span>
             </strong>
