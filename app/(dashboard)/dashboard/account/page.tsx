@@ -170,13 +170,15 @@ function MarketingEmailsSection() {
     return null;
   }
 
-  const isSubscribed = user.marketingEmails === 1 || user.marketingEmails === true;
+  // Handle both number (0/1) and boolean types for marketingEmails
+  // Check if truthy: 1 or true means subscribed, 0 or false means unsubscribed
+  const isSubscribed = Boolean(user.marketingEmails);
   const [checked, setChecked] = useState(isSubscribed);
 
   // Update checkbox when user data changes
   useEffect(() => {
     if (user) {
-      setChecked(user.marketingEmails === 1 || user.marketingEmails === true);
+      setChecked(Boolean(user.marketingEmails));
     }
   }, [user]);
 
