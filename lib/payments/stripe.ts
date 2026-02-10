@@ -31,6 +31,7 @@ type SignupData = {
   colorPreference: string;
   timetableCycle: string;
   location: string;
+  marketingEmails?: boolean;
 };
 
 export async function createCheckoutSession({
@@ -80,6 +81,9 @@ export async function createCheckoutSession({
     metadata.signupColorPreference = signupData.colorPreference;
     metadata.signupTimetableCycle = signupData.timetableCycle;
     metadata.signupLocation = signupData.location;
+    if (signupData.marketingEmails !== undefined) {
+      metadata.signupMarketingEmails = signupData.marketingEmails ? 'true' : 'false';
+    }
   }
 
   const session = await stripe.checkout.sessions.create({
