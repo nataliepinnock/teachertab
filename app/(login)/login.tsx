@@ -85,7 +85,7 @@ export function Login({
   } else if (oauthError) {
     errorMessage = getOAuthErrorMessage(oauthError);
   } else {
-    errorMessage = state.error;
+    errorMessage = state.error ?? '';
   }
 
   // Ensure plans is always a valid array with strict validation and deduplication

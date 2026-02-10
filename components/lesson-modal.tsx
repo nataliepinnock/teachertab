@@ -71,8 +71,8 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
         // Ensure timetableSlotIds is an array of strings
         const slotIds = initialData.timetableSlotIds 
           ? (Array.isArray(initialData.timetableSlotIds) 
-              ? initialData.timetableSlotIds.map(id => id.toString()).filter(id => id)
-              : [initialData.timetableSlotIds.toString()].filter(id => id))
+              ? initialData.timetableSlotIds.map((id: any) => id.toString()).filter((id: string) => id)
+              : [initialData.timetableSlotIds.toString()].filter((id: string) => id))
           : [];
         
         const newFormData = {
@@ -111,7 +111,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
   useEffect(() => {
     if (isOpen && initialData?.timetableSlotIds && initialData.timetableSlotIds.length > 0) {
       const slotIds = Array.isArray(initialData.timetableSlotIds) 
-        ? initialData.timetableSlotIds.map(id => id.toString())
+        ? initialData.timetableSlotIds.map((id: any) => id.toString())
         : [initialData.timetableSlotIds.toString()];
       
       // Only update if formData doesn't have the slot IDs
@@ -244,8 +244,8 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
         ? formData.timetableSlotIds
         : (initialData?.timetableSlotIds 
             ? (Array.isArray(initialData.timetableSlotIds) 
-                ? initialData.timetableSlotIds.map(id => id.toString()).filter(id => id)
-                : [initialData.timetableSlotIds.toString()].filter(id => id))
+                ? initialData.timetableSlotIds.map((id: any) => id.toString()).filter((id: string) => id)
+                : [initialData.timetableSlotIds.toString()].filter((id: string) => id))
             : []);
       
       const dataToSave = { 
@@ -371,7 +371,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
               // Check if read-only (has initialData with timetableSlotIds)
               const isReadOnly = initialData?.timetableSlotIds && initialData.timetableSlotIds.length > 0;
               const slotIdsToUse = isReadOnly
-                ? initialData.timetableSlotIds.map(id => id.toString())
+                ? initialData.timetableSlotIds.map((id: any) => id.toString())
                 : formData.timetableSlotIds;
               
               // Get all timetable slots to find selected slots
@@ -380,7 +380,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
               // Find selected slots from all slots
               const selectedSlots = allSlots.filter(slot => {
                 const slotIdStr = slot.id.toString();
-                return slotIdsToUse.some(id => id.toString() === slotIdStr);
+                return slotIdsToUse.some((id: string) => id.toString() === slotIdStr);
               });
               
               // If read-only, show as plain text
@@ -456,7 +456,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                               onClick={() => {
                                 setFormData(prev => ({
                                   ...prev,
-                                  timetableSlotIds: prev.timetableSlotIds.filter(id => id !== slot.id.toString())
+                                  timetableSlotIds: prev.timetableSlotIds.filter((id: string) => id !== slot.id.toString())
                                 }));
                               }}
                               className="text-red-600 hover:text-red-700 text-sm"
@@ -598,7 +598,7 @@ export function LessonModal({ isOpen, onClose, onSave, onDelete, mode, initialDa
                               onClick={() => {
                                 setFormData(prev => ({
                                   ...prev,
-                                  timetableSlotIds: prev.timetableSlotIds.filter(id => id !== slotId)
+                                  timetableSlotIds: prev.timetableSlotIds.filter((id: string) => id !== slotId)
                                 }));
                               }}
                               className="text-red-600 hover:text-red-700 text-sm"

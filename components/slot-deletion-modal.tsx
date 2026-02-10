@@ -4,6 +4,11 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Users, BookOpen, Calendar, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import useSWR from 'swr';
+import { getLocalizedTerm } from '@/lib/utils/localization';
+import { User } from '@/lib/db/schema';
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface SlotDependencies {
   lessonsCount: number;
@@ -47,6 +52,8 @@ export function SlotDeletionModal({
   dependencies,
   isLoading = false 
 }: SlotDeletionModalProps) {
+  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const timetableSlotLabel = getLocalizedTerm(user?.location, 'timetableSlot');
   const [deletionStep, setDeletionStep] = useState<'confirm' | 'deleting' | 'completed'>('confirm');
   const [deletedItems, setDeletedItems] = useState<{
     lessons: boolean;

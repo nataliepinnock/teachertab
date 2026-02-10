@@ -20,6 +20,14 @@ const fetcher = async (url: string) => {
   return Array.isArray(data) ? data : [];
 };
 
+const userFetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error('Failed to fetch user');
+  }
+  return res.json();
+};
+
 interface TimetableSlotModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -45,7 +53,7 @@ export function TimetableSlotModal({
   onSave, 
   onDelete 
 }: TimetableSlotModalProps) {
-  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const { data: user } = useSWR<User>('/api/user', userFetcher);
   const timetableSlotLabel = getLocalizedTerm(user?.location, 'timetableSlot');
   const [formData, setFormData] = useState({
     dayOfWeek: 'Monday',
@@ -82,7 +90,7 @@ export function TimetableSlotModal({
           existingSlot.weekNumber === weekNumber &&
           existingSlot.startTime === formData.startTime &&
           existingSlot.endTime === formData.endTime &&
-          (slot ? existingSlot.id !== slot.id : true) // Exclude current slot when editing
+          (slot ? existingSlot.id !== (slot as TimetableSlot).id : true) // Exclude current slot when editing
         );
 
         if (hasConflict) {

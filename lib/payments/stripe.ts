@@ -212,7 +212,7 @@ export async function handleSubscriptionChange(
     if (wasInactive) {
       try {
         const { subject, html } = getSubscriptionReactivatedEmail({
-          name: user.name,
+          name: user.name || 'User',
           email: user.email,
           planName: planName,
         });
@@ -231,17 +231,16 @@ export async function handleSubscriptionChange(
     // Only send if subscription was previously active (not reactivating)
     if (subscription.cancel_at_period_end && status === 'active' && !wasInactive) {
       try {
-        const periodEnd = subscription.current_period_end 
-          ? new Date(subscription.current_period_end * 1000)
+        const periodEnd = (subscription as any).current_period_end 
+          ? new Date((subscription as any).current_period_end * 1000)
           : undefined;
 
         const { subject, html } = getSubscriptionCanceledEmail({
-          name: user.name,
+          name: user.name || 'User',
           email: user.email,
           planName: planName || undefined,
           cancelAtPeriodEnd: true,
           periodEnd: periodEnd,
-          location: user.location || undefined,
         });
         await sendEmail({
           to: user.email,
@@ -265,7 +264,7 @@ export async function handleSubscriptionChange(
     // This happens when the period ends and subscription becomes 'canceled'
     try {
       const { subject, html } = getSubscriptionExpiredEmail({
-        name: user.name,
+        name: user.name || 'User',
         email: user.email,
         planName: user.planName || undefined,
         location: user.location || undefined,

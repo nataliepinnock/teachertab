@@ -197,7 +197,7 @@ export async function GET(request: NextRequest) {
         if (flow === 'signup') {
           try {
             const { subject, html } = getWelcomeEmail({
-              name: createdUser.name,
+              name: createdUser.name || 'User',
               email: createdUser.email,
               planName: createdUser.planName || undefined,
               location: createdUser.location || undefined,

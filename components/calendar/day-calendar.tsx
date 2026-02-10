@@ -239,7 +239,7 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
   const { data: user } = useSWR<User>('/api/user', fetcher);
   const { data: timetableEntries } = useSWR<any[]>('/api/timetable', fetcher);
   const { data: timetableSlots } = useSWR<any[]>('/api/timetable-slots', fetcher);
-  const { data: timetableActivities } = useSWR<any[]>('/api/timetable-activities', fetcher);
+  const { data: timetableActivities, mutate: mutateTimetableActivities } = useSWR<any[]>('/api/timetable-activities', fetcher);
   
 
   // Academic calendar hook for holidays
@@ -699,8 +699,7 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
                 {calendarEvents.allDayEvents.map((event) => (
                   <div
                     key={event.id}
-                    className={`flex items-center rounded-lg text-xs p-2 text-left border-2 group cursor-pointer`}
-                    className={`${event.isUnfinished ? 'border-dashed' : 'border-solid'}`}
+                    className={`flex items-center rounded-lg text-xs p-2 text-left border-2 group cursor-pointer ${event.isUnfinished ? 'border-dashed' : 'border-solid'}`}
                     style={{
                       backgroundColor: event.isUnfinished
                         ? lightenColor(event.color || '#FCD34D', 0.7) // Much lighter background for unplanned
@@ -1210,7 +1209,7 @@ export function DayCalendar({ className, currentDate, onDateChange, onAddEvent, 
               date: firstLesson?.date || editingLesson.startTime.toISOString().split('T')[0],
               lessonPlan: firstLesson?.lessonPlan || editingLesson.description || '',
               color: firstLesson?.color || editingLesson.color || '#6B7280',
-              planCompleted: firstLesson?.planCompleted || editingLesson.planCompleted || false,
+              planCompleted: editingLesson.planCompleted || false,
             };
             
             return initialData;
