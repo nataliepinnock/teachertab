@@ -56,7 +56,8 @@ async function testResendAudience() {
     console.log('\n🔍 Verifying contact exists...');
     if (audienceId) {
       const contacts = await resend.contacts.list({ audienceId });
-      const found = contacts.data?.find((c: any) => c.email === testEmail);
+      const contactsData = (contacts as any)?.data as any[] | undefined;
+      const found = contactsData?.find((c: any) => c.email === testEmail);
       if (found) {
         console.log('✅ Contact found in audience!');
         console.log('  Contact data:', JSON.stringify(found, null, 2));

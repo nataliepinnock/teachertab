@@ -133,7 +133,7 @@ export async function addUserToResendAudience(
       if (response?.error || (response?.data === null && response?.error)) {
         const error = response.error;
         const errorMessage = error?.message || String(error);
-        const statusCode = error?.statusCode || error?.status;
+        const statusCode = error?.statusCode || (error as any)?.status;
         
         console.log(`[resend-audience] ⚠️ API returned error:`, {
           statusCode,
@@ -177,8 +177,8 @@ export async function addUserToResendAudience(
       // Only log success if there's no error
       if (!response?.error && response?.data !== null) {
         console.log(`[resend-audience] ✅ Successfully added contact to Resend Audience: ${email}`, {
-          responseId: response?.data?.id || response?.id,
-          responseData: response?.data,
+          responseId: (response as any)?.data?.id || (response as any)?.id,
+          responseData: (response as any)?.data,
         });
       } else {
         // This shouldn't happen, but log it if it does
@@ -414,8 +414,7 @@ export async function sendUserInfoToResend(
   // For signups, always add to audience (they can unsubscribe later)
   // For updates, check marketingEmails value to determine if they should be in audience
   const shouldAddToAudience = 
-    eventType === 'signup' || 
-    (eventType !== 'signup' && marketingEmailsValue);
+    eventType === 'signup' || marketingEmailsValue;
   
   const shouldRemoveFromAudience = 
     eventType !== 'signup' && 
@@ -489,7 +488,7 @@ export async function sendUserInfoToResend(
           // Check for errors in response
           if (updateResponse?.error) {
             const error = updateResponse.error;
-            const statusCode = error.statusCode || error.status;
+            const statusCode = error.statusCode || (error as any)?.status;
             
             // Handle rate limiting - retry after delay
             if (statusCode === 429) {
@@ -574,7 +573,7 @@ export async function sendUserInfoToResend(
     } catch (error) {
       console.error(`[resend-audience] ❌ Failed to handle opt-out for contact ${user.email}:`, error);
     }
-  } else if (!shouldAddToAudience && eventType !== 'signup') {
+  } else if (!shouldAddToAudience && (eventType as string) !== 'signup') {
     // Log when we're not adding or removing (edge case)
     console.log(`[user-info] No Resend Audience action needed:`, {
       eventType,
@@ -666,8 +665,8 @@ export async function addUserToDeletedUsersSegment(
               email,
               audienceId: deletedUsersSegmentId,
               unsubscribed: true,
-              metadata: contactData.metadata,
-            });
+              ...(contactData.metadata && { metadata: contactData.metadata as any }),
+            } as any);
             console.log(`[resend-deleted-users] ✅ Updated contact ${email} in Deleted Users segment`);
             return;
           } catch (updateError) {
@@ -682,14 +681,14 @@ export async function addUserToDeletedUsersSegment(
           email,
           audienceId,
           unsubscribed: true,
-          metadata: contactData.metadata,
-        });
+          ...(contactData.metadata && { metadata: contactData.metadata as any }),
+        } as any);
       } else {
         await resend.contacts.update({
           email,
           unsubscribed: true,
-          metadata: contactData.metadata,
-        });
+          ...(contactData.metadata && { metadata: contactData.metadata as any }),
+        } as any);
       }
       console.log(`[resend-deleted-users] ✅ Updated contact ${email} with deleted status (segment filters by metadata)`);
     } catch (error) {
@@ -700,14 +699,14 @@ export async function addUserToDeletedUsersSegment(
             email,
             audienceId,
             unsubscribed: true,
-            metadata: contactData.metadata,
-          });
+            ...(contactData.metadata && { metadata: contactData.metadata as any }),
+          } as any);
         } else {
           await resend.contacts.update({
             email,
             unsubscribed: true,
-            metadata: contactData.metadata,
-          });
+            ...(contactData.metadata && { metadata: contactData.metadata as any }),
+          } as any);
         }
         console.log(`[resend-deleted-users] ✅ Updated contact ${email} (segment may filter by metadata)`);
       } catch (fallbackError) {

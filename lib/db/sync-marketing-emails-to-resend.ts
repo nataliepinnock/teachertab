@@ -35,7 +35,7 @@ async function syncMarketingEmailsToResend() {
   for (let i = 0; i < allUsers.length; i++) {
     const user = allUsers[i];
     const progress = `[${i + 1}/${totalUsers}]`;
-    const isSubscribed = user.marketingEmails === 1 || user.marketingEmails === true;
+    const isSubscribed = Boolean(user.marketingEmails);
 
     try {
       console.log(`${progress} Syncing ${user.email}...`);

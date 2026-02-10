@@ -44,10 +44,10 @@ async function verifyMarketingStatus() {
   try {
     if (audienceId) {
       const response = await resend.contacts.list({ audienceId });
-      resendContacts = response.data || [];
+      resendContacts = ((response as any)?.data as any[]) || [];
     } else {
       const response = await resend.contacts.list();
-      resendContacts = response.data || [];
+      resendContacts = ((response as any)?.data as any[]) || [];
     }
     console.log(`📊 Found ${resendContacts.length} contact(s) in Resend\n`);
   } catch (error) {
@@ -71,7 +71,7 @@ async function verifyMarketingStatus() {
   for (let i = 0; i < allUsers.length; i++) {
     const user = allUsers[i];
     const progress = `[${i + 1}/${totalUsers}]`;
-    const dbSubscribed = user.marketingEmails === 1 || user.marketingEmails === true;
+    const dbSubscribed = Boolean(user.marketingEmails);
     const dbStatus = dbSubscribed ? 'SUBSCRIBED (1)' : 'UNSUBSCRIBED (0)';
 
     const resendContact = resendMap.get(user.email);

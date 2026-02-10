@@ -68,7 +68,8 @@ async function verifyResendContacts() {
 
       if (contact) {
         foundCount++;
-        const status = contact.unsubscribed ? 'Unsubscribed' : 'Subscribed';
+        const contactData = contact as any;
+        const status = contactData.unsubscribed ? 'Unsubscribed' : 'Subscribed';
         console.log(`${progress} ✅ Found: ${user.email} (${status})`);
       } else {
         notFoundCount++;

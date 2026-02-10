@@ -48,7 +48,8 @@ async function migrateTeacherType() {
         color_preference = 'subject'
       WHERE teacher_type IN ('primary', 'mixed');
     `);
-    console.log(`✓ Migrated ${primaryResult.rowCount || 0} primary/mixed users to primary/subject`);
+    const primaryCount = (primaryResult as any).rowCount || 0;
+    console.log(`✓ Migrated ${primaryCount} primary/mixed users to primary/subject`);
 
     // Secondary → teachingPhase: 'secondary', colorPreference: 'class'
     const secondaryResult = await db.execute(sql`
@@ -58,7 +59,8 @@ async function migrateTeacherType() {
         color_preference = 'class'
       WHERE teacher_type = 'secondary';
     `);
-    console.log(`✓ Migrated ${secondaryResult.rowCount || 0} secondary users to secondary/class`);
+    const secondaryCount = (secondaryResult as any).rowCount || 0;
+    console.log(`✓ Migrated ${secondaryCount} secondary users to secondary/class`);
 
     // Handle any null or unexpected values
     const nullResult = await db.execute(sql`
@@ -68,7 +70,8 @@ async function migrateTeacherType() {
         color_preference = 'subject'
       WHERE teaching_phase IS NULL OR color_preference IS NULL;
     `);
-    console.log(`✓ Fixed ${nullResult.rowCount || 0} null values\n`);
+    const nullCount = (nullResult as any).rowCount || 0;
+    console.log(`✓ Fixed ${nullCount} null values\n`);
 
     // Step 3: Verify migration
     console.log('Step 3: Verifying migration...');

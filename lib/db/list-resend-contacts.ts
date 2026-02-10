@@ -19,7 +19,7 @@ async function listResendContacts() {
 
   try {
     // List contacts from the audience
-    let contacts;
+    let contacts: any;
     if (audienceId) {
       contacts = await resend.contacts.list({
         audienceId,
@@ -28,14 +28,15 @@ async function listResendContacts() {
       contacts = await resend.contacts.list();
     }
 
-    if (!contacts || !contacts.data || contacts.data.length === 0) {
+    const contactsData = (contacts as any)?.data as any[] | undefined;
+    if (!contactsData || contactsData.length === 0) {
       console.log('📭 No contacts found in Resend Audience');
       process.exit(0);
     }
 
-    console.log(`📊 Found ${contacts.data.length} contact(s) in Resend:\n`);
+    console.log(`📊 Found ${contactsData.length} contact(s) in Resend:\n`);
 
-    contacts.data.forEach((contact: any, index: number) => {
+    contactsData.forEach((contact: any, index: number) => {
       const status = contact.unsubscribed ? '❌ Unsubscribed' : '✅ Subscribed';
       const name = contact.firstName || contact.lastName 
         ? `${contact.firstName || ''} ${contact.lastName || ''}`.trim()
@@ -51,7 +52,7 @@ async function listResendContacts() {
       console.log('');
     });
 
-    console.log(`\n✅ Total: ${contacts.data.length} contact(s)`);
+    console.log(`\n✅ Total: ${contactsData.length} contact(s)`);
     process.exit(0);
   } catch (error) {
     console.error('❌ Error fetching contacts:', error instanceof Error ? error.message : String(error));
