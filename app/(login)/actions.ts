@@ -680,7 +680,7 @@ export const resendWelcomeEmail = validatedActionWithUser(
   async (_, __, user) => {
     try {
       const { subject, html } = getWelcomeEmail({
-        name: user.name,
+        name: user.name || 'User',
         email: user.email,
         planName: user.planName || undefined,
         location: user.location || undefined,
