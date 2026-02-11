@@ -600,6 +600,23 @@ function LoginContent({
             </Link>
           </div>
         </div>
+
+        {/* Footer Links */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="flex flex-wrap justify-center gap-4 text-xs text-gray-500">
+            <Link href="/terms" className="hover:text-gray-700">
+              Terms of Service
+            </Link>
+            <span>•</span>
+            <Link href="/privacy" className="hover:text-gray-700">
+              Privacy Policy
+            </Link>
+            <span>•</span>
+            <a href="#" className="termly-display-preferences hover:text-gray-700">
+              Consent Preferences
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );
