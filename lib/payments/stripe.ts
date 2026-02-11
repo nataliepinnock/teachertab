@@ -298,9 +298,14 @@ export async function getStripePrices() {
     if (price.type !== 'recurring') return false;
     // Only include active prices (double-check, though API should filter)
     if (!price.active) return false;
-    // Only include prices for active products
+    // Only include prices for active products (exclude deleted products)
     const product = typeof price.product === 'string' ? null : price.product;
-    if (product && !product.active) return false;
+    if (product) {
+      // Check if product is deleted (DeletedProduct has deleted: true)
+      if ('deleted' in product && (product as Stripe.DeletedProduct).deleted) return false;
+      // Check if product is active (only for non-deleted products)
+      if ('active' in product && !(product as Stripe.Product).active) return false;
+    }
     // Remove duplicates
     if (seenPriceIds.has(price.id)) return false;
     seenPriceIds.add(price.id);
