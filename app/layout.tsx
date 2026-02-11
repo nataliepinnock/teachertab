@@ -59,6 +59,22 @@ export default function RootLayout({
           src={termlyScriptUrl}
           strategy="afterInteractive"
         />
+        {/* Simple Analytics - 100% privacy-first analytics */}
+        <script
+          data-collect-dnt="true"
+          async
+          src="https://scripts.simpleanalyticscdn.com/latest.js"
+          suppressHydrationWarning
+        />
+        <noscript>
+          <img
+            src="https://queue.simpleanalyticscdn.com/noscript.gif?collect-dnt=true"
+            alt=""
+            referrerPolicy="no-referrer-when-downgrade"
+            style={{ display: 'none' }}
+            suppressHydrationWarning
+          />
+        </noscript>
         <Suspense fallback={null}>
           <TermlyCMP />
         </Suspense>
