@@ -14,6 +14,7 @@ import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
 import { getTeachingPhaseOptions, getLocalizedOrganizing, type Location } from '@/lib/utils/localization';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import useSWR from 'swr';
 
 export type PlanOption = {
   id: string;
@@ -22,6 +23,32 @@ export type PlanOption = {
   interval: Stripe.Price.Recurring.Interval;
   description?: string | null;
 };
+
+interface PlanData {
+  name: string;
+  price: number;
+  currency: string;
+  interval: string;
+  trialDays: number;
+  priceId?: string;
+}
+
+interface PricingData {
+  gbp: {
+    monthly: PlanData;
+    annual: PlanData;
+  };
+  usd: {
+    monthly: PlanData;
+    annual: PlanData;
+  };
+  eur: {
+    monthly: PlanData;
+    annual: PlanData;
+  };
+}
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 function LoginContent({
   mode = 'signin',
@@ -88,8 +115,57 @@ function LoginContent({
     errorMessage = state.error ?? '';
   }
 
+  // Transform pricing data into PlanOption format, filtered by selected currency
+  const currencyFilteredPlans = useMemo(() => {
+    if (mode !== 'signup' || !pricingData) {
+      return [];
+    }
+    
+    const currencyData = pricingData[currency];
+    if (!currencyData) {
+      return [];
+    }
+    
+    const transformedPlans: PlanOption[] = [];
+    
+    // Add monthly plan
+    if (currencyData.monthly?.priceId && currencyData.monthly?.price) {
+      transformedPlans.push({
+        id: currencyData.monthly.priceId,
+        name: currencyData.monthly.name || 'Monthly',
+        amount: currencyData.monthly.price,
+        interval: (currencyData.monthly.interval || 'month') as Stripe.Price.Recurring.Interval,
+        description: currencyData.monthly.trialDays > 0 
+          ? `${currencyData.monthly.trialDays} day free trial`
+          : null,
+      });
+    }
+    
+    // Add annual plan
+    if (currencyData.annual?.priceId && currencyData.annual?.price) {
+      transformedPlans.push({
+        id: currencyData.annual.priceId,
+        name: currencyData.annual.name || 'Annual',
+        amount: currencyData.annual.price,
+        interval: (currencyData.annual.interval || 'year') as Stripe.Price.Recurring.Interval,
+        description: currencyData.annual.trialDays > 0 
+          ? `${currencyData.annual.trialDays} day free trial`
+          : null,
+      });
+    }
+    
+    return transformedPlans;
+  }, [mode, pricingData, currency]);
+
   // Ensure plans is always a valid array with strict validation and deduplication
+  // Use currency-filtered plans if available, otherwise fall back to original plans
   const safePlans = useMemo(() => {
+    // For signup mode with pricing data, use currency-filtered plans
+    if (mode === 'signup' && currencyFilteredPlans.length > 0) {
+      return currencyFilteredPlans;
+    }
+    
+    // Otherwise, use the original plans with validation
     try {
       if (!Array.isArray(plans)) {
         return [];
@@ -139,7 +215,7 @@ function LoginContent({
     } catch {
       return [];
     }
-  }, [plans]);
+  }, [mode, plans, currencyFilteredPlans]);
 
   const statePriceId = typeof state?.priceId === 'string' ? state.priceId : undefined;
   const computedInitialPlan = useMemo(() => {
@@ -159,12 +235,35 @@ function LoginContent({
   const [location, setLocation] = useState<Location>('UK');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [marketingEmails, setMarketingEmails] = useState(false);
+  const [currency, setCurrency] = useState<'gbp' | 'usd' | 'eur'>('gbp');
+  
+  // Fetch pricing data for currency selection (only for signup mode)
+  const { data: pricingData, error: pricingError, isLoading: pricingLoading } = useSWR<PricingData>(
+    mode === 'signup' ? '/api/pricing' : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      refreshInterval: 3600000, // Revalidate every hour
+    }
+  );
 
   useEffect(() => {
     if (mode === 'signup') {
       setSelectedPlan(computedInitialPlan);
     }
   }, [computedInitialPlan, mode]);
+
+  // Reset selected plan when currency changes (if current plan is not available in new currency)
+  useEffect(() => {
+    if (mode === 'signup' && safePlans.length > 0) {
+      const currentPlanExists = safePlans.some((plan) => plan.id === selectedPlan);
+      if (!currentPlanExists) {
+        // Select first available plan in new currency
+        setSelectedPlan(safePlans[0]?.id || '');
+      }
+    }
+  }, [currency, safePlans, mode, selectedPlan]);
 
   const redirectValue = mode === 'signup' ? 'checkout' : redirectQuery || '';
   const priceFieldValue =
@@ -192,9 +291,12 @@ function LoginContent({
     return `/sign-in${params.toString() ? `?${params.toString()}` : ''}`;
   }, [mode, priceIdQuery, selectedPlan]);
 
-  const formatPrice = (amount: number, interval: string) => {
-    const currencyAmount = (amount / 100).toFixed(2);
-    return `£${currencyAmount} per ${interval}`;
+  const formatPrice = (amount: number, interval: string, curr?: string) => {
+    const selectedCurrency = curr || currency;
+    const symbol = selectedCurrency.toUpperCase() === 'GBP' ? '£' : selectedCurrency.toUpperCase() === 'USD' ? '$' : '€';
+    const isEur = selectedCurrency.toUpperCase() === 'EUR';
+    const currencyAmount = (amount / 100).toFixed(isEur ? 0 : 2);
+    return `${symbol}${currencyAmount} per ${interval}`;
   };
 
   return (
@@ -229,7 +331,52 @@ function LoginContent({
                 <Label className="block text-sm font-medium text-gray-700 mb-2">
                   Choose your subscription plan
                 </Label>
-                {safePlans.length === 0 ? (
+                
+                {/* Currency Toggle */}
+                {!pricingLoading && pricingData && (
+                  <div className="mb-4 flex items-center justify-start gap-4">
+                    <span className="text-sm font-medium text-gray-700">Currency:</span>
+                    <div className="inline-flex rounded-lg bg-gray-100 p-1">
+                      <button
+                        type="button"
+                        onClick={() => setCurrency('gbp')}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                          currency === 'gbp'
+                            ? 'bg-white text-[#001b3d] shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        GBP
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCurrency('usd')}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                          currency === 'usd'
+                            ? 'bg-white text-[#001b3d] shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        USD
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCurrency('eur')}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                          currency === 'eur'
+                            ? 'bg-white text-[#001b3d] shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        EUR
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {pricingLoading ? (
+                  <div className="text-sm text-gray-500 py-4">Loading plans...</div>
+                ) : safePlans.length === 0 ? (
                   <p className="text-sm text-gray-500">
                     Subscription plans are currently unavailable. Please try again later.
                   </p>
@@ -239,7 +386,11 @@ function LoginContent({
                     onValueChange={setSelectedPlan}
                     className="space-y-3"
                   >
-                    {safePlans.map((plan) => (
+                    {safePlans.map((plan) => {
+                      const planCurrency = pricingData?.[currency]?.monthly?.currency || 
+                                         pricingData?.[currency]?.annual?.currency || 
+                                         currency;
+                      return (
                         <label
                           key={plan.id}
                           htmlFor={`plan-${plan.id}`}
@@ -258,7 +409,7 @@ function LoginContent({
                                 {plan.name}
                               </p>
                               <p className="text-sm text-gray-600">
-                                {formatPrice(plan.amount, plan.interval || 'month')}
+                                {formatPrice(plan.amount, plan.interval || 'month', planCurrency)}
                               </p>
                               {plan.description && (
                                 <p className="mt-1 text-sm text-gray-500">
@@ -268,7 +419,8 @@ function LoginContent({
                             </div>
                           </div>
                         </label>
-                      ))}
+                      );
+                    })}
                   </RadioGroup>
                 )}
               </div>
