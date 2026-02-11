@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState, useEffect, useMemo, useState } from 'react';
+import { useActionState, useEffect, useMemo, useState, Suspense } from 'react';
 import type Stripe from 'stripe';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ export type PlanOption = {
   description?: string | null;
 };
 
-export function Login({
+function LoginContent({
   mode = 'signin',
   plans = [],
   initialPriceId
@@ -602,5 +602,21 @@ export function Login({
         </div>
       </div>
     </div>
+  );
+}
+
+export function Login({
+  mode = 'signin',
+  plans = [],
+  initialPriceId
+}: {
+  mode?: 'signin' | 'signup';
+  plans?: PlanOption[];
+  initialPriceId?: string;
+}) {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <LoginContent mode={mode} plans={plans} initialPriceId={initialPriceId} />
+    </Suspense>
   );
 }

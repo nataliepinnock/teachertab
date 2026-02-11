@@ -9,11 +9,11 @@ import useSWR from 'swr';
 import { getLocalizedTerm, getLocalizedOrganize, getLocalizedOrganization } from '@/lib/utils/localization';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export default function SetupPage() {
+function SetupPageContent() {
   const { data: user } = useSWR<User>('/api/user', fetcher);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -347,5 +347,13 @@ export default function SetupPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SetupPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center"><div className="animate-pulse">Loading...</div></div>}>
+      <SetupPageContent />
+    </Suspense>
   );
 } 

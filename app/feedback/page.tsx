@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TeacherTabLogo } from '@/components/ui/logo';
 import { Loader2, CheckCircle, MessageSquare } from 'lucide-react';
 
-export default function FeedbackPage() {
+function FeedbackPageContent() {
   const searchParams = useSearchParams();
   const reason = searchParams.get('reason') || 'general';
   const email = searchParams.get('email') || '';
@@ -197,6 +197,14 @@ export default function FeedbackPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function FeedbackPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center"><div className="animate-pulse">Loading...</div></div>}>
+      <FeedbackPageContent />
+    </Suspense>
   );
 }
 
