@@ -115,6 +115,23 @@ function LoginContent({
     errorMessage = state.error ?? '';
   }
 
+  const [selectedPlan, setSelectedPlan] = useState('');
+  const [location, setLocation] = useState<Location>('UK');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [marketingEmails, setMarketingEmails] = useState(false);
+  const [currency, setCurrency] = useState<'gbp' | 'usd' | 'eur'>('gbp');
+  
+  // Fetch pricing data for currency selection (only for signup mode)
+  const { data: pricingData, error: pricingError, isLoading: pricingLoading } = useSWR<PricingData>(
+    mode === 'signup' ? '/api/pricing' : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      refreshInterval: 3600000, // Revalidate every hour
+    }
+  );
+
   // Transform pricing data into PlanOption format, filtered by selected currency
   const currencyFilteredPlans = useMemo(() => {
     if (mode !== 'signup' || !pricingData) {
@@ -231,23 +248,7 @@ function LoginContent({
     );
   }, [mode, statePriceId, initialPriceId, priceIdQuery, safePlans]);
 
-  const [selectedPlan, setSelectedPlan] = useState(computedInitialPlan);
-  const [location, setLocation] = useState<Location>('UK');
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [marketingEmails, setMarketingEmails] = useState(false);
-  const [currency, setCurrency] = useState<'gbp' | 'usd' | 'eur'>('gbp');
-  
-  // Fetch pricing data for currency selection (only for signup mode)
-  const { data: pricingData, error: pricingError, isLoading: pricingLoading } = useSWR<PricingData>(
-    mode === 'signup' ? '/api/pricing' : null,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      refreshInterval: 3600000, // Revalidate every hour
-    }
-  );
-
+  // Update selectedPlan when computedInitialPlan changes
   useEffect(() => {
     if (mode === 'signup') {
       setSelectedPlan(computedInitialPlan);
