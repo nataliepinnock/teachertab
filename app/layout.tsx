@@ -6,6 +6,7 @@ import { SWRConfig } from 'swr';
 import TermlyCMP from '@/components/TermlyCMP';
 import ContactWidget from '@/components/ContactWidget';
 import Script from 'next/script';
+import { Suspense } from 'react';
 
 const WEBSITE_UUID = '1432f3dc-f773-4030-aec0-71b2e73afd60'
 
@@ -58,7 +59,9 @@ export default function RootLayout({
           src={termlyScriptUrl}
           strategy="afterInteractive"
         />
-        <TermlyCMP />
+        <Suspense fallback={null}>
+          <TermlyCMP />
+        </Suspense>
         <ContactWidget />
         <SWRConfig
           value={{
