@@ -282,18 +282,25 @@ export async function handleSubscriptionChange(
 
 export async function getStripePrices() {
   // Query all recurring prices to get all currencies
+  // Only fetch active prices to exclude archived ones
   const allPricesResponse = await stripe.prices.list({
+    active: true,
     expand: ['data.product', 'data.currency_options'],
     limit: 100
   });
   
   const allPricesData = allPricesResponse.data;
 
-  // Filter to only recurring prices and remove duplicates
+  // Filter to only recurring prices, active products, and remove duplicates
   const seenPriceIds = new Set<string>();
   const allPriceData = allPricesData.filter((price) => {
     // Only include recurring prices
     if (price.type !== 'recurring') return false;
+    // Only include active prices (double-check, though API should filter)
+    if (!price.active) return false;
+    // Only include prices for active products
+    const product = typeof price.product === 'string' ? null : price.product;
+    if (product && !product.active) return false;
     // Remove duplicates
     if (seenPriceIds.has(price.id)) return false;
     seenPriceIds.add(price.id);
