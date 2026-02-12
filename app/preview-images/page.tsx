@@ -81,8 +81,8 @@ function CalendarPreview() {
       <div className="flex-none bg-white">
         <div className="flex">
           <div className="w-14 flex-none" />
-          <div className="flex-auto grid grid-cols-7 divide-x divide-gray-100 border-r border-gray-100 text-sm/6 text-gray-500">
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(
+          <div className="flex-auto grid grid-cols-5 divide-x divide-gray-100 border-r border-gray-100 text-sm/6 text-gray-500">
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(
               (day, index) => {
                 const today = new Date();
                 const date = new Date(today);
@@ -120,8 +120,8 @@ function CalendarPreview() {
             <div className="w-14 flex-none flex items-center justify-center py-2 text-center text-xs font-semibold text-gray-500 border-r border-gray-200">
               <span>All-day</span>
             </div>
-            <div className="flex-auto grid grid-cols-7 divide-x divide-gray-100 border-r border-gray-100 py-2 px-1">
-              {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => {
+            <div className="flex-auto grid grid-cols-5 divide-x divide-gray-100 border-r border-gray-100 py-2 px-1">
+              {[0, 1, 2, 3, 4].map((dayIndex) => {
                 const eventForDay = allDayEvents.find(e => e.day === dayIndex);
                 return (
                   <div key={dayIndex} className="px-1">
@@ -166,19 +166,17 @@ function CalendarPreview() {
           </div>
 
           {/* Vertical lines - matching main app */}
-          <div className="col-start-1 col-end-2 row-start-1 grid grid-cols-7 grid-rows-1 divide-x divide-gray-200">
+          <div className="col-start-1 col-end-2 row-start-1 grid grid-cols-5 grid-rows-1 divide-x divide-gray-200">
             <div className="col-start-1 row-span-full border-r border-gray-200" />
             <div className="col-start-2 row-span-full border-r border-gray-200" />
             <div className="col-start-3 row-span-full border-r border-gray-200" />
             <div className="col-start-4 row-span-full border-r border-gray-200" />
-            <div className="col-start-5 row-span-full border-r border-gray-200" />
-            <div className="col-start-6 row-span-full border-r border-gray-200" />
-            <div className="col-start-7 row-span-full" />
+            <div className="col-start-5 row-span-full" />
           </div>
 
           {/* Events - matching main app styling */}
           <ol
-            className="col-start-1 col-end-2 row-start-1 grid grid-cols-7"
+            className="col-start-1 col-end-2 row-start-1 grid grid-cols-5"
             style={{ gridTemplateRows: '1.75rem repeat(16, 2.4rem) auto' }}
           >
             {/* Render lessons */}
