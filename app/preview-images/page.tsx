@@ -9,6 +9,24 @@ import {
   MapPin,
 } from 'lucide-react';
 
+// Header component for preview images
+function PreviewHeader() {
+  return (
+    <header className="bg-[#001b3d] border-b border-[#001b3d] flex-none">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex justify-between items-center">
+        <div className="flex items-center min-w-0 flex-shrink-0">
+          <span className="text-xl sm:text-2xl lg:text-3xl font-semibold text-[#fbae36] truncate">TeacherTab</span>
+        </div>
+        <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
+          <div className="w-8 h-8 bg-[#fbae36] rounded-full flex items-center justify-center">
+            <span className="text-xs font-semibold text-[#001b3d]">JS</span>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
 // Helper function to lighten color (matching the main app exactly)
 function lightenColor(color: string, amount: number = 0.7): string {
   if (!color || !color.startsWith('#')) return color;
@@ -58,6 +76,7 @@ function CalendarPreview() {
 
   return (
     <div className="w-full flex flex-col h-[500px] overflow-hidden select-none pointer-events-none bg-white">
+      <PreviewHeader />
       {/* Week Header - matching main app */}
       <div className="flex-none bg-white">
         <div className="flex">
@@ -128,7 +147,7 @@ function CalendarPreview() {
         </div>
       )}
       {/* Calendar Grid - matching main app */}
-      <div className="flex relative h-full flex-auto" style={{ height: allDayEvents.length > 0 ? 'calc(500px - 60px - 90px)' : 'calc(500px - 60px)' }}>
+      <div className="flex relative h-full flex-auto" style={{ height: allDayEvents.length > 0 ? 'calc(500px - 60px - 90px - 60px)' : 'calc(500px - 60px - 60px)' }}>
         <div className="sticky left-0 z-10 w-14 flex-none bg-white border-r-2 border-gray-200" />
         <div className="grid flex-auto grid-cols-1 grid-rows-1">
           {/* Horizontal lines - matching main app */}
@@ -276,8 +295,10 @@ function CalendarPreview() {
 
 function LessonPlanningPreview() {
   return (
-    <div className="w-full h-[500px] overflow-hidden select-none pointer-events-none bg-white p-6">
-      <div className="flex flex-col h-full">
+    <div className="w-full flex flex-col h-[500px] overflow-hidden select-none pointer-events-none bg-white">
+      <PreviewHeader />
+      <div className="flex-1 p-6 overflow-hidden">
+        <div className="flex flex-col h-full">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-900">Lesson Plans</h2>
           <div className="flex gap-2">
@@ -315,13 +336,16 @@ function LessonPlanningPreview() {
           ))}
         </div>
       </div>
+      </div>
     </div>
   );
 }
 
 function SetupOrganisationPreview() {
   return (
-    <div className="w-full h-[500px] overflow-hidden select-none pointer-events-none bg-white p-6">
+    <div className="w-full flex flex-col h-[500px] overflow-hidden select-none pointer-events-none bg-white">
+      <PreviewHeader />
+      <div className="flex-1 p-6 overflow-hidden">
       <div className="grid grid-cols-2 gap-6 h-full">
         <div className="flex flex-col">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Classes</h2>
@@ -370,14 +394,17 @@ function SetupOrganisationPreview() {
           </div>
         </div>
       </div>
+      </div>
     </div>
   );
 }
 
 function TaskManagementPreview() {
   return (
-    <div className="w-full h-[500px] overflow-hidden select-none pointer-events-none bg-white p-6">
-      <div className="flex flex-col h-full">
+    <div className="w-full flex flex-col h-[500px] overflow-hidden select-none pointer-events-none bg-white">
+      <PreviewHeader />
+      <div className="flex-1 p-6 overflow-hidden">
+        <div className="flex flex-col h-full">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-900">Tasks</h2>
           <div className="flex gap-2">
@@ -413,6 +440,7 @@ function TaskManagementPreview() {
             </div>
           ))}
         </div>
+      </div>
       </div>
     </div>
   );
