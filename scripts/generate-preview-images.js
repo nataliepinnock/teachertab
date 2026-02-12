@@ -12,8 +12,8 @@ async function generatePreviewImages() {
   try {
     const page = await browser.newPage();
     
-    // Set viewport for high-quality screenshots
-    await page.setViewport({ width: 1400, height: 1000, deviceScaleFactor: 2 });
+    // Set viewport for high-quality screenshots (landscape 16:9 ratio)
+    await page.setViewport({ width: 1400, height: 800, deviceScaleFactor: 2 });
     
     // Navigate to the preview page (assuming it's running locally)
     const port = process.env.PORT || 3000;

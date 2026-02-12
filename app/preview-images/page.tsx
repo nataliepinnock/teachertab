@@ -75,7 +75,7 @@ function CalendarPreview() {
   ];
 
   return (
-    <div className="w-full flex flex-col h-[500px] overflow-hidden select-none pointer-events-none bg-white">
+    <div className="w-full flex flex-col h-[675px] overflow-hidden select-none pointer-events-none bg-white" style={{ width: '1200px', maxWidth: '100%' }}>
       <PreviewHeader />
       {/* Week Header - matching main app */}
       <div className="flex-none bg-white">
@@ -147,7 +147,7 @@ function CalendarPreview() {
         </div>
       )}
       {/* Calendar Grid - matching main app */}
-      <div className="flex relative h-full flex-auto" style={{ height: allDayEvents.length > 0 ? 'calc(500px - 60px - 90px - 60px)' : 'calc(500px - 60px - 60px)' }}>
+      <div className="flex relative h-full flex-auto" style={{ height: allDayEvents.length > 0 ? 'calc(675px - 60px - 90px - 60px)' : 'calc(675px - 60px - 60px)' }}>
         <div className="sticky left-0 z-10 w-14 flex-none bg-white border-r-2 border-gray-200" />
         <div className="grid flex-auto grid-cols-1 grid-rows-1">
           {/* Horizontal lines - matching main app */}
@@ -295,7 +295,7 @@ function CalendarPreview() {
 
 function LessonPlanningPreview() {
   return (
-    <div className="w-full flex flex-col h-[500px] overflow-hidden select-none pointer-events-none bg-white">
+    <div className="w-full flex flex-col h-[675px] overflow-hidden select-none pointer-events-none bg-white" style={{ width: '1200px', maxWidth: '100%' }}>
       <PreviewHeader />
       <div className="flex-1 p-6 overflow-hidden">
         <div className="flex flex-col h-full">
@@ -343,7 +343,7 @@ function LessonPlanningPreview() {
 
 function SetupOrganisationPreview() {
   return (
-    <div className="w-full flex flex-col h-[500px] overflow-hidden select-none pointer-events-none bg-white">
+    <div className="w-full flex flex-col h-[675px] overflow-hidden select-none pointer-events-none bg-white" style={{ width: '1200px', maxWidth: '100%' }}>
       <PreviewHeader />
       <div className="flex-1 p-6 overflow-hidden">
       <div className="grid grid-cols-2 gap-6 h-full">
@@ -401,7 +401,7 @@ function SetupOrganisationPreview() {
 
 function TaskManagementPreview() {
   return (
-    <div className="w-full flex flex-col h-[500px] overflow-hidden select-none pointer-events-none bg-white">
+    <div className="w-full flex flex-col h-[675px] overflow-hidden select-none pointer-events-none bg-white" style={{ width: '1200px', maxWidth: '100%' }}>
       <PreviewHeader />
       <div className="flex-1 p-6 overflow-hidden">
         <div className="flex flex-col h-full">
@@ -458,7 +458,7 @@ export default function PreviewImagesPage() {
         {/* Calendar View */}
         <div className="bg-white rounded-lg shadow-lg p-4" id="preview-calendar">
           <h2 className="text-xl font-semibold mb-4 text-gray-900">1. Calendar View</h2>
-          <div className="border border-gray-200 rounded-lg overflow-hidden" id="calendar-preview-container">
+          <div className="border border-gray-200 rounded-lg overflow-hidden flex justify-center" id="calendar-preview-container">
             <CalendarPreview />
           </div>
         </div>
@@ -466,7 +466,7 @@ export default function PreviewImagesPage() {
         {/* Lesson Planning */}
         <div className="bg-white rounded-lg shadow-lg p-4" id="preview-lesson-planning">
           <h2 className="text-xl font-semibold mb-4 text-gray-900">2. Lesson Planning</h2>
-          <div className="border border-gray-200 rounded-lg overflow-hidden" id="lesson-planning-preview-container">
+          <div className="border border-gray-200 rounded-lg overflow-hidden flex justify-center" id="lesson-planning-preview-container">
             <LessonPlanningPreview />
           </div>
         </div>
@@ -474,7 +474,7 @@ export default function PreviewImagesPage() {
         {/* Setup & Organisation */}
         <div className="bg-white rounded-lg shadow-lg p-4" id="preview-setup">
           <h2 className="text-xl font-semibold mb-4 text-gray-900">3. Setup & Organisation</h2>
-          <div className="border border-gray-200 rounded-lg overflow-hidden" id="setup-preview-container">
+          <div className="border border-gray-200 rounded-lg overflow-hidden flex justify-center" id="setup-preview-container">
             <SetupOrganisationPreview />
           </div>
         </div>
@@ -482,7 +482,7 @@ export default function PreviewImagesPage() {
         {/* Task Management */}
         <div className="bg-white rounded-lg shadow-lg p-4" id="preview-tasks">
           <h2 className="text-xl font-semibold mb-4 text-gray-900">4. Task Management</h2>
-          <div className="border border-gray-200 rounded-lg overflow-hidden" id="tasks-preview-container">
+          <div className="border border-gray-200 rounded-lg overflow-hidden flex justify-center" id="tasks-preview-container">
             <TaskManagementPreview />
           </div>
         </div>
