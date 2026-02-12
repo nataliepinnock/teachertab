@@ -1,8 +1,8 @@
 'use client';
 
-import { checkoutAction } from '@/lib/payments/actions';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 import useSWR from 'swr';
 import { useState } from 'react';
 
@@ -219,10 +219,9 @@ function PricingCard({
           Save {formatPrice(savingsAmount, currency)} per year ({savingsPercentage}% off)
         </p>
       )}
-      <form action={checkoutAction} className="mt-8">
-        <input type="hidden" name="priceId" value={priceId} />
+      <div className="mt-8">
         <Button
-          type="submit"
+          asChild
           variant={popular ? 'accent' : 'default'}
           className={`w-full rounded-full ${
             popular 
@@ -230,10 +229,12 @@ function PricingCard({
               : 'bg-[#001b3d] hover:bg-[#000e28] text-white'
           }`}
         >
-          Get started
-          <ArrowRight className="ml-2 h-4 w-4" />
+          <Link href={priceId ? `/sign-up?priceId=${priceId}` : '/sign-up'}>
+            Get started
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
         </Button>
-      </form>
+      </div>
     </div>
   );
 }
