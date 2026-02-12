@@ -716,7 +716,7 @@ export default function HomePage() {
             </div>
 
             {/* Footer Links */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 gap-6 sm:gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
               <div>
                 <h4 className="text-lg font-semibold mb-4">Product</h4>
                 <ul className="space-y-3">
@@ -743,31 +743,6 @@ export default function HomePage() {
                 </ul>
               </div>
               <div>
-                <h4 className="text-lg font-semibold mb-4">Company</h4>
-                <ul className="space-y-3">
-                  <li>
-                    <Link href="/about" className="text-gray-300 hover:text-white transition-colors">
-                      About Us
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/blog" className="text-gray-300 hover:text-white transition-colors">
-                      Blog
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/careers" className="text-gray-300 hover:text-white transition-colors">
-                      Careers
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/contact" className="text-gray-300 hover:text-white transition-colors">
-                      Contact
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-              <div>
                 <h4 className="text-lg font-semibold mb-4">Legal</h4>
                 <ul className="space-y-3">
                   <li>
@@ -789,26 +764,6 @@ export default function HomePage() {
                     <a href="#" className="termly-display-preferences text-gray-300 hover:text-white transition-colors">
                       Consent Preferences
                     </a>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="text-lg font-semibold mb-4">Support</h4>
-                <ul className="space-y-3">
-                  <li>
-                    <Link href="/help" className="text-gray-300 hover:text-white transition-colors">
-                      Help Center
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/faq" className="text-gray-300 hover:text-white transition-colors">
-                      FAQ
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/documentation" className="text-gray-300 hover:text-white transition-colors">
-                      Documentation
-                    </Link>
                   </li>
                 </ul>
               </div>
