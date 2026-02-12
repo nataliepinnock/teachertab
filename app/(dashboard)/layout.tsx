@@ -40,14 +40,14 @@ function UserMenu() {
       <>
         <Link
           href="/pricing"
-          className="text-sm font-medium text-white hover:text-gray-200"
+          className="hidden sm:inline-block text-sm font-medium text-white hover:text-gray-200"
         >
           Pricing
         </Link>
-        <Button asChild className="rounded-full bg-white text-[#001b3d] hover:bg-gray-100" variant="default">
+        <Button asChild className="rounded-full bg-white text-[#001b3d] hover:bg-gray-100 text-xs sm:text-sm px-3 sm:px-4" variant="default">
           <Link href="/sign-in">Sign In</Link>
         </Button>
-        <Button asChild className="rounded-full px-6 bg-[#fbae36] text-white hover:bg-[#d69225]" variant="accent">
+        <Button asChild className="rounded-full px-3 sm:px-6 bg-[#fbae36] text-white hover:bg-[#d69225] text-xs sm:text-sm" variant="accent">
           <Link href="/sign-up">Sign Up</Link>
         </Button>
       </>
@@ -116,11 +116,11 @@ function UserMenu() {
 function Header() {
   return (
     <header className="bg-[#001b3d] border-b border-[#001b3d]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-        <Link href="/" className="flex items-center">
-          <span className="text-3xl font-semibold text-[#fbae36]">TeacherTab</span>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex justify-between items-center">
+        <Link href="/" className="flex items-center min-w-0 flex-shrink-0">
+          <span className="text-xl sm:text-2xl lg:text-3xl font-semibold text-[#fbae36] truncate">TeacherTab</span>
         </Link>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
           <Suspense fallback={<div className="h-9" />}>
             <UserMenu />
           </Suspense>

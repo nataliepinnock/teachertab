@@ -529,7 +529,7 @@ export default function HomePage() {
   return (
     <main className="isolate bg-white">
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-14 pb-20 sm:pb-32">
+      <section className="relative overflow-hidden pt-8 sm:pt-14 pb-16 sm:pb-20 lg:pb-32">
         {/* Background decoration */}
         <div
           aria-hidden="true"
@@ -544,21 +544,21 @@ export default function HomePage() {
           />
         </div>
 
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">
             {/* Tagline */}
-            <div className="mb-12">
-               <h1 className="text-5xl font-bold tracking-tight text-gray-900 sm:text-6xl md:text-7xl">Your teacher planner, upgraded.</h1>
+            <div className="mb-8 sm:mb-12">
+               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight text-gray-900 px-2 sm:px-0">Your teacher planner, upgraded.</h1>
             </div>
-            <p className="mt-6 text-lg leading-8 text-gray-600 sm:text-xl">
+            <p className="mt-4 sm:mt-6 text-base sm:text-lg leading-7 sm:leading-8 text-gray-600 px-4 sm:px-0">
             The all-in-one digital planner for teachers.
             Organise your schedule, manage your timetable, and stay focused on what matters most — teaching.
             </p>
-            <div className="mt-10 flex items-center justify-center gap-x-6">
+            <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-x-6 px-4 sm:px-0">
               <Button
                 size="lg"
                 variant="accent"
-                className="text-lg rounded-full px-8 py-6"
+                className="w-full sm:w-auto text-base sm:text-lg rounded-full px-6 sm:px-8 py-4 sm:py-6"
                 asChild
               >
                 <Link href="/sign-up">
@@ -567,7 +567,7 @@ export default function HomePage() {
               </Button>
               <Link
                 href="#features"
-                className="text-base font-semibold leading-6 text-gray-900 hover:text-[#001b3d]"
+                className="text-sm sm:text-base font-semibold leading-6 text-gray-900 hover:text-[#001b3d] whitespace-nowrap"
               >
                 Learn more <span aria-hidden="true">→</span>
               </Link>
@@ -575,8 +575,8 @@ export default function HomePage() {
           </div>
 
           {/* App Preview */}
-          <div className="mt-8 flow-root sm:mt-24">
-            <div className="-m-2 rounded-xl bg-gray-50 p-2 ring-1 ring-gray-200 ring-inset lg:-m-4 lg:rounded-2xl lg:p-4 overflow-hidden">
+          <div className="mt-6 sm:mt-8 lg:mt-24 flow-root">
+            <div className="-m-2 sm:-m-2 rounded-xl bg-gray-50 p-1 sm:p-2 ring-1 ring-gray-200 ring-inset lg:-m-4 lg:rounded-2xl lg:p-4 overflow-hidden">
               <div className="bg-white rounded-lg shadow-2xl ring-1 ring-gray-900/10 overflow-hidden">
                 {/* Mock Header */}
                 <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
@@ -609,15 +609,15 @@ export default function HomePage() {
 
       {/* Features Section */}
       <section id="features" className="py-16 sm:py-24 bg-gray-50">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl lg:text-center">
             <h2 className="text-base font-semibold leading-7 text-[#001b3d]">
               Features
             </h2>
-            <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            <p className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gray-900">
               All the tools you need
             </p>
-            <p className="mt-6 text-lg leading-8 text-gray-600">
+            <p className="mt-4 sm:mt-6 text-base sm:text-lg leading-7 sm:leading-8 text-gray-600">
               All the tools you need to organise your teaching life, all in one
               place.
             </p>
@@ -652,11 +652,11 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="bg-[#001b3d] text-white">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8 py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
             {/* Contact Form */}
             <div>
-              <h3 className="text-2xl font-bold mb-6">Get in Touch</h3>
+              <h3 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Get in Touch</h3>
               <p className="text-gray-300 mb-6">
                 Have questions or feedback? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
               </p>
@@ -716,7 +716,7 @@ export default function HomePage() {
             </div>
 
             {/* Footer Links */}
-            <div className="grid grid-cols-2 gap-8">
+            <div className="grid grid-cols-2 sm:grid-cols-2 gap-6 sm:gap-8">
               <div>
                 <h4 className="text-lg font-semibold mb-4">Product</h4>
                 <ul className="space-y-3">
