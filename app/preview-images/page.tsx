@@ -323,33 +323,33 @@ export default function PreviewImagesPage() {
         </div>
 
         {/* Calendar View */}
-        <div className="bg-white rounded-lg shadow-lg p-4">
+        <div className="bg-white rounded-lg shadow-lg p-4" id="preview-calendar">
           <h2 className="text-xl font-semibold mb-4 text-gray-900">1. Calendar View</h2>
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="border border-gray-200 rounded-lg overflow-hidden" id="calendar-preview-container">
             <CalendarPreview />
           </div>
         </div>
 
         {/* Lesson Planning */}
-        <div className="bg-white rounded-lg shadow-lg p-4">
+        <div className="bg-white rounded-lg shadow-lg p-4" id="preview-lesson-planning">
           <h2 className="text-xl font-semibold mb-4 text-gray-900">2. Lesson Planning</h2>
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="border border-gray-200 rounded-lg overflow-hidden" id="lesson-planning-preview-container">
             <LessonPlanningPreview />
           </div>
         </div>
 
         {/* Setup & Organisation */}
-        <div className="bg-white rounded-lg shadow-lg p-4">
+        <div className="bg-white rounded-lg shadow-lg p-4" id="preview-setup">
           <h2 className="text-xl font-semibold mb-4 text-gray-900">3. Setup & Organisation</h2>
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="border border-gray-200 rounded-lg overflow-hidden" id="setup-preview-container">
             <SetupOrganisationPreview />
           </div>
         </div>
 
         {/* Task Management */}
-        <div className="bg-white rounded-lg shadow-lg p-4">
+        <div className="bg-white rounded-lg shadow-lg p-4" id="preview-tasks">
           <h2 className="text-xl font-semibold mb-4 text-gray-900">4. Task Management</h2>
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="border border-gray-200 rounded-lg overflow-hidden" id="tasks-preview-container">
             <TaskManagementPreview />
           </div>
         </div>
