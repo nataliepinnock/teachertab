@@ -27,13 +27,33 @@ function lightenColor(color: string, amount: number = 0.7): string {
 }
 
 function CalendarPreview() {
+  // Lessons with varying lengths (height represents duration in grid rows)
   const lessons = [
-    { color: '#001b3d', subject: 'Mathematics', class: 'Year 9A', location: 'Room 101', top: 1, height: 2 },
-    { color: '#fbae36', subject: 'English', class: 'Year 11B', location: 'Room 205', top: 2.5, height: 1.5 },
-    { color: '#059669', subject: 'Science', class: 'Year 10C', location: 'Lab 3', top: 0.5, height: 2 },
-    { color: '#DC2626', subject: 'History', class: 'Year 8A', location: 'Room 112', top: 3, height: 1.5 },
-    { color: '#7C3AED', subject: 'Physics', class: 'Year 12B', location: 'Lab 1', top: 1.5, height: 2 },
-    { color: '#6B7280', subject: 'Art', class: 'Year 9B', location: 'Studio A', top: 4, height: 1.5 },
+    { color: '#001b3d', subject: 'Mathematics', class: 'Year 9A', location: 'Room 101', day: 0, top: 1, height: 2 }, // 1 hour
+    { color: '#fbae36', subject: 'English', class: 'Year 11B', location: 'Room 205', day: 0, top: 3.5, height: 1 }, // 30 min
+    { color: '#059669', subject: 'Science', class: 'Year 10C', location: 'Lab 3', day: 1, top: 0.5, height: 3 }, // 1.5 hours
+    { color: '#DC2626', subject: 'History', class: 'Year 8A', location: 'Room 112', day: 1, top: 4.5, height: 2 }, // 1 hour
+    { color: '#7C3AED', subject: 'Physics', class: 'Year 12B', location: 'Lab 1', day: 2, top: 1.5, height: 2.5 }, // 1.25 hours
+    { color: '#6B7280', subject: 'Art', class: 'Year 9B', location: 'Studio A', day: 2, top: 5, height: 1 }, // 30 min
+    { color: '#001b3d', subject: 'Mathematics', class: 'Year 9A', location: 'Room 101', day: 3, top: 2, height: 2 }, // 1 hour
+    { color: '#fbae36', subject: 'English', class: 'Year 11B', location: 'Room 205', day: 3, top: 4.5, height: 1.5 }, // 45 min
+    { color: '#059669', subject: 'Science', class: 'Year 10C', location: 'Lab 3', day: 4, top: 0.5, height: 2 }, // 1 hour
+    { color: '#DC2626', subject: 'History', class: 'Year 8A', location: 'Room 112', day: 4, top: 3, height: 2.5 }, // 1.25 hours
+  ];
+
+  // Meetings (different styling, no class/subject)
+  const meetings = [
+    { color: '#8B5CF6', title: 'Staff Meeting', location: 'Conference Room', day: 0, top: 5.5, height: 1 }, // 30 min
+    { color: '#EC4899', title: 'Parent Consultation', location: 'Office 2', day: 1, top: 7, height: 1.5 }, // 45 min
+    { color: '#10B981', title: 'Department Planning', location: 'Staff Room', day: 2, top: 6.5, height: 2 }, // 1 hour
+    { color: '#F59E0B', title: 'Training Session', location: 'Training Hall', day: 3, top: 6, height: 1.5 }, // 45 min
+  ];
+
+  // All-day events
+  const allDayEvents = [
+    { color: '#3B82F6', title: 'School Trip', day: 1, span: 1 },
+    { color: '#EF4444', title: 'INSET Day', day: 3, span: 1 },
+    { color: '#10B981', title: 'Sports Day', day: 4, span: 1 },
   ];
 
   return (
@@ -73,8 +93,42 @@ function CalendarPreview() {
           </div>
         </div>
       </div>
+
+      {/* All-day events section */}
+      {allDayEvents.length > 0 && (
+        <div className="flex-none border-b border-gray-200 bg-gray-50">
+          <div className="flex">
+            <div className="w-14 flex-none flex items-center justify-center py-2 text-center text-xs font-semibold text-gray-500 border-r border-gray-200">
+              <span>All-day</span>
+            </div>
+            <div className="flex-auto grid grid-cols-7 divide-x divide-gray-100 border-r border-gray-100 py-2 px-1">
+              {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => {
+                const eventForDay = allDayEvents.find(e => e.day === dayIndex);
+                return (
+                  <div key={dayIndex} className="px-1">
+                    {eventForDay && (
+                      <div
+                        className="flex items-center rounded-lg text-xs p-2 text-left border-2 border-solid"
+                        style={{
+                          backgroundColor: lightenColor(eventForDay.color, 0.4),
+                          borderColor: `${eventForDay.color}AA`,
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: eventForDay.color }} />
+                          <span className="font-medium text-gray-900 truncate">{eventForDay.title}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
       {/* Calendar Grid - matching main app */}
-      <div className="flex relative h-full flex-auto" style={{ height: 'calc(500px - 60px)' }}>
+      <div className="flex relative h-full flex-auto" style={{ height: allDayEvents.length > 0 ? 'calc(500px - 60px - 90px)' : 'calc(500px - 60px)' }}>
         <div className="sticky left-0 z-10 w-14 flex-none bg-white border-r-2 border-gray-200" />
         <div className="grid flex-auto grid-cols-1 grid-rows-1">
           {/* Horizontal lines - matching main app */}
@@ -108,14 +162,15 @@ function CalendarPreview() {
             className="col-start-1 col-end-2 row-start-1 grid grid-cols-7"
             style={{ gridTemplateRows: '1.75rem repeat(16, 2.4rem) auto' }}
           >
+            {/* Render lessons */}
             {lessons.map((lesson, index) => {
-              const dayColumn = index % 7 + 1;
+              const dayColumn = lesson.day + 1;
               const startRow = Math.floor(lesson.top) + 2;
               const duration = Math.ceil(lesson.height);
               
               return (
                 <li
-                  key={index}
+                  key={`lesson-${index}`}
                   className="relative mt-px flex"
                   style={{
                     gridRow: `${startRow} / span ${duration}`,
@@ -152,6 +207,56 @@ function CalendarPreview() {
                               <div className="flex items-center text-xs mt-0.5">
                                 <MapPin className="h-3 w-3 mr-1 flex-shrink-0" style={{ color: `${lesson.color}CC` }} />
                                 <span className="truncate" style={{ color: `${lesson.color}CC` }}>{lesson.location}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+
+            {/* Render meetings */}
+            {meetings.map((meeting, index) => {
+              const dayColumn = meeting.day + 1;
+              const startRow = Math.floor(meeting.top) + 2;
+              const duration = Math.ceil(meeting.height);
+              
+              return (
+                <li
+                  key={`meeting-${index}`}
+                  className="relative mt-px flex"
+                  style={{
+                    gridRow: `${startRow} / span ${duration}`,
+                    gridColumn: `${dayColumn} / span 1`,
+                    paddingRight: '2px',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <div
+                    className="group flex flex-col text-xs transition-colors border-2 border-dashed rounded-md z-10 overflow-hidden px-1.5 py-1 h-full w-full shadow-sm"
+                    style={{
+                      backgroundColor: meeting.color ? lightenColor(meeting.color, 0.9) : '#F9FAFB',
+                      borderColor: meeting.color ? `${meeting.color}99` : '#374151',
+                      transform: 'translateZ(0)'
+                    }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-1">
+                        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                          <div className="flex-1 min-w-0">
+                            <div
+                              className="text-xs font-semibold truncate"
+                              style={{ color: `${meeting.color}E6` }}
+                            >
+                              {meeting.title}
+                            </div>
+                            {meeting.location && (
+                              <div className="flex items-center text-xs mt-0.5">
+                                <MapPin className="h-3 w-3 mr-1 flex-shrink-0" style={{ color: `${meeting.color}99` }} />
+                                <span className="truncate" style={{ color: `${meeting.color}99` }}>{meeting.location}</span>
                               </div>
                             )}
                           </div>
