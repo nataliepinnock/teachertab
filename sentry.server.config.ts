@@ -16,4 +16,20 @@ Sentry.init({
   // Enable sending user PII (Personally Identifiable Information)
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
   sendDefaultPii: true,
+
+  // Ignore known Next.js caching errors from stale form submissions
+  beforeSend(event, hint) {
+    // Ignore "Failed to find Server Action" errors - these occur when users have
+    // cached forms from previous deployments trying to submit to non-existent actions
+    if (
+      event.exception &&
+      event.exception.values &&
+      event.exception.values[0] &&
+      event.exception.values[0].value &&
+      event.exception.values[0].value.includes('Failed to find Server Action')
+    ) {
+      return null; // Don't send to Sentry
+    }
+    return event;
+  },
 });
